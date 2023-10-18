@@ -1,0 +1,117 @@
+from enum import Enum
+from typing import Any, Dict, Iterable
+
+from pydantic import Field
+from scrapy import Request
+from scrapy_poet import DummyResponse
+from scrapy_spider_metadata import Args
+from zyte_common_items import Product, ProductNavigation
+
+from zyte_spider_templates.formatters import product_navigation_report
+from zyte_spider_templates.spiders.base import BaseSpider, BaseSpiderParams
+
+
+class EcommerceCrawlStrategy(str, Enum):
+    navigation: str = "navigation"
+    full: str = "full"
+
+
+class EcommerceSpiderParams(BaseSpiderParams):
+    crawl_strategy: EcommerceCrawlStrategy = Field(
+        title="Crawl strategy",
+        description="Determines how the start URL and follow-up URLs are crawled.",
+        default=EcommerceCrawlStrategy.navigation,
+        json_schema_extra={
+            "enumMeta": {
+                EcommerceCrawlStrategy.navigation: {
+                    "title": "Navigation",
+                    "description": "Follow pagination, subcategories, and product detail pages.",
+                },
+                EcommerceCrawlStrategy.full: {
+                    "title": "Full",
+                    "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+                },
+            },
+        },
+    )
+
+
+class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
+    """Yield products from an e-commerce website.
+
+    *url* is the start URL, e.g. a homepage or category page.
+
+    *crawl_strategy* determines how the start URL and follow-up URLs are
+    crawled:
+
+    -   ``"navigation"`` (default): follow pagination, subcategories, and
+        product detail pages.
+
+    -   ``"full"``: follow most links within the domain of *url* in an attempt to
+        discover and extract as many products as it can.
+
+    *geolocation* (optional) is an ISO 3166-1 alpha-2 2-character string specified in:
+    https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation
+
+    *max_requests* (optional) specifies the max number of Zyte API requests
+    allowed for the crawl.
+    """
+
+    name = "ecommerce"
+
+    metadata: Dict[str, Any] = {
+        **BaseSpider.metadata,
+        "title": "E-commerce",
+        "description": "Template for spiders that extract product data from e-commerce websites.",
+    }
+
+    def start_requests(self) -> Iterable[Request]:
+        page_params = {}
+        if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
+            page_params = {"full_domain": self.allowed_domains[0]}
+
+        yield Request(
+            url=self.args.url,
+            callback=self.parse_navigation,
+            meta={
+                "page_params": page_params,
+            },
+        )
+
+    def parse_navigation(
+        self, response: DummyResponse, navigation: ProductNavigation
+    ) -> Iterable[Request]:
+        self.logger.info(product_navigation_report(navigation))
+
+        page_params = response.meta.get("page_params")
+
+        for request in navigation.items or []:
+            yield self.get_parse_product_request(request)
+        if navigation.nextPage:
+            yield self.get_parse_navigation_request(
+                navigation.nextPage,
+                priority=self.ITEM_REQUEST_PRIORITY - 1,
+            )
+        for request in navigation.subCategories or []:
+            if "[heuristics]" in (request.name or ""):
+                yield self.get_parse_navigation_request(
+                    request, page_params=page_params
+                )
+            else:
+                yield self.get_parse_navigation_request(request)
+
+    def parse_product(
+        self, response: DummyResponse, product: Product
+    ) -> Iterable[Product]:
+        probability = None
+        if metadata := getattr(product, "metadata", None):
+            probability = metadata.probability
+
+        # TODO: convert to a configurable parameter later on after the launch
+        if probability is None or probability >= 0.1:
+            yield product
+        else:
+            self.logger.info(
+                f"Ignoring item from {response.url} since its probability is "
+                f"less than threshold of 0.1:\n{product}"
+            )

@@ -1,0 +1,122 @@
+from importlib.metadata import version
+from typing import Any, Callable, Dict, Optional
+
+import scrapy
+from pydantic import BaseModel, Field
+from scrapy.crawler import Crawler
+from scrapy.utils.url import parse_url
+from zyte_common_items import Request
+
+from zyte_spider_templates._geolocations import (
+    GEOLOCATION_OPTIONS_WITH_CODE,
+    Geolocation,
+)
+
+# Higher priority than command-line-defined settings (40).
+ARG_SETTING_PRIORITY: int = 50
+
+
+class BaseSpiderParams(BaseModel):
+    url: str = Field(
+        title="URL",
+        description="Initial URL for the crawl.",
+        pattern=r"^https?:\/\/[^:\/\s]+(:\d{1,5})?(\/[^\s]*)*(#[^\s]*)?$",
+    )
+    geolocation: Optional[Geolocation] = Field(
+        title="Geolocation",
+        description="ISO 3166-1 alpha-2 2-character string specified in "
+        "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
+                }
+                for code in Geolocation
+            }
+        },
+    )
+    max_requests: Optional[int] = Field(
+        description="The max number of Zyte API requests allowed for the crawl.",
+        default=None,
+        json_schema_extra={
+            "widget": "request-limit",
+        },
+    )
+
+
+class BaseSpider(scrapy.Spider):
+    custom_settings: Dict[str, Any] = {
+        "ZYTE_API_TRANSPARENT_MODE": True,
+        "_ZYTE_API_USER_AGENT": f"zyte-spider-templates/{version('zyte-spider-templates')}",
+    }
+
+    metadata: Dict[str, Any] = {
+        "template": True,
+        "title": "Base",
+        "description": "Base template.",
+    }
+
+    ITEM_REQUEST_PRIORITY: int = 10
+
+    @classmethod
+    def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
+        spider = super().from_crawler(crawler, *args, **kwargs)
+        spider.allowed_domains = [parse_url(spider.args.url).netloc]
+
+        if spider.args.geolocation:
+            # We set the geolocation in ZYTE_API_PROVIDER_PARAMS for injected
+            # dependencies, and in ZYTE_API_AUTOMAP_PARAMS for page object
+            # additional requests.
+            for component in ("AUTOMAP", "PROVIDER"):
+                default_params = spider.settings.getdict(f"ZYTE_API_{component}_PARAMS")
+                default_params["geolocation"] = spider.args.geolocation
+                spider.settings.set(
+                    f"ZYTE_API_{component}_PARAMS",
+                    default_params,
+                    priority=ARG_SETTING_PRIORITY,
+                )
+
+        if spider.args.max_requests:
+            spider.settings.set(
+                "ZYTE_API_MAX_REQUESTS",
+                spider.args.max_requests,
+                priority=ARG_SETTING_PRIORITY,
+            )
+        return spider
+
+    @staticmethod
+    def get_parse_navigation_request_priority(request: Request) -> int:
+        if (
+            not hasattr(request, "metadata")
+            or not request.metadata
+            or request.metadata.probability is None
+        ):
+            return 0
+        return int(10 * request.metadata.probability)
+
+    def get_parse_navigation_request(
+        self,
+        request: Request,
+        callback: Optional[Callable] = None,
+        page_params: Optional[Dict[str, Any]] = None,
+        priority: Optional[int] = None,
+    ) -> scrapy.Request:
+        callback = callback or self.parse_navigation
+        return request.to_scrapy(
+            callback=callback,
+            priority=priority or self.get_parse_navigation_request_priority(request),
+            meta={"page_params": page_params or {}},
+        )
+
+    def get_parse_product_request_priority(self, request: Request) -> int:
+        return self.ITEM_REQUEST_PRIORITY
+
+    def get_parse_product_request(
+        self, request: Request, callback: Optional[Callable] = None
+    ) -> scrapy.Request:
+        callback = callback or self.parse_product
+        return request.to_scrapy(
+            callback=callback,
+            priority=self.get_parse_product_request_priority(request),
+        )
