@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.0.1 (TBD)
------------
+0.1.0 (2023-10-24)
+------------------
 
-Initial release
+Initial release.
