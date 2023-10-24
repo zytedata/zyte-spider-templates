@@ -304,6 +304,22 @@ def test_metadata():
                         },
                     },
                 },
+                "extract_from": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": None,
+                    "title": "Extraction source",
+                    "enum": ["httpResponseBody", "browserHtml"],
+                    "enumMeta": {
+                        "httpResponseBody": {
+                            "title": "httpResponseBody",
+                            "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
+                        },
+                        "browserHtml": {
+                            "title": "browserHtml",
+                            "description": "Use browser rendering. Often provides the best quality.",
+                        },
+                    },
+                },
                 "geolocation": {
                     "anyOf": [
                         {"type": "string"},
