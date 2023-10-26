@@ -133,7 +133,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         if navigation.nextPage:
             yield self.get_parse_navigation_request(
                 navigation.nextPage,
-                priority=self.ITEM_REQUEST_PRIORITY - 1,
+                priority=self._NEXT_PAGE_PRIORITY,
             )
         for request in navigation.subCategories or []:
             if "[heuristics]" in (request.name or ""):

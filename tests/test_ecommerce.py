@@ -60,15 +60,15 @@ def test_crawl():
 
     subcategories = {
         "subCategories": [
-            {"url": subcategory_urls[0]},
-            {"url": subcategory_urls[1]},
+            {"url": subcategory_urls[0], "metadata": {"probability": 0.95}},
+            {"url": subcategory_urls[1], "metadata": {"probability": 0.78}},
         ],
     }
     nextpage = {"nextPage": {"url": nextpage_url}}
     items = {
         "items": [
-            {"url": item_urls[0]},
-            {"url": item_urls[1]},
+            {"url": item_urls[0], "metadata": {"probability": 0.99}},
+            {"url": item_urls[1], "metadata": {"probability": 0.83}},
         ],
     }
 
@@ -86,8 +86,10 @@ def test_crawl():
     assert len(requests) == 2
     assert requests[0].url == subcategory_urls[0]
     assert requests[0].callback == spider.parse_navigation
+    assert requests[0].priority == 95
     assert requests[1].url == subcategory_urls[1]
     assert requests[1].callback == spider.parse_navigation
+    assert requests[1].priority == 78
 
     # subcategories + nextpage
     navigation = ProductNavigation.from_dict(
@@ -102,6 +104,7 @@ def test_crawl():
     urls = {request.url for request in requests}
     assert urls == {*subcategory_urls, nextpage_url}
     assert all(request.callback == spider.parse_navigation for request in requests)
+    assert [request.priority for request in requests] == [100, 95, 78]
 
     # subcategories + nextpage + items
     navigation = ProductNavigation.from_dict(
@@ -120,6 +123,7 @@ def test_crawl():
             assert request.callback == spider.parse_product
         else:
             assert request.callback == spider.parse_navigation
+    assert [request.priority for request in requests] == [199, 183, 100, 95, 78]
 
     # nextpage + items
     navigation = ProductNavigation.from_dict(
@@ -137,6 +141,7 @@ def test_crawl():
     assert requests[1].callback == spider.parse_product
     assert requests[2].url == nextpage_url
     assert requests[2].callback == spider.parse_navigation
+    assert [request.priority for request in requests] == [199, 183, 100]
 
     # subcategories + items
     navigation = ProductNavigation.from_dict(
@@ -156,6 +161,7 @@ def test_crawl():
     assert requests[2].callback == spider.parse_navigation
     assert requests[3].url == subcategory_urls[1]
     assert requests[3].callback == spider.parse_navigation
+    assert [request.priority for request in requests] == [199, 183, 95, 78]
 
     # nextpage
     navigation = ProductNavigation.from_dict(
@@ -168,6 +174,7 @@ def test_crawl():
     assert len(requests) == 1
     assert requests[0].url == nextpage_url
     assert requests[0].callback == spider.parse_navigation
+    assert [request.priority for request in requests] == [100]
 
     # items
     navigation = ProductNavigation.from_dict(
@@ -182,6 +189,7 @@ def test_crawl():
     assert requests[0].callback == spider.parse_product
     assert requests[1].url == item_urls[1]
     assert requests[1].callback == spider.parse_product
+    assert [request.priority for request in requests] == [199, 183]
 
 
 @pytest.mark.parametrize(
