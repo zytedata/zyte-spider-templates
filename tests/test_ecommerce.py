@@ -326,7 +326,10 @@ def test_metadata():
                             "title": "Navigation",
                         },
                         "pagination_only": {
-                            "description": "Follow pagination and product detail pages.",
+                            "description": (
+                                "Follow pagination and product detail pages. SubCategory links are ignored. "
+                                "Use this when some subCategory links are misidentified by ML-extraction."
+                            ),
                             "title": "Pagination Only",
                         },
                     },

@@ -41,7 +41,10 @@ class EcommerceSpiderParams(BaseSpiderParams):
                 },
                 EcommerceCrawlStrategy.pagination_only: {
                     "title": "Pagination Only",
-                    "description": "Follow pagination and product detail pages.",
+                    "description": (
+                        "Follow pagination and product detail pages. SubCategory links are ignored. "
+                        "Use this when some subCategory links are misidentified by ML-extraction."
+                    ),
                 },
             },
         },
