@@ -8,4 +8,4 @@ ignore_missing_imports = true
 no_warn_no_return = true
 
 [tool.black]
-target-version = ["py38", "py39", "py310", "py311"]
+target-version = ["py38", "py39", "py310", "py311", "py312"]
