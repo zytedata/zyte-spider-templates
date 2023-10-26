@@ -14,6 +14,10 @@ zyte-spider-templates
    :target: https://github.com/zytedata/zyte-spider-templates/actions/workflows/test.yml
    :alt: Automated tests
 
+.. image:: https://codecov.io/github/zytedata/zyte-spider-templates/coverage.svg?branch=main
+   :target: https://codecov.io/gh/zytedata/zyte-spider-templates
+   :alt: Coverage report
+
 
 Spider templates for automatic crawlers.
 
