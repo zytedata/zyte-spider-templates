@@ -183,6 +183,29 @@ def test_crawl():
     assert requests[1].url == item_urls[1]
     assert requests[1].callback == spider.parse_product
 
+    # Test parse_navigation() behavior on pagination_only crawl strategy.
+    spider = EcommerceSpider(
+        url="https://example.com/", crawl_strategy="pagination_only"
+    )
+
+    # nextpage + items
+    navigation = ProductNavigation.from_dict(
+        {
+            "url": url,
+            **subcategories,
+            **nextpage,
+            **items,
+        }
+    )
+    requests = list(spider.parse_navigation(response, navigation))
+    urls = {request.url for request in requests}
+    assert urls == {*item_urls, nextpage_url}
+    for request in requests:
+        if request.url in item_urls:
+            assert request.callback == spider.parse_product
+        else:
+            assert request.callback == spider.parse_navigation
+
 
 @pytest.mark.parametrize(
     "probability,has_item", ((0.9, True), (0.09, False), (0.1, True), (None, True))
@@ -292,7 +315,7 @@ def test_metadata():
                     "title": "Crawl strategy",
                     "description": "Determines how the start URL and follow-up URLs are crawled.",
                     "type": "string",
-                    "enum": ["navigation", "full"],
+                    "enum": ["full", "navigation", "pagination_only"],
                     "enumMeta": {
                         "full": {
                             "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
@@ -301,6 +324,10 @@ def test_metadata():
                         "navigation": {
                             "description": "Follow pagination, subcategories, and product detail pages.",
                             "title": "Navigation",
+                        },
+                        "pagination_only": {
+                            "description": "Follow pagination and product detail pages.",
+                            "title": "Pagination Only",
                         },
                     },
                 },
