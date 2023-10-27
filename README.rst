@@ -21,6 +21,14 @@ zyte-spider-templates
 
 Spider templates for automatic crawlers.
 
+This library contains Scrapy_ spiders that are intended to be used with the
+Zyte features such as `Zyte API`_. There is a `sample Scrapy project`_ for this
+library that you can use as a starting point for your own projects.
+
+.. _Scrapy: https://docs.scrapy.org/
+.. _Zyte API: https://docs.zyte.com/zyte-api/get-started.html
+.. _sample Scrapy project: https://github.com/zytedata/zyte-spider-templates-project
+
 
 Requirements
 ============
@@ -35,3 +43,10 @@ Installation
 .. code-block::
 
     pip install zyte-spider-templates
+
+
+Spiders
+=======
+
+* ``EcommerceSpider``: a spider that can scrape products from any e-commerce
+  website.
