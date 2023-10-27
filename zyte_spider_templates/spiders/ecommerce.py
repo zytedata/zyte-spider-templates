@@ -141,7 +141,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         if navigation.nextPage:
             yield self.get_parse_navigation_request(
                 navigation.nextPage,
-                priority=self.ITEM_REQUEST_PRIORITY - 1,
+                priority=self._NEXT_PAGE_PRIORITY,
             )
 
         if self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only:

@@ -1,11 +1,11 @@
 from importlib.metadata import version
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Union
 
 import scrapy
 from pydantic import BaseModel, Field
 from scrapy.crawler import Crawler
 from scrapy.utils.url import parse_url
-from zyte_common_items import Request
+from zyte_common_items import ProbabilityRequest, Request
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -57,7 +57,7 @@ class BaseSpider(scrapy.Spider):
         "description": "Base template.",
     }
 
-    ITEM_REQUEST_PRIORITY: int = 10
+    _NEXT_PAGE_PRIORITY: int = 100
 
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
@@ -86,18 +86,20 @@ class BaseSpider(scrapy.Spider):
         return spider
 
     @staticmethod
-    def get_parse_navigation_request_priority(request: Request) -> int:
+    def get_parse_navigation_request_priority(
+        request: Union[ProbabilityRequest, Request]
+    ) -> int:
         if (
             not hasattr(request, "metadata")
             or not request.metadata
             or request.metadata.probability is None
         ):
             return 0
-        return int(10 * request.metadata.probability)
+        return int(100 * request.metadata.probability)
 
     def get_parse_navigation_request(
         self,
-        request: Request,
+        request: Union[ProbabilityRequest, Request],
         callback: Optional[Callable] = None,
         page_params: Optional[Dict[str, Any]] = None,
         priority: Optional[int] = None,
@@ -109,11 +111,15 @@ class BaseSpider(scrapy.Spider):
             meta={"page_params": page_params or {}},
         )
 
-    def get_parse_product_request_priority(self, request: Request) -> int:
-        return self.ITEM_REQUEST_PRIORITY
+    def get_parse_product_request_priority(self, request: ProbabilityRequest) -> int:
+        # TODO: Simplify when https://github.com/zytedata/zyte-common-items/pull/64 is released
+        probability = 0
+        if metadata := getattr(request, "metadata", None):
+            probability = metadata.probability
+        return int(100 * probability) + self._NEXT_PAGE_PRIORITY
 
     def get_parse_product_request(
-        self, request: Request, callback: Optional[Callable] = None
+        self, request: ProbabilityRequest, callback: Optional[Callable] = None
     ) -> scrapy.Request:
         callback = callback or self.parse_product
         return request.to_scrapy(
