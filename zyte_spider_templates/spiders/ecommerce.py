@@ -14,8 +14,9 @@ from zyte_spider_templates.spiders.base import BaseSpider, BaseSpiderParams
 
 
 class EcommerceCrawlStrategy(str, Enum):
-    navigation: str = "navigation"
     full: str = "full"
+    navigation: str = "navigation"
+    pagination_only: str = "pagination_only"
 
 
 class ExtractFrom(str, Enum):
@@ -30,13 +31,20 @@ class EcommerceSpiderParams(BaseSpiderParams):
         default=EcommerceCrawlStrategy.navigation,
         json_schema_extra={
             "enumMeta": {
+                EcommerceCrawlStrategy.full: {
+                    "title": "Full",
+                    "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+                },
                 EcommerceCrawlStrategy.navigation: {
                     "title": "Navigation",
                     "description": "Follow pagination, subcategories, and product detail pages.",
                 },
-                EcommerceCrawlStrategy.full: {
-                    "title": "Full",
-                    "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+                EcommerceCrawlStrategy.pagination_only: {
+                    "title": "Pagination Only",
+                    "description": (
+                        "Follow pagination and product detail pages. SubCategory links are ignored. "
+                        "Use this when some subCategory links are misidentified by ML-extraction."
+                    ),
                 },
             },
         },
@@ -135,13 +143,15 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 navigation.nextPage,
                 priority=self.ITEM_REQUEST_PRIORITY - 1,
             )
-        for request in navigation.subCategories or []:
-            if "[heuristics]" in (request.name or ""):
-                yield self.get_parse_navigation_request(
-                    request, page_params=page_params
-                )
-            else:
-                yield self.get_parse_navigation_request(request)
+
+        if self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only:
+            for request in navigation.subCategories or []:
+                if "[heuristics]" in (request.name or ""):
+                    yield self.get_parse_navigation_request(
+                        request, page_params=page_params
+                    )
+                else:
+                    yield self.get_parse_navigation_request(request)
 
     def parse_product(
         self, response: DummyResponse, product: Product
