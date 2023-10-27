@@ -156,9 +156,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     def parse_product(
         self, response: DummyResponse, product: Product
     ) -> Iterable[Product]:
-        probability = None
-        if metadata := getattr(product, "metadata", None):
-            probability = metadata.probability
+        probability = product.get_probability()
 
         # TODO: convert to a configurable parameter later on after the launch
         if probability is None or probability >= 0.1:
