@@ -21,9 +21,10 @@ zyte-spider-templates
 
 Spider templates for automatic crawlers.
 
-This library contains Scrapy_ spiders that are intended to be used with the
-Zyte features such as `Zyte API`_. There is a `sample Scrapy project`_ for this
-library that you can use as a starting point for your own projects.
+This library contains Scrapy_ spider templates. They can be used out of the box
+with the Zyte features such as `Zyte API`_ or modified to be used standalone.
+There is a `sample Scrapy project`_ for this library that you can use as a
+starting point for your own projects.
 
 .. _Scrapy: https://docs.scrapy.org/
 .. _Zyte API: https://docs.zyte.com/zyte-api/get-started.html
