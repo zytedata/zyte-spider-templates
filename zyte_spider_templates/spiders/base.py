@@ -112,10 +112,7 @@ class BaseSpider(scrapy.Spider):
         )
 
     def get_parse_product_request_priority(self, request: ProbabilityRequest) -> int:
-        # TODO: Simplify when https://github.com/zytedata/zyte-common-items/pull/64 is released
-        probability = 0
-        if metadata := getattr(request, "metadata", None):
-            probability = metadata.probability
+        probability = request.get_probability() or 0
         return int(100 * probability) + self._NEXT_PAGE_PRIORITY
 
     def get_parse_product_request(
