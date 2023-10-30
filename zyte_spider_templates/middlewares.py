@@ -20,6 +20,7 @@ class CrawlingLogsMiddleware:
     The motivation for such logs is to easily debug the crawling behavior and see
     what went wrong. Apart from high-level summarized information, this also includes
     JSON-formatted data so that it can easily be parsed later on.
+
     Some notes:
     - ``scrapy.utils.request.request_fingerprint`` is used to match what
       https://github.com/scrapinghub/scrapinghub-entrypoint-scrapy uses.
@@ -55,6 +56,8 @@ class CrawlingLogsMiddleware:
             "current": {
                 "url": response.url,
                 "request_url": response.request.url,
+                # TODO: update this when the following is updated to use the same fingerprinter
+                # with Scrapy: https://github.com/scrapinghub/scrapinghub-entrypoint-scrapy/
                 "request_fingerprint": request_fingerprint(response.request),
                 "page_type": current_page_type,
                 "probability": response.meta.get("crawling_logs", {}).get(

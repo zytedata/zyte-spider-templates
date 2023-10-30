@@ -105,25 +105,16 @@ class BaseSpider(scrapy.Spider):
         priority: Optional[int] = None,
         page_type: str = "productNavigation",
     ) -> scrapy.Request:
-        if "[heuristics]" not in (request.name or ""):
-            page_params = None
-        else:
-            page_type = "productNavigation-heuristics"
-
         callback = callback or self.parse_navigation
-        priority = priority or self.get_parse_navigation_request_priority(request)
-        name = request.name or ""
-
-        probability = request.get_probability()
 
         return request.to_scrapy(
             callback=callback,
-            priority=priority,
+            priority=priority or self.get_parse_navigation_request_priority(request),
             meta={
                 "page_params": page_params or {},
                 "crawling_logs": {
-                    "name": name.replace("[heuristics]", ""),
-                    "probability": probability,
+                    "name": request.name or "",
+                    "probability": request.get_probability(),
                     "page_type": page_type,
                 },
             },
@@ -136,8 +127,19 @@ class BaseSpider(scrapy.Spider):
         page_params: Optional[Dict[str, Any]] = None,
         priority: Optional[int] = None,
     ) -> scrapy.Request:
+        page_type = "subCategories"
+        request_name = request.name or ""
+        if "[heuristics]" not in request_name:
+            page_params = None
+        else:
+            page_type = "productNavigation-heuristics"
+            request.name = request_name.replace("[heuristics]", "").strip()
         return self.get_parse_navigation_request(
-            request, callback, page_params, priority, "subCategories"
+            request,
+            callback,
+            page_params,
+            priority,
+            page_type,
         )
 
     def get_nextpage_request(
