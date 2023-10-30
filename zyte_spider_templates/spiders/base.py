@@ -103,12 +103,51 @@ class BaseSpider(scrapy.Spider):
         callback: Optional[Callable] = None,
         page_params: Optional[Dict[str, Any]] = None,
         priority: Optional[int] = None,
+        page_type: str = "productNavigation",
     ) -> scrapy.Request:
+        if "[heuristics]" not in (request.name or ""):
+            page_params = None
+        else:
+            page_type = "productNavigation-heuristics"
+
         callback = callback or self.parse_navigation
+        priority = priority or self.get_parse_navigation_request_priority(request)
+        name = request.name or ""
+
+        probability = request.get_probability()
+
         return request.to_scrapy(
             callback=callback,
-            priority=priority or self.get_parse_navigation_request_priority(request),
-            meta={"page_params": page_params or {}},
+            priority=priority,
+            meta={
+                "page_params": page_params or {},
+                "crawling_logs": {
+                    "name": name.replace("[heuristics]", ""),
+                    "probability": probability,
+                    "page_type": page_type,
+                },
+            },
+        )
+
+    def get_subcategory_request(
+        self,
+        request: Union[ProbabilityRequest, Request],
+        callback: Optional[Callable] = None,
+        page_params: Optional[Dict[str, Any]] = None,
+        priority: Optional[int] = None,
+    ) -> scrapy.Request:
+        return self.get_parse_navigation_request(
+            request, callback, page_params, priority, "subCategories"
+        )
+
+    def get_nextpage_request(
+        self,
+        request: Union[ProbabilityRequest, Request],
+        callback: Optional[Callable] = None,
+        page_params: Optional[Dict[str, Any]] = None,
+    ):
+        return self.get_parse_navigation_request(
+            request, callback, page_params, self._NEXT_PAGE_PRIORITY, "nextPage"
         )
 
     def get_parse_product_request_priority(self, request: ProbabilityRequest) -> int:
@@ -119,7 +158,18 @@ class BaseSpider(scrapy.Spider):
         self, request: ProbabilityRequest, callback: Optional[Callable] = None
     ) -> scrapy.Request:
         callback = callback or self.parse_product
+        priority = self.get_parse_product_request_priority(request)
+
+        probability = request.get_probability()
+
         return request.to_scrapy(
             callback=callback,
-            priority=self.get_parse_product_request_priority(request),
+            priority=priority,
+            meta={
+                "crawling_logs": {
+                    "name": request.name,
+                    "probability": probability,
+                    "page_type": "product",
+                }
+            },
         )

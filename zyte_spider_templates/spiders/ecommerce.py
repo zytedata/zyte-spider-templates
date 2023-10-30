@@ -9,7 +9,6 @@ from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import Product, ProductNavigation
 
-from zyte_spider_templates.formatters import product_navigation_report
 from zyte_spider_templates.spiders.base import BaseSpider, BaseSpiderParams
 
 
@@ -126,32 +125,23 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             callback=self.parse_navigation,
             meta={
                 "page_params": page_params,
+                "crawling_logs": {"page_type": "productNavigation"},
             },
         )
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
     ) -> Iterable[Request]:
-        self.logger.info(product_navigation_report(navigation))
-
         page_params = response.meta.get("page_params")
 
         for request in navigation.items or []:
             yield self.get_parse_product_request(request)
         if navigation.nextPage:
-            yield self.get_parse_navigation_request(
-                navigation.nextPage,
-                priority=self._NEXT_PAGE_PRIORITY,
-            )
+            yield self.get_nextpage_request(navigation.nextPage)
 
         if self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only:
             for request in navigation.subCategories or []:
-                if "[heuristics]" in (request.name or ""):
-                    yield self.get_parse_navigation_request(
-                        request, page_params=page_params
-                    )
-                else:
-                    yield self.get_parse_navigation_request(request)
+                yield self.get_subcategory_request(request, page_params=page_params)
 
     def parse_product(
         self, response: DummyResponse, product: Product
