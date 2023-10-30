@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.2.0 (YYYY-MM-DD)
+0.2.0 (2023-10-30)
 ------------------
 
 * Now requires ``zyte-common-items >= 0.12.0``.
