@@ -33,6 +33,8 @@ Installation
     pip install zyte-spider-templates
 
 
+.. _config:
+
 Configuration
 =============
 
