@@ -19,6 +19,8 @@ zyte-spider-templates
    :alt: Coverage report
 
 
+.. description starts
+
 Spider templates for automatic crawlers.
 
 This library contains Scrapy_ spider templates. They can be used out of the box
@@ -30,6 +32,7 @@ starting point for your own projects.
 .. _Zyte API: https://docs.zyte.com/zyte-api/get-started.html
 .. _sample Scrapy project: https://github.com/zytedata/zyte-spider-templates-project
 
+.. description ends
 
 Requirements
 ============
