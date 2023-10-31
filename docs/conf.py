@@ -27,4 +27,8 @@ intersphinx_mapping = {
         "https://docs.scrapy.org/en/latest",
         None,
     ),
+    "scrapy-poet": (
+        "https://scrapy-poet.readthedocs.io/en/stable",
+        None,
+    ),
 }

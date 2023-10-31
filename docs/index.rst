@@ -7,6 +7,28 @@ zyte-spider-templates documentation
    :end-before: .. description ends
 
 .. toctree::
-   :maxdepth: 1
+   :caption: First steps
+   :hidden:
+
+   setup
+
+.. toctree::
+   :caption: Templates
+   :hidden:
+
+   templates/index
+   E-commerce <templates/e-commerce>
+
+.. toctree::
+   :caption: Customization
+   :hidden:
+
+   customization/index
+   Crawling <customization/crawling>
+   Parsing <customization/parsing>
+
+.. toctree::
+   :caption: All the rest
+   :hidden:
 
    changes
