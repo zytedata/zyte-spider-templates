@@ -12,6 +12,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
+        "enum_tools",
         "pydantic>=2",
         "scrapy>=2.11.0",
         "scrapy-poet>=0.16.0",
