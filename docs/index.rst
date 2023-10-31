@@ -24,8 +24,8 @@ zyte-spider-templates documentation
    :hidden:
 
    customization/index
-   Crawling <customization/crawling>
-   Parsing <customization/parsing>
+   customization/spiders
+   customization/page-objects
 
 .. toctree::
    :caption: All the rest
