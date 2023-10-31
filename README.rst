@@ -34,23 +34,5 @@ starting point for your own projects.
 
 .. description ends
 
-Requirements
-============
-
-* Python 3.8+
-* Scrapy 2.11+
-
-
-Installation
-============
-
-.. code-block::
-
-    pip install zyte-spider-templates
-
-
-Spiders
-=======
-
-* ``EcommerceSpider``: a spider that can scrape products from any e-commerce
-  website.
+* Documentation: https://zyte-spider-templates.readthedocs.io/en/latest/
+* License: BSD 3-clause
