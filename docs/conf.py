@@ -43,4 +43,5 @@ intersphinx_mapping = {
     ),
 }
 
+autodoc_pydantic_model_show_field_summary = False
 autodoc_pydantic_model_show_json = False
