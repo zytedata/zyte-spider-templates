@@ -64,8 +64,7 @@ The following additional settings are recommended:
 -   Set :setting:`SCHEDULER_DISK_QUEUE <scrapy:SCHEDULER_DISK_QUEUE>` to
     ``"scrapy.squeues.PickleFifoDiskQueue"`` and
     :setting:`SCHEDULER_MEMORY_QUEUE <scrapy:SCHEDULER_MEMORY_QUEUE>` to
-    ``"scrapy.squeues.FifoMemoryQueue"``, for better request scheduling
-    performance.
+    ``"scrapy.squeues.FifoMemoryQueue"``, for better request priority handling.
 
 For an example of a properly configured ``settings.py`` file, see `the one
 in zyte-spider-templates-project`_.
