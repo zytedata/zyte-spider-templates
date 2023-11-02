@@ -32,8 +32,6 @@ extract that field. For example:
 .. code-block:: python
     :caption: page_objects/books_toscrape_com.py
 
-    import re
-
     import attrs
     from number_parser import parse_number
     from web_poet import HttpResponse, field, handle_urls
