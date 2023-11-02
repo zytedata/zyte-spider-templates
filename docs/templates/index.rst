@@ -16,7 +16,7 @@ the :ref:`e-commerce spider <e-commerce>` spider as follows:
 
 .. code-block:: shell
 
-    scrapy crawl e-commerce -a url="https://books.toscrape.com"
+    scrapy crawl ecommerce -a url="https://books.toscrape.com"
 
 Spider templates support additional parameters beyond ``url``. See the
 documentation of each specific spider for details.

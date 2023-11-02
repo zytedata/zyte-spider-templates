@@ -1,15 +1,15 @@
 .. _e-commerce:
 
-===========================================
-E-commerce spider template (``e-commerce``)
-===========================================
+==========================================
+E-commerce spider template (``ecommerce``)
+==========================================
 
 Basic use
 =========
 
 .. code-block:: shell
 
-    scrapy crawl e-commerce -a url="https://books.toscrape.com"
+    scrapy crawl ecommerce -a url="https://books.toscrape.com"
 
 Parameters
 ==========
