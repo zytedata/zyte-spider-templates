@@ -25,6 +25,7 @@ For example, to keep the upstream ``title`` but change the ``description``:
 
     from zyte_spider_templates import EcommerceSpider
 
+
     class MySpider(EcommerceSpider):
         name = "my_spider"
         metadata = {

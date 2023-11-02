@@ -108,7 +108,6 @@ To extract a new field for one or more websites:
 
         @handle_urls("books.toscrape.com")
         class BookPage(AutoProductPage, Returns[CustomProduct]):
-
             @field
             async def stock(self):
                 for entry in await self.additionalProperties:
