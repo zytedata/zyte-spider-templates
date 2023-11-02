@@ -66,6 +66,10 @@ class EcommerceSpiderParams(BaseSpiderParams):
     )
     extract_from: Optional[ExtractFrom] = Field(
         title="Extraction source",
+        description=(
+            "Whether to perform extraction using a browser request "
+            "(browserHtml) or an HTTP request (httpResponseBody)."
+        ),
         default=None,
         json_schema_extra={
             "enumMeta": {
