@@ -89,7 +89,7 @@ not follow navigation at all:
     from typing import Iterable
 
     from scrapy import Request
-    from zyte_spider_templates import EcommerceSpider,
+    from zyte_spider_templates import EcommerceSpider
 
 
     class MySpider(EcommerceSpider):
