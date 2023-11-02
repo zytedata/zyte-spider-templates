@@ -40,7 +40,7 @@ intersphinx_mapping = {
     "zyte-common-items": (
         "https://zyte-common-items.readthedocs.io/en/latest",
         None,
-    )
+    ),
 }
 
 autodoc_pydantic_model_show_json = False
