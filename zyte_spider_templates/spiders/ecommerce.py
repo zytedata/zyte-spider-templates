@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Any, Dict, Iterable, Optional
 
 import scrapy
-from enum_tools.documentation import document_enum
 from pydantic import Field
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -10,6 +9,7 @@ from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import Product, ProductNavigation
 
+from zyte_spider_templates.documentation import document_enum
 from zyte_spider_templates.formatters import product_navigation_report
 from zyte_spider_templates.spiders.base import BaseSpider, BaseSpiderParams
 
