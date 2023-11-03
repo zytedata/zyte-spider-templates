@@ -66,6 +66,10 @@ The following additional settings are recommended:
     :setting:`SCHEDULER_MEMORY_QUEUE <scrapy:SCHEDULER_MEMORY_QUEUE>` to
     ``"scrapy.squeues.FifoMemoryQueue"``, for better request priority handling.
 
+-   Update :setting:`SPIDER_MIDDLEWARES <scrapy:SPIDER_MIDDLEWARES>` to include
+    ``"zyte_crawlers.middlewares.CrawlingLogsMiddleware": 1000``, to log crawl
+    data in JSON format for debugging purposes.
+
 For an example of a properly configured ``settings.py`` file, see `the one
 in zyte-spider-templates-project`_.
 
