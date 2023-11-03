@@ -1,6 +1,16 @@
 Changes
 =======
 
+0.3.0 (YYYY-MM-DD)
+------------------
+
+* Added documentation.
+
+* Added a middleware that logs information about the crawl in JSON format,
+  :class:`zyte_spider_templates.middlewares.CrawlingLogsMiddleware`. This
+  replaces the old crawling information that was difficult to parse using
+  regular expressions.
+
 0.2.0 (2023-10-30)
 ------------------
 
