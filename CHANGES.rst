@@ -6,8 +6,10 @@ Changes
 
 * Added documentation.
 
-* Added a middleware that outputs details about the crawling,
-  :class:`zyte_spider_templates.middlewares.CrawlingLogsMiddleware`.
+* Added a middleware that logs information about the crawl in JSON format,
+  :class:`zyte_spider_templates.middlewares.CrawlingLogsMiddleware`. This
+  replaces the old crawling information that was difficult to parse using
+  regular expressions.
 
 0.2.0 (2023-10-30)
 ------------------
