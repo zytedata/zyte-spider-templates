@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.3.0 (YYYY-MM-DD)
+0.3.0 (2023-11-03)
 ------------------
 
 * Added documentation.
