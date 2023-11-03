@@ -39,18 +39,19 @@ class CrawlingLogsMiddleware:
 
     def process_spider_output(self, response, result, spider):
         result = list(result)
+        crawl_logs = self.crawl_logs(response, result)
+        logger.info(crawl_logs)
+        return result
+
+    def crawl_logs(self, response, result):
+        current_page_type = response.meta.get("crawling_logs", {}).get("page_type")
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
                 category=ScrapyDeprecationWarning,
                 message="Call to deprecated function scrapy.utils.request.request_fingerprint()*",
             )
-            crawl_logs = self.crawl_logs(response, result)
-        logger.info(crawl_logs)
-        return result
-
-    def crawl_logs(self, response, result):
-        current_page_type = response.meta.get("crawling_logs", {}).get("page_type")
+            fingerprint = request_fingerprint(response.request)
         data: Dict[str, Any] = {
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "current": {
@@ -58,7 +59,7 @@ class CrawlingLogsMiddleware:
                 "request_url": response.request.url,
                 # TODO: update this when the following is updated to use the same fingerprinter
                 # with Scrapy: https://github.com/scrapinghub/scrapinghub-entrypoint-scrapy/
-                "request_fingerprint": request_fingerprint(response.request),
+                "request_fingerprint": fingerprint,
                 "page_type": current_page_type,
                 "probability": response.meta.get("crawling_logs", {}).get(
                     "probability"
@@ -76,11 +77,18 @@ class CrawlingLogsMiddleware:
                     continue
 
                 crawling_logs = entry.meta.get("crawling_logs", {})
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        category=ScrapyDeprecationWarning,
+                        message="Call to deprecated function scrapy.utils.request.request_fingerprint()*",
+                    )
+                    entry_fingerprint = request_fingerprint(entry)
                 crawling_logs.update(
                     {
                         "request_url": entry.url,
                         "request_priority": entry.priority,
-                        "request_fingerprint": request_fingerprint(entry),
+                        "request_fingerprint": entry_fingerprint,
                     }
                 )
 

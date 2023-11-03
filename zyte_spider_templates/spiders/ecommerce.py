@@ -9,18 +9,33 @@ from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import Product, ProductNavigation
 
+from zyte_spider_templates.documentation import document_enum
 from zyte_spider_templates.spiders.base import BaseSpider, BaseSpiderParams
 
 
+@document_enum
 class EcommerceCrawlStrategy(str, Enum):
     full: str = "full"
+    """Follow most links within the domain of URL in an attempt to discover and
+    extract as many products as possible."""
+
     navigation: str = "navigation"
+    """Follow pagination, subcategories, and product detail pages."""
+
     pagination_only: str = "pagination_only"
+    """Follow pagination and product detail pages. SubCategory links are
+    ignored. Use this when some subCategory links are misidentified by
+    ML-extraction."""
 
 
+@document_enum
 class ExtractFrom(str, Enum):
     httpResponseBody: str = "httpResponseBody"
+    """Use HTTP responses. Cost-efficient and fast extraction method, which
+    works well on many websites."""
+
     browserHtml: str = "browserHtml"
+    """Use browser rendering. Often provides the best quality."""
 
 
 class EcommerceSpiderParams(BaseSpiderParams):
@@ -50,6 +65,10 @@ class EcommerceSpiderParams(BaseSpiderParams):
     )
     extract_from: Optional[ExtractFrom] = Field(
         title="Extraction source",
+        description=(
+            "Whether to perform extraction using a browser request "
+            "(browserHtml) or an HTTP request (httpResponseBody)."
+        ),
         default=None,
         json_schema_extra={
             "enumMeta": {

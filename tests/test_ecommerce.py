@@ -346,6 +346,10 @@ def test_metadata():
                     "anyOf": [{"type": "string"}, {"type": "null"}],
                     "default": None,
                     "title": "Extraction source",
+                    "description": (
+                        "Whether to perform extraction using a browser request "
+                        "(browserHtml) or an HTTP request (httpResponseBody)."
+                    ),
                     "enum": ["httpResponseBody", "browserHtml"],
                     "enumMeta": {
                         "httpResponseBody": {
