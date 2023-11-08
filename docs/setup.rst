@@ -70,6 +70,14 @@ The following additional settings are recommended:
     ``"zyte_crawlers.middlewares.CrawlingLogsMiddleware": 1000``, to log crawl
     data in JSON format for debugging purposes.
 
+-   Update :setting:`DOWNLOADER_MIDDLEWARES <scrapy:DOWNLOADER_MIDDLEWARES>` to
+    include
+    ``"zyte_spider_templates.middlewares.ForbiddenDomainDownloaderMiddleware":
+    1100`` and :setting:`SPIDER_MIDDLEWARES <scrapy:SPIDER_MIDDLEWARES>` to
+    include
+    ``"zyte_spider_templates.middlewares.ForbiddenDomainSpiderMiddleware":
+    100``.
+
 For an example of a properly configured ``settings.py`` file, see `the one
 in zyte-spider-templates-project`_.
 

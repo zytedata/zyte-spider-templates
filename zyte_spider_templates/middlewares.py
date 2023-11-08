@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Dict
 
 from scrapy import Request
-from scrapy.exceptions import CloseSpider, ScrapyDeprecationWarning
+from scrapy.exceptions import ScrapyDeprecationWarning
 from scrapy.utils.request import request_fingerprint
 from zyte_api.aio.errors import RequestError
 
@@ -112,7 +112,7 @@ class CrawlingLogsMiddleware:
         return "\n".join(report)
 
 
-start_requests_processed = object()
+_start_requests_processed = object()
 
 
 class ForbiddenDomainSpiderMiddleware:
@@ -133,7 +133,7 @@ class ForbiddenDomainSpiderMiddleware:
             request.meta["is_start_request"] = True
             yield request
             count += 1
-        self._send_signal(start_requests_processed, count=count)
+        self._send_signal(_start_requests_processed, count=count)
 
 
 class ForbiddenDomainDownloaderMiddleware:
@@ -148,12 +148,13 @@ class ForbiddenDomainDownloaderMiddleware:
         self._failed_start_request_count = 0
         self._total_start_request_count = 0
         crawler.signals.connect(
-            self.start_requests_processed, signal=start_requests_processed
+            self._start_requests_processed, signal=_start_requests_processed
         )
+        self._crawler = crawler
 
-    def start_requests_processed(self, count):
+    def _start_requests_processed(self, count):
         self._total_start_request_count = count
-        self.maybe_close()  # TODO: Ensure that raising here works.
+        self._maybe_close()
 
     def process_exception(self, request, exception, spider):
         if (
@@ -164,16 +165,17 @@ class ForbiddenDomainDownloaderMiddleware:
             return
 
         self._failed_start_request_count += 1
+        self._maybe_close()
 
+    def _maybe_close(self):
         if not self._total_start_request_count:
             return
-        else:
-            self.maybe_close()  # TODO: Ensure that raising here works.
-
-    def maybe_close(self):
-        if self._failed_start_request_count >= self._total_start_request_count:
-            logger.error(
-                "Stopping the spider, all start request failed because they "
-                "were pointing to a domain forbidden by Zyte API."
-            )
-            raise CloseSpider("failed-forbidden-domain")
+        if self._failed_start_request_count < self._total_start_request_count:
+            return
+        logger.error(
+            "Stopping the spider, all start request failed because they "
+            "were pointing to a domain forbidden by Zyte API."
+        )
+        self._crawler.engine.close_spider(
+            self._crawler.spider, "failed-forbidden-domain"
+        )
