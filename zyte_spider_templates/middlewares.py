@@ -5,8 +5,9 @@ from datetime import datetime
 from typing import Any, Dict
 
 from scrapy import Request
-from scrapy.exceptions import ScrapyDeprecationWarning
+from scrapy.exceptions import CloseSpider, ScrapyDeprecationWarning
 from scrapy.utils.request import request_fingerprint
+from zyte_api.aio.errors import RequestError
 
 logger = logging.getLogger(__name__)
 
@@ -109,3 +110,70 @@ class CrawlingLogsMiddleware:
             json.dumps(data, indent=2),
         ]
         return "\n".join(report)
+
+
+start_requests_processed = object()
+
+
+class ForbiddenDomainSpiderMiddleware:
+    """Marks start requests and reports to
+    :class:`ForbiddenDomainDownloaderMiddleware` the number of them once all
+    have been processed."""
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler)
+
+    def __init__(self, crawler):
+        self._send_signal = crawler.signals.send_catch_log
+
+    def process_start_requests(self, start_requests, spider):
+        count = 0
+        for request in start_requests:
+            request.meta["is_start_request"] = True
+            yield request
+            count += 1
+        self._send_signal(start_requests_processed, count=count)
+
+
+class ForbiddenDomainDownloaderMiddleware:
+    """Closes the spider with ``failed-forbidden-domain`` as close reason if
+    all start requests get a 451 response from Zyte API."""
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler)
+
+    def __init__(self, crawler):
+        self._failed_start_request_count = 0
+        self._total_start_request_count = 0
+        crawler.signals.connect(
+            self.start_requests_processed, signal=start_requests_processed
+        )
+
+    def start_requests_processed(self, count):
+        self._total_start_request_count = count
+        self.maybe_close()  # TODO: Ensure that raising here works.
+
+    def process_exception(self, request, exception, spider):
+        if (
+            not request.meta.get("is_start_request")
+            or not isinstance(exception, RequestError)
+            or exception.status != 451
+        ):
+            return
+
+        self._failed_start_request_count += 1
+
+        if not self._total_start_request_count:
+            return
+        else:
+            self.maybe_close()  # TODO: Ensure that raising here works.
+
+    def maybe_close(self):
+        if self._failed_start_request_count >= self._total_start_request_count:
+            logger.error(
+                "Stopping the spider, all start request failed because they "
+                "were pointing to a domain forbidden by Zyte API."
+            )
+            raise CloseSpider("failed-forbidden-domain")
