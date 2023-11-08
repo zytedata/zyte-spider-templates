@@ -37,7 +37,13 @@ class BaseSpiderParams(BaseModel):
         },
     )
     max_requests: Optional[int] = Field(
-        description="The max number of Zyte API requests allowed for the crawl.",
+        description=(
+            "The maximum number of Zyte API requests allowed for the crawl.\n"
+            "\n"
+            "Requests with error responses that cannot be retried or exceed "
+            "their retry limit also count here, but they incur in no costs "
+            "and do not increase the request count in Scrapy Cloud."
+        ),
         default=None,
         json_schema_extra={
             "widget": "request-limit",
