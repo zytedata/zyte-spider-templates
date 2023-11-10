@@ -49,6 +49,10 @@ class BaseSpiderParams(BaseModel):
             "widget": "request-limit",
         },
     )
+    allow_items_outside_domains: Optional[bool] = Field(
+        description="When set to True, items outside of the domains will be crawled.",
+        default=False,
+    )
 
 
 class BaseSpider(scrapy.Spider):
@@ -170,7 +174,7 @@ class BaseSpider(scrapy.Spider):
 
         probability = request.get_probability()
 
-        return request.to_scrapy(
+        scrapy_request = request.to_scrapy(
             callback=callback,
             priority=priority,
             meta={
@@ -181,3 +185,7 @@ class BaseSpider(scrapy.Spider):
                 }
             },
         )
+        if self.args.allow_items_outside_domains:
+            scrapy_request.meta["allow_offsite"] = True
+
+        return scrapy_request

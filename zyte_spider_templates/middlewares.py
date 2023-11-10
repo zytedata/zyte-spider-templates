@@ -4,8 +4,9 @@ import warnings
 from datetime import datetime
 from typing import Any, Dict
 
-from scrapy import Request
+from scrapy import Request, Spider
 from scrapy.exceptions import ScrapyDeprecationWarning
+from scrapy.spidermiddlewares.offsite import OffsiteMiddleware
 from scrapy.utils.request import request_fingerprint
 
 logger = logging.getLogger(__name__)
@@ -109,3 +110,13 @@ class CrawlingLogsMiddleware:
             json.dumps(data, indent=2),
         ]
         return "\n".join(report)
+
+
+class ItemOffsiteMiddleware(OffsiteMiddleware):
+    def _filter(self, request: Any, spider: Spider) -> bool:
+        if not isinstance(request, Request):
+            return True
+        if request.meta.get("allow_offsite"):
+            return True
+        result = super()._filter(request, spider)
+        return result
