@@ -70,6 +70,13 @@ The following additional settings are recommended:
     ``"zyte_crawlers.middlewares.CrawlingLogsMiddleware": 1000``, to log crawl
     data in JSON format for debugging purposes.
 
+-   Ensure that :class:`zyte_common_items.ZyteItemAdapter` is also configured::
+
+        from itemadapter import ItemAdapter
+        from zyte_common_items import ZyteItemAdapter
+
+        ItemAdapter.ADAPTER_CLASSES.appendleft(ZyteItemAdapter)
+
 For an example of a properly configured ``settings.py`` file, see `the one
 in zyte-spider-templates-project`_.
 
