@@ -126,9 +126,9 @@ To extract a new field for one or more websites:
         :caption: spiders/books_toscrape_com.py
 
         from scrapy_poet import DummyResponse
+        from zyte_spider_templates import EcommerceSpider
 
         from ..items import CustomProduct
-        from ..zyte_crawlers.spiders.ecommerce import EcommerceSpider
 
 
         class BooksToScrapeComSpider(EcommerceSpider):

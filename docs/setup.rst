@@ -67,8 +67,8 @@ The following additional settings are recommended:
     ``"scrapy.squeues.FifoMemoryQueue"``, for better request priority handling.
 
 -   Update :setting:`SPIDER_MIDDLEWARES <scrapy:SPIDER_MIDDLEWARES>` to include
-    ``"zyte_crawlers.middlewares.CrawlingLogsMiddleware": 1000``, to log crawl
-    data in JSON format for debugging purposes.
+    ``"zyte_spider_templates.middlewares.CrawlingLogsMiddleware": 1000``, to
+    log crawl data in JSON format for debugging purposes.
 
 -   Ensure that :class:`zyte_common_items.ZyteItemAdapter` is also configured::
 
