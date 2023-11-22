@@ -112,7 +112,7 @@ class CrawlingLogsMiddleware:
         return "\n".join(report)
 
 
-class ItemOffsiteMiddleware(OffsiteMiddleware):
+class AllowOffsiteMiddleware(OffsiteMiddleware):
     def _filter(self, request: Any, spider: Spider) -> bool:
         if not isinstance(request, Request):
             return True

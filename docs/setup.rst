@@ -71,9 +71,9 @@ The following additional settings are recommended:
     data in JSON format for debugging purposes.
 
 -   Update :setting:`SPIDER_MIDDLEWARES <scrapy:SPIDER_MIDDLEWARES>` to include
-    ``"zyte_crawlers.middlewares.ItemOffsiteMiddleware": 500`` and remove
-    ``"scrapy.spidermiddlewares.offsite.OffsiteMiddleware"``. This allows for the
-    ``allow_items_outside_domains`` spider parameter to work.
+    ``"zyte_crawlers.middlewares.AllowOffsiteMiddleware": 500`` and remove
+    ``"scrapy.spidermiddlewares.offsite.OffsiteMiddleware"``. This allows for
+    crawling item links outside of the domain.
 
 For an example of a properly configured ``settings.py`` file, see `the one
 in zyte-spider-templates-project`_.

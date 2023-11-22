@@ -6,8 +6,8 @@ from scrapy.statscollectors import StatsCollector
 from scrapy.utils.test import get_crawler
 
 from zyte_spider_templates.middlewares import (
+    AllowOffsiteMiddleware,
     CrawlingLogsMiddleware,
-    ItemOffsiteMiddleware,
 )
 
 
@@ -240,7 +240,7 @@ def test_item_offsite_middleware(req, allowed):
     spider = TestSpider()
     crawler = get_crawler(TestSpider)
     stats = StatsCollector(crawler)
-    middleware = ItemOffsiteMiddleware(stats)
+    middleware = AllowOffsiteMiddleware(stats)
     middleware.spider_opened(spider)
 
     result = list(middleware.process_spider_output(Response(""), [req], spider))

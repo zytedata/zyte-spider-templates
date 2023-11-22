@@ -400,12 +400,6 @@ def test_metadata():
                     "description": "Initial URL for the crawl.",
                     "pattern": r"^https?:\/\/[^:\/\s]+(:\d{1,5})?(\/[^\s]*)*(#[^\s]*)?$",
                 },
-                "allow_items_outside_domains": {
-                    "title": "Allow Items Outside Domains",
-                    "description": "When set to True, items outside of the domains will be crawled.",
-                    "default": False,
-                    "anyOf": [{"type": "boolean"}, {"type": "null"}],
-                },
             },
             "required": ["url"],
             "title": "EcommerceSpiderParams",
@@ -470,22 +464,8 @@ def test_get_parse_product_request():
     }
     crawler = get_crawler()
 
-    # Not allowing offsite item crawl by default.
+    # Crawls products outside of domains by default
     spider = EcommerceSpider.from_crawler(crawler, **base_kwargs)
-    request = ProbabilityRequest(url="https://example.com")
-    scrapy_request = spider.get_parse_product_request(request)
-    assert "allow_offsite" not in scrapy_request.meta
-
-    # Setting allow_items_outside_domains=False does not allow it.
-    spider = EcommerceSpider.from_crawler(crawler, **base_kwargs)
-    request = ProbabilityRequest(url="https://example.com")
-    scrapy_request = spider.get_parse_product_request(request)
-    assert "allow_offsite" not in scrapy_request.meta
-
-    # Setting allow_items_outside_domains=True allows it.
-    spider = EcommerceSpider.from_crawler(
-        crawler, allow_items_outside_domains=True, **base_kwargs
-    )
     request = ProbabilityRequest(url="https://example.com")
     scrapy_request = spider.get_parse_product_request(request)
     assert scrapy_request.meta.get("allow_offsite") is True
