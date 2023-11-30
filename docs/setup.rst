@@ -77,6 +77,11 @@ The following additional settings are recommended:
 
         ItemAdapter.ADAPTER_CLASSES.appendleft(ZyteItemAdapter)
 
+-   Update :setting:`SPIDER_MIDDLEWARES <scrapy:SPIDER_MIDDLEWARES>` to include
+    ``"zyte_spider_templates.middlewares.AllowOffsiteMiddleware": 500`` and
+    ``"scrapy.spidermiddlewares.offsite.OffsiteMiddleware": None``. This allows for
+    crawling item links outside of the domain.
+
 For an example of a properly configured ``settings.py`` file, see `the one
 in zyte-spider-templates-project`_.
 

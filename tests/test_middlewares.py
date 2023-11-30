@@ -1,7 +1,14 @@
+import pytest
 from freezegun import freeze_time
+from scrapy import Spider
 from scrapy.http import Request, Response
+from scrapy.statscollectors import StatsCollector
+from scrapy.utils.test import get_crawler
 
-from zyte_spider_templates.middlewares import CrawlingLogsMiddleware
+from zyte_spider_templates.middlewares import (
+    AllowOffsiteMiddleware,
+    CrawlingLogsMiddleware,
+)
 
 
 @freeze_time("2023-10-10 20:09:29")
@@ -215,3 +222,29 @@ def test_crawling_logs_middleware():
         "  }\n"
         "}"
     )
+
+
+@pytest.mark.parametrize(
+    "req,allowed",
+    (
+        (Request("https://example.com"), True),
+        (Request("https://outside-example.com"), False),
+        (Request("https://outside-example.com", meta={"allow_offsite": True}), True),
+    ),
+)
+def test_item_offsite_middleware(req, allowed):
+    class TestSpider(Spider):
+        name = "test"
+        allowed_domains = ("example.com",)
+
+    spider = TestSpider()
+    crawler = get_crawler(TestSpider)
+    stats = StatsCollector(crawler)
+    middleware = AllowOffsiteMiddleware(stats)
+    middleware.spider_opened(spider)
+
+    result = list(middleware.process_spider_output(Response(""), [req], spider))
+    if allowed:
+        assert result == [req]
+    else:
+        assert result == []

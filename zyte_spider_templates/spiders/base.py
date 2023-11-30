@@ -170,7 +170,7 @@ class BaseSpider(scrapy.Spider):
 
         probability = request.get_probability()
 
-        return request.to_scrapy(
+        scrapy_request = request.to_scrapy(
             callback=callback,
             priority=priority,
             meta={
@@ -181,3 +181,5 @@ class BaseSpider(scrapy.Spider):
                 }
             },
         )
+        scrapy_request.meta["allow_offsite"] = True
+        return scrapy_request

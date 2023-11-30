@@ -6,7 +6,7 @@ import scrapy
 from pydantic import ValidationError
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import get_spider_metadata
-from zyte_common_items import Product, ProductNavigation
+from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
 from zyte_spider_templates import BaseSpiderParams
 from zyte_spider_templates._geolocations import (
@@ -456,3 +456,16 @@ def test_metadata():
 def test_validation_url(url, valid):
     url_re = BaseSpiderParams.model_fields["url"].metadata[0].pattern
     assert bool(re.match(url_re, url)) == valid
+
+
+def test_get_parse_product_request():
+    base_kwargs = {
+        "url": "https://example.com",
+    }
+    crawler = get_crawler()
+
+    # Crawls products outside of domains by default
+    spider = EcommerceSpider.from_crawler(crawler, **base_kwargs)
+    request = ProbabilityRequest(url="https://example.com")
+    scrapy_request = spider.get_parse_product_request(request)
+    assert scrapy_request.meta.get("allow_offsite") is True
