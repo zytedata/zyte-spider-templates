@@ -118,5 +118,4 @@ class AllowOffsiteMiddleware(OffsiteMiddleware):
             return True
         if request.meta.get("allow_offsite"):
             return True
-        result = super()._filter(request, spider)
-        return result
+        return super()._filter(request, spider)
