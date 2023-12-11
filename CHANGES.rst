@@ -11,6 +11,8 @@ Changes
 
 * Improved ``max_requests`` spider parameter description.
 
+* Official support for Python 3.12.
+
 * Misc documentation improvements.
 
 0.3.0 (2023-11-03)
