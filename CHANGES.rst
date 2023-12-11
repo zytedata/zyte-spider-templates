@@ -1,6 +1,18 @@
 Changes
 =======
 
+0.4.0 (YYYY-MM-DD)
+------------------
+
+* Products outside of the domain can now be crawled using
+  ``zyte_spider_templates.middlewares.AllowOffsiteMiddleware``.
+
+* Updated documentation to also setup ``zyte_common_items.ZyteItemAdapter``.
+
+* Improved ``max_requests`` spider parameter description.
+
+* Misc documentation improvements.
+
 0.3.0 (2023-11-03)
 ------------------
 
