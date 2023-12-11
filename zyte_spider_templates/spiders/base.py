@@ -1,11 +1,11 @@
 from importlib.metadata import version
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Union
 
 import scrapy
 from pydantic import BaseModel, Field
 from scrapy.crawler import Crawler
 from scrapy.utils.url import parse_url
-from zyte_common_items import Request
+from zyte_common_items import ProbabilityRequest, Request
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -37,7 +37,13 @@ class BaseSpiderParams(BaseModel):
         },
     )
     max_requests: Optional[int] = Field(
-        description="The max number of Zyte API requests allowed for the crawl.",
+        description=(
+            "The maximum number of Zyte API requests allowed for the crawl.\n"
+            "\n"
+            "Requests with error responses that cannot be retried or exceed "
+            "their retry limit also count here, but they incur in no costs "
+            "and do not increase the request count in Scrapy Cloud."
+        ),
         default=None,
         json_schema_extra={
             "widget": "request-limit",
@@ -57,7 +63,7 @@ class BaseSpider(scrapy.Spider):
         "description": "Base template.",
     }
 
-    ITEM_REQUEST_PRIORITY: int = 10
+    _NEXT_PAGE_PRIORITY: int = 100
 
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
@@ -86,37 +92,94 @@ class BaseSpider(scrapy.Spider):
         return spider
 
     @staticmethod
-    def get_parse_navigation_request_priority(request: Request) -> int:
+    def get_parse_navigation_request_priority(
+        request: Union[ProbabilityRequest, Request]
+    ) -> int:
         if (
             not hasattr(request, "metadata")
             or not request.metadata
             or request.metadata.probability is None
         ):
             return 0
-        return int(10 * request.metadata.probability)
+        return int(100 * request.metadata.probability)
 
     def get_parse_navigation_request(
         self,
-        request: Request,
+        request: Union[ProbabilityRequest, Request],
+        callback: Optional[Callable] = None,
+        page_params: Optional[Dict[str, Any]] = None,
+        priority: Optional[int] = None,
+        page_type: str = "productNavigation",
+    ) -> scrapy.Request:
+        callback = callback or self.parse_navigation
+
+        return request.to_scrapy(
+            callback=callback,
+            priority=priority or self.get_parse_navigation_request_priority(request),
+            meta={
+                "page_params": page_params or {},
+                "crawling_logs": {
+                    "name": request.name or "",
+                    "probability": request.get_probability(),
+                    "page_type": page_type,
+                },
+            },
+        )
+
+    def get_subcategory_request(
+        self,
+        request: Union[ProbabilityRequest, Request],
         callback: Optional[Callable] = None,
         page_params: Optional[Dict[str, Any]] = None,
         priority: Optional[int] = None,
     ) -> scrapy.Request:
-        callback = callback or self.parse_navigation
-        return request.to_scrapy(
-            callback=callback,
-            priority=priority or self.get_parse_navigation_request_priority(request),
-            meta={"page_params": page_params or {}},
+        page_type = "subCategories"
+        request_name = request.name or ""
+        if "[heuristics]" not in request_name:
+            page_params = None
+        else:
+            page_type = "productNavigation-heuristics"
+            request.name = request_name.replace("[heuristics]", "").strip()
+        return self.get_parse_navigation_request(
+            request,
+            callback,
+            page_params,
+            priority,
+            page_type,
         )
 
-    def get_parse_product_request_priority(self, request: Request) -> int:
-        return self.ITEM_REQUEST_PRIORITY
+    def get_nextpage_request(
+        self,
+        request: Union[ProbabilityRequest, Request],
+        callback: Optional[Callable] = None,
+        page_params: Optional[Dict[str, Any]] = None,
+    ):
+        return self.get_parse_navigation_request(
+            request, callback, page_params, self._NEXT_PAGE_PRIORITY, "nextPage"
+        )
+
+    def get_parse_product_request_priority(self, request: ProbabilityRequest) -> int:
+        probability = request.get_probability() or 0
+        return int(100 * probability) + self._NEXT_PAGE_PRIORITY
 
     def get_parse_product_request(
-        self, request: Request, callback: Optional[Callable] = None
+        self, request: ProbabilityRequest, callback: Optional[Callable] = None
     ) -> scrapy.Request:
         callback = callback or self.parse_product
-        return request.to_scrapy(
+        priority = self.get_parse_product_request_priority(request)
+
+        probability = request.get_probability()
+
+        scrapy_request = request.to_scrapy(
             callback=callback,
-            priority=self.get_parse_product_request_priority(request),
+            priority=priority,
+            meta={
+                "crawling_logs": {
+                    "name": request.name,
+                    "probability": probability,
+                    "page_type": "product",
+                }
+            },
         )
+        scrapy_request.meta["allow_offsite"] = True
+        return scrapy_request

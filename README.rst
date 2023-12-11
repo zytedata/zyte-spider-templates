@@ -19,19 +19,20 @@ zyte-spider-templates
    :alt: Coverage report
 
 
+.. description starts
+
 Spider templates for automatic crawlers.
 
+This library contains Scrapy_ spider templates. They can be used out of the box
+with the Zyte features such as `Zyte API`_ or modified to be used standalone.
+There is a `sample Scrapy project`_ for this library that you can use as a
+starting point for your own projects.
 
-Requirements
-============
+.. _Scrapy: https://docs.scrapy.org/
+.. _Zyte API: https://docs.zyte.com/zyte-api/get-started.html
+.. _sample Scrapy project: https://github.com/zytedata/zyte-spider-templates-project
 
-* Python 3.8+
-* Scrapy 2.11+
+.. description ends
 
-
-Installation
-============
-
-.. code-block::
-
-    pip install zyte-spider-templates
+* Documentation: https://zyte-spider-templates.readthedocs.io/en/latest/
+* License: BSD 3-clause

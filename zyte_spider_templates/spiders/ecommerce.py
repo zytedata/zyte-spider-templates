@@ -9,18 +9,33 @@ from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import Product, ProductNavigation
 
-from zyte_spider_templates.formatters import product_navigation_report
+from zyte_spider_templates.documentation import document_enum
 from zyte_spider_templates.spiders.base import BaseSpider, BaseSpiderParams
 
 
+@document_enum
 class EcommerceCrawlStrategy(str, Enum):
-    navigation: str = "navigation"
     full: str = "full"
+    """Follow most links within the domain of URL in an attempt to discover and
+    extract as many products as possible."""
+
+    navigation: str = "navigation"
+    """Follow pagination, subcategories, and product detail pages."""
+
+    pagination_only: str = "pagination_only"
+    """Follow pagination and product detail pages. SubCategory links are
+    ignored. Use this when some subCategory links are misidentified by
+    ML-extraction."""
 
 
+@document_enum
 class ExtractFrom(str, Enum):
     httpResponseBody: str = "httpResponseBody"
+    """Use HTTP responses. Cost-efficient and fast extraction method, which
+    works well on many websites."""
+
     browserHtml: str = "browserHtml"
+    """Use browser rendering. Often provides the best quality."""
 
 
 class EcommerceSpiderParams(BaseSpiderParams):
@@ -30,19 +45,30 @@ class EcommerceSpiderParams(BaseSpiderParams):
         default=EcommerceCrawlStrategy.navigation,
         json_schema_extra={
             "enumMeta": {
+                EcommerceCrawlStrategy.full: {
+                    "title": "Full",
+                    "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+                },
                 EcommerceCrawlStrategy.navigation: {
                     "title": "Navigation",
                     "description": "Follow pagination, subcategories, and product detail pages.",
                 },
-                EcommerceCrawlStrategy.full: {
-                    "title": "Full",
-                    "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+                EcommerceCrawlStrategy.pagination_only: {
+                    "title": "Pagination Only",
+                    "description": (
+                        "Follow pagination and product detail pages. SubCategory links are ignored. "
+                        "Use this when some subCategory links are misidentified by ML-extraction."
+                    ),
                 },
             },
         },
     )
     extract_from: Optional[ExtractFrom] = Field(
         title="Extraction source",
+        description=(
+            "Whether to perform extraction using a browser request "
+            "(browserHtml) or an HTTP request (httpResponseBody)."
+        ),
         default=None,
         json_schema_extra={
             "enumMeta": {
@@ -118,37 +144,28 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             callback=self.parse_navigation,
             meta={
                 "page_params": page_params,
+                "crawling_logs": {"page_type": "productNavigation"},
             },
         )
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
     ) -> Iterable[Request]:
-        self.logger.info(product_navigation_report(navigation))
-
         page_params = response.meta.get("page_params")
 
         for request in navigation.items or []:
             yield self.get_parse_product_request(request)
         if navigation.nextPage:
-            yield self.get_parse_navigation_request(
-                navigation.nextPage,
-                priority=self.ITEM_REQUEST_PRIORITY - 1,
-            )
-        for request in navigation.subCategories or []:
-            if "[heuristics]" in (request.name or ""):
-                yield self.get_parse_navigation_request(
-                    request, page_params=page_params
-                )
-            else:
-                yield self.get_parse_navigation_request(request)
+            yield self.get_nextpage_request(navigation.nextPage)
+
+        if self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only:
+            for request in navigation.subCategories or []:
+                yield self.get_subcategory_request(request, page_params=page_params)
 
     def parse_product(
         self, response: DummyResponse, product: Product
     ) -> Iterable[Product]:
-        probability = None
-        if metadata := getattr(product, "metadata", None):
-            probability = metadata.probability
+        probability = product.get_probability()
 
         # TODO: convert to a configurable parameter later on after the launch
         if probability is None or probability >= 0.1:
