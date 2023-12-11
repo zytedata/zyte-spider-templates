@@ -4,12 +4,12 @@ Changes
 0.4.0 (YYYY-MM-DD)
 ------------------
 
-* Products outside of the domain can now be crawled using
-  ``zyte_spider_templates.middlewares.AllowOffsiteMiddleware``.
+* Products outside of the target domain can now be crawled using
+  :class:`zyte_spider_templates.middlewares.AllowOffsiteMiddleware`.
 
-* Updated documentation to also setup ``zyte_common_items.ZyteItemAdapter``.
+* Updated the documentation to also set up ``zyte_common_items.ZyteItemAdapter``.
 
-* Improved ``max_requests`` spider parameter description.
+* Improved the description of the ``max_requests`` spider parameter.
 
 * Official support for Python 3.12.
 
