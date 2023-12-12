@@ -9,6 +9,9 @@ Changes
 
 * Updated the documentation to also set up ``zyte_common_items.ZyteItemAdapter``.
 
+* The ``max_requests`` spider parameter has now a default value of 100. Previously,
+  it was ``None`` which was unlimited.
+
 * Improved the description of the ``max_requests`` spider parameter.
 
 * Official support for Python 3.12.
