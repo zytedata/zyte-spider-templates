@@ -44,7 +44,7 @@ class BaseSpiderParams(BaseModel):
             "their retry limit also count here, but they incur in no costs "
             "and do not increase the request count in Scrapy Cloud."
         ),
-        default=None,
+        default=100,
         json_schema_extra={
             "widget": "request-limit",
         },
