@@ -1,3 +1,4 @@
+import pytest
 from pytest_twisted import ensureDeferred
 from web_poet import HttpResponse, PageParams, RequestUrl
 from zyte_common_items import ProbabilityRequest, ProductNavigation
@@ -125,3 +126,16 @@ async def test_crawl_nofollow_links():
         request_url, response, navigation, page_params
     )
     assert [req.url for req in page.subCategories] == ["https://example.com/can-follow"]
+
+
+def test_deprecated_page_objects():
+    with pytest.warns(DeprecationWarning, match="page_objects"):
+        from zyte_spider_templates.page_objects import (  # noqa: F401
+            HeuristicsProductNavigationPage,
+        )
+
+    # We cannot test the warning again because duplicate warnings are ignored,
+    # but we still want to ensure that we can import the class.
+    from zyte_spider_templates.page_objects.product_navigation_heuristics import (  # noqa: F401, F811
+        HeuristicsProductNavigationPage,
+    )
