@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.4.0 (YYYY-MM-DD)
+0.4.0 (2023-12-14)
 ------------------
 
 * Products outside of the target domain can now be crawled using
