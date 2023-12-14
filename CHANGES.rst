@@ -1,6 +1,23 @@
 Changes
 =======
 
+0.4.0 (2023-12-14)
+------------------
+
+* Products outside of the target domain can now be crawled using
+  :class:`zyte_spider_templates.middlewares.AllowOffsiteMiddleware`.
+
+* Updated the documentation to also set up ``zyte_common_items.ZyteItemAdapter``.
+
+* The ``max_requests`` spider parameter has now a default value of 100. Previously,
+  it was ``None`` which was unlimited.
+
+* Improved the description of the ``max_requests`` spider parameter.
+
+* Official support for Python 3.12.
+
+* Misc documentation improvements.
+
 0.3.0 (2023-11-03)
 ------------------
 
