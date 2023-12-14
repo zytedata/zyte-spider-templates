@@ -2,7 +2,7 @@ from pytest_twisted import ensureDeferred
 from web_poet import HttpResponse, PageParams, RequestUrl
 from zyte_common_items import ProbabilityRequest, ProductNavigation
 
-from zyte_spider_templates.page_objects.product_navigation_heuristics import (
+from zyte_spider_templates.pages.product_navigation_heuristics import (
     HeuristicsProductNavigationPage,
 )
 

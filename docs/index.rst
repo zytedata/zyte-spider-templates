@@ -25,7 +25,7 @@ zyte-spider-templates documentation
 
    customization/index
    customization/spiders
-   customization/page-objects
+   customization/pages
 
 .. toctree::
    :caption: All the rest
