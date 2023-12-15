@@ -30,7 +30,7 @@ on some given URLs (:func:`web_poet.handle_urls`), that defines the logic to
 extract that field. For example:
 
 .. code-block:: python
-    :caption: page_objects/books_toscrape_com.py
+    :caption: pages/books_toscrape_com.py
 
     import attrs
     from number_parser import parse_number
@@ -96,7 +96,7 @@ To extract a new field for one or more websites:
     field. For example:
 
     .. code-block:: python
-        :caption: page_objects/books_toscrape_com.py
+        :caption: pages/books_toscrape_com.py
 
         import re
 

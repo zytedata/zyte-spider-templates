@@ -45,7 +45,7 @@ In your Scrapy project settings (usually in ``settings.py``):
 
 -   `Configure scrapy-poet`_, and update :ref:`SCRAPY_POET_DISCOVER
     <scrapy-poet:settings>` to include
-    ``"zyte_spider_templates.page_objects"``.
+    ``"zyte_spider_templates.pages"``.
 
     .. _Configure scrapy-poet: https://scrapy-poet.readthedocs.io/en/stable/intro/install.html#configuring-the-project
 

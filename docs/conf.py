@@ -13,6 +13,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
+    "sphinx_reredirects",
     "sphinxcontrib.autodoc_pydantic",
 ]
 
@@ -45,3 +46,8 @@ intersphinx_mapping = {
 
 autodoc_pydantic_model_show_field_summary = False
 autodoc_pydantic_model_show_json = False
+
+# sphinx-reredirects
+redirects = {
+    "customization/page-objects": "pages.html",
+}
