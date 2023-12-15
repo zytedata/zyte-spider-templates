@@ -1,6 +1,12 @@
 Changes
 =======
 
+0.5.0 (unreleased)
+------------------
+
+* The ``zyte_spider_templates.page_objects`` module is now deprecated in favor
+  of ``zyte_spider_templates.pages``, in line with ``web_poet.pages``.
+
 0.4.0 (2023-12-14)
 ------------------
 
