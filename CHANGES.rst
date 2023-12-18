@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.5.0 (unreleased)
+0.5.0 (2023-12-18)
 ------------------
 
 * The ``zyte_spider_templates.page_objects`` module is now deprecated in favor
