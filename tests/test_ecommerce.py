@@ -1,5 +1,6 @@
 import logging
 import re
+from unittest.mock import MagicMock, call
 
 import pytest
 import scrapy
@@ -216,9 +217,10 @@ def test_crawl():
 
 
 @pytest.mark.parametrize(
-    "probability,has_item", ((0.9, True), (0.09, False), (0.1, True), (None, True))
+    "probability,has_item,item_drop",
+    ((0.9, True, False), (0.09, False, True), (0.1, True, False), (None, True, False)),
 )
-def test_parse_product(probability, has_item, caplog):
+def test_parse_product(probability, has_item, item_drop, caplog):
     caplog.clear()
 
     product_url = "https://example.com/product?id=123"
@@ -227,8 +229,14 @@ def test_parse_product(probability, has_item, caplog):
     )
     response = DummyResponse(product_url)
     spider = EcommerceSpider(url="https://example.com")
+    mock_crawler = MagicMock()
+    spider.crawler = mock_crawler
     logging.getLogger().setLevel(logging.INFO)
     items = list(spider.parse_product(response, product))
+    if item_drop:
+        assert mock_crawler.method_calls == [
+            call.stats.inc_value("drop_item/product/low_probability")
+        ]
 
     if has_item:
         assert len(items) == 1
