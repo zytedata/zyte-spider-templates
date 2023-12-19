@@ -171,6 +171,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         if probability is None or probability >= 0.1:
             yield product
         else:
+            self.crawler.stats.inc_value("drop_item/product/low_probability")
             self.logger.info(
                 f"Ignoring item from {response.url} since its probability is "
                 f"less than threshold of 0.1:\n{product}"
