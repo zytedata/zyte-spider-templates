@@ -153,10 +153,18 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     ) -> Iterable[Request]:
         page_params = response.meta.get("page_params")
 
-        for request in navigation.items or []:
+        products = navigation.items or []
+        for request in products:
             yield self.get_parse_product_request(request)
+
         if navigation.nextPage:
-            yield self.get_nextpage_request(navigation.nextPage)
+            if not products:
+                self.logger.info(
+                    f"Ignoring nextPage link {navigation.nextPage} since there "
+                    f"are no product links found in {navigation.url}"
+                )
+            else:
+                yield self.get_nextpage_request(navigation.nextPage)
 
         if self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only:
             for request in navigation.subCategories or []:
