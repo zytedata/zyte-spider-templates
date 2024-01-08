@@ -18,7 +18,6 @@ Spider template metadata is defined using `scrapy-spider-metadata`_, and can be
 
 For example, to keep the upstream ``title`` but change the ``description``:
 
-.. _scrapy-spider-metadata: https://scrapy-spider-metadata.readthedocs.io/en/latest
 .. _redefined or customized in a subclass: https://scrapy-spider-metadata.readthedocs.io/en/latest/metadata.html#defining-spider-metadata
 
 .. code-block:: python
@@ -45,7 +44,6 @@ and can be `redefined or customized in a subclass as well`_.
 For example, to add a ``min_price`` parameter and filter out products with a
 lower price:
 
-.. _scrapy-spider-metadata: https://scrapy-spider-metadata.readthedocs.io/en/latest
 .. _redefined or customized in a subclass as well: https://scrapy-spider-metadata.readthedocs.io/en/latest/params.html
 
 .. code-block:: python
@@ -56,14 +54,15 @@ lower price:
     from scrapy_poet import DummyResponse
     from scrapy_spider_metadata import Args
     from zyte_common_items import Product
-    from zyte_spider_templates import EcommerceSpider, EcommerceSpiderParams
+    from zyte_spider_templates import EcommerceSpider
+    from zyte_spider_templates.spiders.ecommerce import EcommerceSpiderParams
 
 
     class MyParams(EcommerceSpiderParams):
         min_price: str = "0.00"
 
 
-    class MySpider(Args[MyParams], EcommerceSpider):
+    class MySpider(EcommerceSpider, Args[MyParams]):
         name = "my_spider"
 
         def parse_product(
@@ -103,3 +102,5 @@ not follow navigation at all:
 All parsing logic is implemented separately in :ref:`page objects
 <custom-page-objects>`, making it easier to read the code of :ref:`built-in
 spider templates <spider-templates>` to modify them as desired.
+
+.. _scrapy-spider-metadata: https://scrapy-spider-metadata.readthedocs.io/en/latest
