@@ -4,10 +4,7 @@ import attrs
 from scrapy.http import TextResponse
 from scrapy.linkextractors import LinkExtractor
 from web_poet import HttpResponse, PageParams, field, handle_urls
-from zyte_common_items import (
-    AutoProductNavigationPage,
-    ProbabilityRequest,
-)
+from zyte_common_items import AutoProductNavigationPage, ProbabilityRequest
 
 from zyte_spider_templates.heuristics import might_be_category
 
