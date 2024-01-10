@@ -4,54 +4,29 @@ import attrs
 from scrapy.http import TextResponse
 from scrapy.linkextractors import LinkExtractor
 from web_poet import HttpResponse, PageParams, field, handle_urls
-from zyte_common_items import (
-    BaseProductNavigationPage,
-    ProbabilityRequest,
-    ProductNavigation,
-    Request,
-)
+from zyte_common_items import AutoProductNavigationPage, ProbabilityRequest
 
 from zyte_spider_templates.heuristics import might_be_category
 
 
 @handle_urls("")
 @attrs.define
-class HeuristicsProductNavigationPage(BaseProductNavigationPage):
+class HeuristicsProductNavigationPage(AutoProductNavigationPage):
     # TODO: swap with BrowserResponse after evaluating it.
     # Also after when the following issue has been fixed:
     # https://github.com/scrapy-plugins/scrapy-zyte-api/issues/91#issuecomment-1744305554
     # NOTE: Even with BrowserResponse, it would still send separate
     # requests for it and productNavigation.
     response: HttpResponse
-    navigation_item: ProductNavigation
     page_params: PageParams
-
-    # FIXME: Remove boilerplate code when this feature is released:
-    # https://github.com/scrapinghub/scrapy-poet/issues/168
-
-    @field
-    def categoryName(self) -> Optional[str]:
-        return self.navigation_item.categoryName
-
-    @field
-    def pageNumber(self) -> Optional[int]:
-        return self.navigation_item.pageNumber
-
-    @field
-    def items(self) -> Optional[List[ProbabilityRequest]]:
-        return self.navigation_item.items
-
-    @field
-    def nextPage(self) -> Optional[Request]:
-        return self.navigation_item.nextPage
 
     @field
     def subCategories(self) -> Optional[List[ProbabilityRequest]]:
         if self.page_params.get("full_domain"):
             return (
-                self.navigation_item.subCategories or []
+                self.product_navigation.subCategories or []
             ) + self._probably_category_links()
-        return self.navigation_item.subCategories
+        return self.product_navigation.subCategories
 
     def _urls_for_category(self) -> List[str]:
         """Return a list of all URLs in the ProductNavigation item:
@@ -61,13 +36,13 @@ class HeuristicsProductNavigationPage(BaseProductNavigationPage):
         """
 
         category_urls = []
-        if self.navigation_item.items:
+        if self.product_navigation.items:
             category_urls.extend(
-                [r.url for r in self.navigation_item.subCategories or []]
+                [r.url for r in self.product_navigation.subCategories or []]
             )
-            category_urls.extend([r.url for r in self.navigation_item.items or []])
-            if self.navigation_item.nextPage:
-                category_urls.append(self.navigation_item.nextPage.url)
+            category_urls.extend([r.url for r in self.product_navigation.items or []])
+            if self.product_navigation.nextPage:
+                category_urls.append(self.product_navigation.nextPage.url)
         return category_urls
 
     def _probably_category_links(self) -> List[ProbabilityRequest]:

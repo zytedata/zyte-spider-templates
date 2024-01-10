@@ -54,6 +54,7 @@ async def test_unknown_product_page():
                 "url": "https://example.com/page-2",
                 "name": "Next Page",
             },
+            "metadata": {"dateDownloaded": "2024-01-09T14:37:58Z"},
         }
     )
     all_valid_urls = [
@@ -76,7 +77,7 @@ async def test_unknown_product_page():
     request_url = RequestUrl(response.url)
     page_params = PageParams({"allow_domains": "example.com"})
     page = HeuristicsProductNavigationPage(
-        request_url, response, navigation, page_params
+        request_url, navigation, response, page_params
     )
     item = await page.to_item()
 
@@ -84,10 +85,9 @@ async def test_unknown_product_page():
     assert page._urls_for_category() == all_valid_urls
 
     # Heuristics turned ON
-
     page_params = PageParams({"full_domain": "example.com"})
     page = HeuristicsProductNavigationPage(
-        request_url, response, navigation, page_params
+        request_url, navigation, response, page_params
     )
     item = await page.to_item()
 
@@ -123,7 +123,7 @@ async def test_crawl_nofollow_links():
     navigation = ProductNavigation(url=url)
 
     page = HeuristicsProductNavigationPage(
-        request_url, response, navigation, page_params
+        request_url, navigation, response, page_params
     )
     assert [req.url for req in page.subCategories] == ["https://example.com/can-follow"]
 
