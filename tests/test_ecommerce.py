@@ -618,3 +618,19 @@ def test_get_parse_navigation_request():
             "page_type": "productNavigation",
         },
     }
+
+
+@pytest.mark.parametrize(
+    "url,allowed_domain",
+    (
+        ("https://example.com", "example.com"),
+        ("https://www.example.com", "example.com"),
+        ("https://www2.example.com", "example.com"),
+    ),
+)
+def test_set_allowed_domains(url, allowed_domain):
+    crawler = get_crawler()
+
+    kwargs = {"url": url}
+    spider = EcommerceSpider.from_crawler(crawler, **kwargs)
+    assert spider.allowed_domains == [allowed_domain]
