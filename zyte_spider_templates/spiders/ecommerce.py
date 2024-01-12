@@ -5,8 +5,8 @@ from typing import Any, Callable, Dict, Iterable, Optional, Union
 import scrapy
 from pydantic import Field
 from scrapy import Request
-from scrapy.utils.url import parse_url
 from scrapy.crawler import Crawler
+from scrapy.utils.url import parse_url
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
@@ -146,7 +146,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @staticmethod
     def _set_allowed_domains(spider: scrapy.Spider) -> None:
         allowed_domain = parse_url(spider.args.url).netloc
-        allowed_domain = re.sub("www.*?\.", "", allowed_domain)
+        allowed_domain = re.sub(r"www.*?\.", "", allowed_domain)
         spider.allowed_domains = [allowed_domain]
 
     def start_requests(self) -> Iterable[Request]:
