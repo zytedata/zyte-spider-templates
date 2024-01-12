@@ -1,4 +1,3 @@
-import re
 from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
@@ -6,17 +5,12 @@ import scrapy
 from pydantic import Field
 from scrapy import Request
 from scrapy.crawler import Crawler
-from scrapy.utils.url import parse_url
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
 from zyte_spider_templates.documentation import document_enum
-from zyte_spider_templates.spiders.base import (
-    ARG_SETTING_PRIORITY,
-    BaseSpider,
-    BaseSpiderParams,
-)
+from zyte_spider_templates.utils import get_domain
 
 
 @document_enum
@@ -126,7 +120,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        cls._set_allowed_domains(spider)
+        spider.allowed_domains = [get_domain(spider.args.url)]
 
         if spider.args.extract_from is not None:
             spider.settings.set(
@@ -142,12 +136,6 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             )
 
         return spider
-
-    @staticmethod
-    def _set_allowed_domains(spider: scrapy.Spider) -> None:
-        allowed_domain = parse_url(spider.args.url).netloc
-        allowed_domain = re.sub(r"www.*?\.", "", allowed_domain)
-        spider.allowed_domains = [allowed_domain]
 
     def start_requests(self) -> Iterable[Request]:
         page_params = {}
