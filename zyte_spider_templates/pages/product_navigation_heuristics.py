@@ -3,7 +3,7 @@ from typing import List, Optional
 import attrs
 from scrapy.http import TextResponse
 from scrapy.linkextractors import LinkExtractor
-from web_poet import HttpOrBrowserResponse, HttpResponse, PageParams, field, handle_urls
+from web_poet import AnyResponse, HttpResponse, PageParams, field, handle_urls
 from zyte_common_items import AutoProductNavigationPage, ProbabilityRequest
 
 from zyte_spider_templates.heuristics import might_be_category
@@ -12,7 +12,7 @@ from zyte_spider_templates.heuristics import might_be_category
 @handle_urls("")
 @attrs.define
 class HeuristicsProductNavigationPage(AutoProductNavigationPage):
-    response: HttpOrBrowserResponse
+    response: AnyResponse
     page_params: PageParams
 
     @field
