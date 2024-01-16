@@ -74,7 +74,7 @@ class EcommerceSpiderParams(BaseSpiderParams):
             "Whether to perform extraction using a browser request "
             "(browserHtml) or an HTTP request (httpResponseBody)."
         ),
-        default=None,
+        default=ExtractFrom.browserHtml,
         json_schema_extra={
             "enumMeta": {
                 ExtractFrom.browserHtml: {

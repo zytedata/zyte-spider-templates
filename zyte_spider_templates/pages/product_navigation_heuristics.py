@@ -3,7 +3,7 @@ from typing import List, Optional
 import attrs
 from scrapy.http import TextResponse
 from scrapy.linkextractors import LinkExtractor
-from web_poet import HttpResponse, PageParams, field, handle_urls
+from web_poet import HttpOrBrowserResponse, HttpResponse, PageParams, field, handle_urls
 from zyte_common_items import AutoProductNavigationPage, ProbabilityRequest
 
 from zyte_spider_templates.heuristics import might_be_category
@@ -12,12 +12,7 @@ from zyte_spider_templates.heuristics import might_be_category
 @handle_urls("")
 @attrs.define
 class HeuristicsProductNavigationPage(AutoProductNavigationPage):
-    # TODO: swap with BrowserResponse after evaluating it.
-    # Also after when the following issue has been fixed:
-    # https://github.com/scrapy-plugins/scrapy-zyte-api/issues/91#issuecomment-1744305554
-    # NOTE: Even with BrowserResponse, it would still send separate
-    # requests for it and productNavigation.
-    response: HttpResponse
+    response: HttpOrBrowserResponse
     page_params: PageParams
 
     @field
@@ -55,7 +50,7 @@ class HeuristicsProductNavigationPage(AutoProductNavigationPage):
         ignore_urls = set(self._urls_for_category())
 
         links = []
-        response = TextResponse(url=str(self.response.url), body=self.response.body)
+        response = TextResponse(url=self.response.url, body=self.response.text.encode())
         for link in link_extractor.extract_links(response):
             if link.url in ignore_urls:
                 continue
