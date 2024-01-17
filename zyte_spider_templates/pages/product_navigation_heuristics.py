@@ -3,7 +3,7 @@ from typing import List, Optional
 import attrs
 from scrapy.http import TextResponse
 from scrapy.linkextractors import LinkExtractor
-from web_poet import AnyResponse, HttpResponse, PageParams, field, handle_urls
+from web_poet import AnyResponse, PageParams, field, handle_urls
 from zyte_common_items import AutoProductNavigationPage, ProbabilityRequest
 
 from zyte_spider_templates.heuristics import might_be_category
@@ -50,7 +50,7 @@ class HeuristicsProductNavigationPage(AutoProductNavigationPage):
         ignore_urls = set(self._urls_for_category())
 
         links = []
-        response = TextResponse(url=self.response.url, body=self.response.text.encode())
+        response = TextResponse(url=str(self.response.url), body=self.response.text.encode())
         for link in link_extractor.extract_links(response):
             if link.url in ignore_urls:
                 continue
