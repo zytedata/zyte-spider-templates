@@ -381,7 +381,7 @@ def test_metadata():
                 },
                 "extract_from": {
                     "anyOf": [{"type": "string"}, {"type": "null"}],
-                    "default": None,
+                    "default": "browserHtml",
                     "title": "Extraction source",
                     "description": (
                         "Whether to perform extraction using a browser request "
