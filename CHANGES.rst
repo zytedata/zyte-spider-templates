@@ -1,6 +1,23 @@
 Changes
 =======
 
+0.6.0 (YYYY-MM-DD)
+------------------
+
+* Fixed the ``extract_from`` spider parameter that isn't working.
+* The *"www."* prefix is now removed when setting the spider's
+  :attr:`~scrapy.Spider.allowed_domains`.
+* The :attr:`zyte_common_items.ProductNavigation.nextPage` link won't be crawled
+  if :attr:`zyte_common_items.ProductNavigation.items` is empty.
+* :class:`zyte_common_items.Product` items that are dropped due to low probability
+  *(below 0.1)* are now logged in stats: ``drop_item/product/low_probability``.
+* :class:`zyte_spider_templates.pages.HeuristicsProductNavigationPage` now
+  inherits from :class:`zyte_common_items.AutoProductNavigationPage` instead of
+  :class:`zyte_common_items.BaseProductNavigationPage`.
+* Moved eCommerce specific code from :class:`zyte_spider_templates.spiders.base.BaseSpider`
+  to :class:`zyte_spider_templates.spiders.ecommerce.EcommerceSpider`.
+* Documentation improvements.
+
 0.5.0 (2023-12-18)
 ------------------
 
