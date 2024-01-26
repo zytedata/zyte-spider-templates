@@ -303,6 +303,37 @@ def test_arguments():
             "getdict",
             {"geolocation": "DE"},
         ),
+        (
+            "extract_from",
+            "browserHtml",
+            "ZYTE_API_PROVIDER_PARAMS",
+            None,
+            "getdict",
+            {
+                "productOptions": {"extractFrom": "browserHtml"},
+                "productNavigationOptions": {"extractFrom": "browserHtml"},
+            },
+        ),
+        (
+            "extract_from",
+            "httpResponseBody",
+            "ZYTE_API_PROVIDER_PARAMS",
+            {"geolocation": "US"},
+            "getdict",
+            {
+                "productOptions": {"extractFrom": "httpResponseBody"},
+                "productNavigationOptions": {"extractFrom": "httpResponseBody"},
+                "geolocation": "US",
+            },
+        ),
+        (
+            "extract_from",
+            None,
+            "ZYTE_API_PROVIDER_PARAMS",
+            {"geolocation": "US"},
+            "getdict",
+            {"geolocation": "US"},
+        ),
     ):
         kwargs = {param: arg}
         settings = {}
