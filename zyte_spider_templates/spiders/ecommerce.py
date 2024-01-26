@@ -10,6 +10,11 @@ from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
 from zyte_spider_templates.documentation import document_enum
+from zyte_spider_templates.spiders.base import (
+    ARG_SETTING_PRIORITY,
+    BaseSpider,
+    BaseSpiderParams,
+)
 from zyte_spider_templates.utils import get_domain
 
 
