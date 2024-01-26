@@ -10,7 +10,11 @@ from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
 from zyte_spider_templates.documentation import document_enum
-from zyte_spider_templates.spiders.base import BaseSpider, BaseSpiderParams
+from zyte_spider_templates.spiders.base import (
+    ARG_SETTING_PRIORITY,
+    BaseSpider,
+    BaseSpiderParams,
+)
 
 
 @document_enum
@@ -129,7 +133,9 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                     "productNavigationOptions": {
                         "extractFrom": spider.args.extract_from
                     },
+                    **spider.settings.get("ZYTE_API_PROVIDER_PARAMS", {}),
                 },
+                priority=ARG_SETTING_PRIORITY,
             )
 
         return spider
