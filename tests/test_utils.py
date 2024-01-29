@@ -6,6 +6,12 @@ URL_TO_DOMAIN = (
     ("https://example.com", "example.com"),
     ("https://www.example.com", "example.com"),
     ("https://www2.example.com", "example.com"),
+    ("https://prefixwww.example.com", "prefixwww.example.com"),
+    ("https://wwworld.example.com", "wwworld.example.com"),
+    ("https://my.wwworld-example.com", "my.wwworld-example.com"),
+    ("https://wwwow.com", "wwwow.com"),
+    ("https://wowww.com", "wowww.com"),
+    ("https://awww.com", "awww.com"),
 )
 
 
