@@ -4,7 +4,7 @@ Changes
 0.6.0 (YYYY-MM-DD)
 ------------------
 
-* Fixed the ``extract_from`` spider parameter that isn't working.
+* Fixed the ``extract_from`` spider parameter that wasn't working.
 
 * The *"www."* prefix is now removed when setting the spider's
   :attr:`~scrapy.Spider.allowed_domains`.
