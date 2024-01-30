@@ -4,7 +4,6 @@ from typing import Any, Dict, Optional
 import scrapy
 from pydantic import BaseModel, Field
 from scrapy.crawler import Crawler
-from scrapy.utils.url import parse_url
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -67,7 +66,6 @@ class BaseSpider(scrapy.Spider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super().from_crawler(crawler, *args, **kwargs)
-        spider.allowed_domains = [parse_url(spider.args.url).netloc]
 
         if spider.args.geolocation:
             # We set the geolocation in ZYTE_API_PROVIDER_PARAMS for injected

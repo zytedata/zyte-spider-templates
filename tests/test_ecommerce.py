@@ -21,6 +21,7 @@ from zyte_spider_templates.spiders.ecommerce import (
 )
 
 from . import get_crawler
+from .test_utils import URL_TO_DOMAIN
 
 
 def test_parameters():
@@ -618,3 +619,12 @@ def test_get_parse_navigation_request():
             "page_type": "productNavigation",
         },
     }
+
+
+@pytest.mark.parametrize("url,allowed_domain", URL_TO_DOMAIN)
+def test_set_allowed_domains(url, allowed_domain):
+    crawler = get_crawler()
+
+    kwargs = {"url": url}
+    spider = EcommerceSpider.from_crawler(crawler, **kwargs)
+    assert spider.allowed_domains == [allowed_domain]

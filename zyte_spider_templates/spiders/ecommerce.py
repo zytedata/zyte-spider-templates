@@ -15,6 +15,7 @@ from zyte_spider_templates.spiders.base import (
     BaseSpider,
     BaseSpiderParams,
 )
+from zyte_spider_templates.utils import get_domain
 
 
 @document_enum
@@ -124,6 +125,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
+        spider.allowed_domains = [get_domain(spider.args.url)]
 
         if spider.args.extract_from is not None:
             spider.settings.set(
