@@ -3,6 +3,7 @@ from freezegun import freeze_time
 from scrapy import Spider
 from scrapy.http import Request, Response
 from scrapy.statscollectors import StatsCollector
+from scrapy.utils.misc import create_instance
 from scrapy.utils.test import get_crawler
 
 from zyte_spider_templates.middlewares import (
@@ -13,11 +14,24 @@ from zyte_spider_templates.middlewares import (
 
 @freeze_time("2023-10-10 20:09:29")
 def test_crawling_logs_middleware_no_requests():
-    middleware = CrawlingLogsMiddleware()
+    crawler = get_crawler()
+    middleware = create_instance(
+        CrawlingLogsMiddleware, settings=crawler.settings, crawler=crawler
+    )
 
     url = "https://example.com"
     request = Request(url)
     response = Response(url=url, request=request)
+
+    try:
+
+        def request_fingerprint(request):
+            return crawler.request_fingerprinter.fingerprint(request).hex()
+
+    except AttributeError:
+        from scrapy.utils.request import request_fingerprint
+
+    fingerprint = request_fingerprint(request)
 
     def results_gen():
         return
@@ -38,7 +52,7 @@ def test_crawling_logs_middleware_no_requests():
         '  "current": {\n'
         '    "url": "https://example.com",\n'
         '    "request_url": "https://example.com",\n'
-        '    "request_fingerprint": "6d748741a927b10454c83ac285b002cd239964ea",\n'
+        f'    "request_fingerprint": "{fingerprint}",\n'
         '    "page_type": null,\n'
         '    "probability": null\n'
         "  },\n"
@@ -56,88 +70,105 @@ def test_crawling_logs_middleware_no_requests():
 
 @freeze_time("2023-10-10 20:09:29")
 def test_crawling_logs_middleware():
-    middleware = CrawlingLogsMiddleware()
+    crawler = get_crawler()
+    middleware = create_instance(
+        CrawlingLogsMiddleware, settings=crawler.settings, crawler=crawler
+    )
 
     url = "https://example.com"
     request = Request(url)
     response = Response(url=url, request=request)
 
+    product_request = Request(
+        "https://example.com/tech/products?id=1",
+        priority=199,
+        meta={
+            "crawling_logs": {
+                "name": "Product ID 1",
+                "probability": 0.9951,
+                "page_type": "product",
+            },
+        },
+    )
+    next_page_request = Request(
+        "https://example.com?page=2",
+        priority=100,
+        meta={
+            "crawling_logs": {
+                "name": "Category Page 2",
+                "probability": 0.9712,
+                "page_type": "nextPage",
+            },
+        },
+    )
+    subcategory_request = Request(
+        "https://example.com/tech/products/monitors",
+        priority=98,
+        meta={
+            "crawling_logs": {
+                "name": "Monitors Subcategory",
+                "probability": 0.9817,
+                "page_type": "subCategories",
+            },
+        },
+    )
+    product_navigation_request = Request(
+        "https://example.com/books/products",
+        priority=91,
+        meta={
+            "crawling_logs": {
+                "name": "Books Category",
+                "probability": 0.9136,
+                "page_type": "productNavigation",
+            },
+        },
+    )
+    product_navigation_heuristics_request = Request(
+        "https://example.com/some-other-page",
+        priority=10,
+        meta={
+            "crawling_logs": {
+                "name": "Some Other Page",
+                "probability": 0.1,
+                "page_type": "productNavigation-heuristics",
+            },
+        },
+    )
+    unknown_request = Request(
+        "https://example.com/other-unknown",
+        meta={
+            "crawling_logs": {
+                "name": "Unknown Page",
+                "page_type": "some other page_type",
+            },
+        },
+    )
+
+    try:
+
+        def request_fingerprint(request):
+            return crawler.request_fingerprinter.fingerprint(request).hex()
+
+    except AttributeError:
+        from scrapy.utils.request import request_fingerprint
+
+    fingerprint = request_fingerprint(request)
+    product_request_fp = request_fingerprint(product_request)
+    next_page_request_fp = request_fingerprint(next_page_request)
+    subcategory_request_fp = request_fingerprint(subcategory_request)
+    product_navigation_request_fp = request_fingerprint(product_navigation_request)
+    product_navigation_heuristics_request_fp = request_fingerprint(
+        product_navigation_heuristics_request
+    )
+    unknown_request_fp = request_fingerprint(unknown_request)
+
     def results_gen():
-        # product
-        yield Request(
-            "https://example.com/tech/products?id=1",
-            priority=199,
-            meta={
-                "crawling_logs": {
-                    "name": "Product ID 1",
-                    "probability": 0.9951,
-                    "page_type": "product",
-                },
-            },
-        )
-
-        # nextPage
-        yield Request(
-            "https://example.com?page=2",
-            priority=100,
-            meta={
-                "crawling_logs": {
-                    "name": "Category Page 2",
-                    "probability": 0.9712,
-                    "page_type": "nextPage",
-                },
-            },
-        )
-
-        # subCategories
-        yield Request(
-            "https://example.com/tech/products/monitors",
-            priority=98,
-            meta={
-                "crawling_logs": {
-                    "name": "Monitors Subcategory",
-                    "probability": 0.9817,
-                    "page_type": "subCategories",
-                },
-            },
-        )
-
-        # productNavigation
-        yield Request(
-            "https://example.com/books/products",
-            priority=91,
-            meta={
-                "crawling_logs": {
-                    "name": "Books Category",
-                    "probability": 0.9136,
-                    "page_type": "productNavigation",
-                },
-            },
-        )
-
-        # productNavigation-heuristics
-        yield Request(
-            "https://example.com/some-other-page",
-            priority=10,
-            meta={
-                "crawling_logs": {
-                    "name": "Some Other Page",
-                    "probability": 0.1,
-                    "page_type": "productNavigation-heuristics",
-                },
-            },
-        )
-
-        # unknown
-        yield Request(
-            "https://example.com/other-unknown",
-            meta={
-                "crawling_logs": {
-                    "name": "Unknown Page",
-                    "page_type": "some other page_type",
-                },
-            },
-        )
+        yield product_request
+        yield next_page_request
+        yield subcategory_request
+        yield product_navigation_request
+        yield product_navigation_heuristics_request
+        yield unknown_request
 
     crawl_logs = middleware.crawl_logs(response, results_gen())
     assert crawl_logs == (
@@ -155,7 +186,7 @@ def test_crawling_logs_middleware():
         '  "current": {\n'
         '    "url": "https://example.com",\n'
         '    "request_url": "https://example.com",\n'
-        '    "request_fingerprint": "6d748741a927b10454c83ac285b002cd239964ea",\n'
+        f'    "request_fingerprint": "{fingerprint}",\n'
         '    "page_type": null,\n'
         '    "probability": null\n'
         "  },\n"
@@ -167,7 +198,7 @@ def test_crawling_logs_middleware():
         '        "page_type": "product",\n'
         '        "request_url": "https://example.com/tech/products?id=1",\n'
         '        "request_priority": 199,\n'
-        '        "request_fingerprint": "3ae14329c7fd5796ab543d7b02cdb7c7c2af3895"\n'
+        f'        "request_fingerprint": "{product_request_fp}"\n'
         "      }\n"
         "    ],\n"
         '    "nextPage": [\n'
@@ -177,7 +208,7 @@ def test_crawling_logs_middleware():
         '        "page_type": "nextPage",\n'
         '        "request_url": "https://example.com?page=2",\n'
         '        "request_priority": 100,\n'
-        '        "request_fingerprint": "cf9e7c91564b16c204cdfa8fe3b4d7cb49375a2a"\n'
+        f'        "request_fingerprint": "{next_page_request_fp}"\n'
         "      }\n"
         "    ],\n"
         '    "subCategories": [\n'
@@ -187,7 +218,7 @@ def test_crawling_logs_middleware():
         '        "page_type": "subCategories",\n'
         '        "request_url": "https://example.com/tech/products/monitors",\n'
         '        "request_priority": 98,\n'
-        '        "request_fingerprint": "107253243fb9bc9c679808c6c5d80bde5ae7ffe0"\n'
+        f'        "request_fingerprint": "{subcategory_request_fp}"\n'
         "      }\n"
         "    ],\n"
         '    "productNavigation": [\n'
@@ -197,7 +228,7 @@ def test_crawling_logs_middleware():
         '        "page_type": "productNavigation",\n'
         '        "request_url": "https://example.com/books/products",\n'
         '        "request_priority": 91,\n'
-        '        "request_fingerprint": "e672605f85de9b9fe76e55463e5bd8ca66ae1ee2"\n'
+        f'        "request_fingerprint": "{product_navigation_request_fp}"\n'
         "      }\n"
         "    ],\n"
         '    "productNavigation-heuristics": [\n'
@@ -207,7 +238,7 @@ def test_crawling_logs_middleware():
         '        "page_type": "productNavigation-heuristics",\n'
         '        "request_url": "https://example.com/some-other-page",\n'
         '        "request_priority": 10,\n'
-        '        "request_fingerprint": "a04e46e1d9887a9f397d97c40db63a7ce3c3f958"\n'
+        f'        "request_fingerprint": "{product_navigation_heuristics_request_fp}"\n'
         "      }\n"
         "    ],\n"
         '    "unknown": [\n'
@@ -216,12 +247,26 @@ def test_crawling_logs_middleware():
         '        "page_type": "some other page_type",\n'
         '        "request_url": "https://example.com/other-unknown",\n'
         '        "request_priority": 0,\n'
-        '        "request_fingerprint": "61fb82880551b45981b0a1cc52eb802166b673ed"\n'
+        f'        "request_fingerprint": "{unknown_request_fp}"\n'
         "      }\n"
         "    ]\n"
         "  }\n"
         "}"
     )
+
+
+def test_crawling_logs_middleware_deprecated_subclassing():
+    class CustomCrawlingLogsMiddleware(CrawlingLogsMiddleware):
+        def __init__(self):
+            pass
+
+    crawler = get_crawler()
+    with pytest.warns(DeprecationWarning, match="must now accept a crawler parameter"):
+        middleware = create_instance(
+            CustomCrawlingLogsMiddleware, settings=crawler.settings, crawler=crawler
+        )
+    assert middleware._crawler == crawler
+    assert hasattr(middleware, "_fingerprint")
 
 
 @pytest.mark.parametrize(
