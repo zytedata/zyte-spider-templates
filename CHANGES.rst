@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.6.0 (YYYY-MM-DD)
+0.6.0 (2024-01-31)
 ------------------
 
 * Fixed the ``extract_from`` spider parameter that wasn't working.
