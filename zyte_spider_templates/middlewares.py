@@ -3,11 +3,10 @@ import logging
 import warnings
 from datetime import datetime
 from typing import Any, Dict
+from warnings import warn
 
 from scrapy import Request, Spider
-from scrapy.exceptions import ScrapyDeprecationWarning
 from scrapy.spidermiddlewares.offsite import OffsiteMiddleware
-from scrapy.utils.request import request_fingerprint
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +37,29 @@ class CrawlingLogsMiddleware:
     ]
     unknown_page_type = "unknown"
 
+    @classmethod
+    def from_crawler(cls, crawler):
+        try:
+            result = cls(crawler)
+        except TypeError:
+            warn(
+                (
+                    "Subclasses of CrawlingLogsMiddleware must now accept a "
+                    "crawler parameter in their __init__ method. This will "
+                    "become an error in the future."
+                ),
+                DeprecationWarning,
+            )
+            result = cls()
+            result._crawler = crawler
+        return result
+
+    def __init__(self, crawler=None):
+        self._crawler = crawler
+
+    def _fingerprint(self, request):
+        return self._crawler.request_fingerprinter.fingerprint(request).hex()
+
     def process_spider_output(self, response, result, spider):
         result = list(result)
         crawl_logs = self.crawl_logs(response, result)
@@ -46,13 +68,7 @@ class CrawlingLogsMiddleware:
 
     def crawl_logs(self, response, result):
         current_page_type = response.meta.get("crawling_logs", {}).get("page_type")
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                category=ScrapyDeprecationWarning,
-                message="Call to deprecated function scrapy.utils.request.request_fingerprint()*",
-            )
-            fingerprint = request_fingerprint(response.request)
+        fingerprint = self._fingerprint(response.request)
         data: Dict[str, Any] = {
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "current": {
@@ -78,13 +94,7 @@ class CrawlingLogsMiddleware:
                     continue
 
                 crawling_logs = entry.meta.get("crawling_logs", {})
-                with warnings.catch_warnings():
-                    warnings.filterwarnings(
-                        "ignore",
-                        category=ScrapyDeprecationWarning,
-                        message="Call to deprecated function scrapy.utils.request.request_fingerprint()*",
-                    )
-                    entry_fingerprint = request_fingerprint(entry)
+                entry_fingerprint = self._fingerprint(entry)
                 crawling_logs.update(
                     {
                         "request_url": entry.url,

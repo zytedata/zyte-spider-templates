@@ -18,7 +18,7 @@ class BaseSpiderParams(BaseModel):
     url: str = Field(
         title="URL",
         description="Initial URL for the crawl.",
-        pattern=r"^https?:\/\/[^:\/\s]+(:\d{1,5})?(\/[^\s]*)*(#[^\s]*)?$",
+        pattern=r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
     )
     geolocation: Optional[Geolocation] = Field(
         title="Geolocation",
