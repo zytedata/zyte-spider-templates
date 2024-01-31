@@ -12,6 +12,10 @@ from zyte_spider_templates.middlewares import (
 )
 
 
+def get_fingerprinter(crawler):
+    return lambda request: crawler.request_fingerprinter.fingerprint(request).hex()
+
+
 @freeze_time("2023-10-10 20:09:29")
 def test_crawling_logs_middleware_no_requests():
     crawler = get_crawler()
@@ -23,14 +27,7 @@ def test_crawling_logs_middleware_no_requests():
     request = Request(url)
     response = Response(url=url, request=request)
 
-    try:
-
-        def request_fingerprint(request):
-            return crawler.request_fingerprinter.fingerprint(request).hex()
-
-    except AttributeError:
-        from scrapy.utils.request import request_fingerprint
-
+    request_fingerprint = get_fingerprinter(crawler)
     fingerprint = request_fingerprint(request)
 
     def results_gen():
@@ -144,14 +141,7 @@ def test_crawling_logs_middleware():
         },
     )
 
-    try:
-
-        def request_fingerprint(request):
-            return crawler.request_fingerprinter.fingerprint(request).hex()
-
-    except AttributeError:
-        from scrapy.utils.request import request_fingerprint
-
+    request_fingerprint = get_fingerprinter(crawler)
     fingerprint = request_fingerprint(request)
     product_request_fp = request_fingerprint(product_request)
     next_page_request_fp = request_fingerprint(next_page_request)

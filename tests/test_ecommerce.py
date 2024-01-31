@@ -435,7 +435,7 @@ def test_metadata():
                     "type": "string",
                     "title": "URL",
                     "description": "Initial URL for the crawl.",
-                    "pattern": r"^https?:\/\/[^:\/\s]+(:\d{1,5})?(\/[^\s]*)*(#[^\s]*)?$",
+                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
                 },
             },
             "required": ["url"],

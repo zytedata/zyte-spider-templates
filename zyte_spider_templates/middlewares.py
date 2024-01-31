@@ -52,25 +52,13 @@ class CrawlingLogsMiddleware:
             )
             result = cls()
             result._crawler = crawler
-        # This call can move to __init__ once we can rely on _crawler being
-        # set by the time it is called.
-        result._load_fingerprinter()
         return result
 
     def __init__(self, crawler=None):
         self._crawler = crawler
 
-    def _load_fingerprinter(self):
-        try:
-            self._fingerprint = (
-                lambda request: self._crawler.request_fingerprinter.fingerprint(
-                    request
-                ).hex()
-            )
-        except AttributeError:
-            from scrapy.utils.request import request_fingerprint
-
-            self._fingerprint = request_fingerprint
+    def _fingerprint(self, request):
+        return self._crawler.request_fingerprinter.fingerprint(request).hex()
 
     def process_spider_output(self, response, result, spider):
         result = list(result)
