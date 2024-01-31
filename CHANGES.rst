@@ -19,7 +19,7 @@ Changes
   inherits from :class:`zyte_common_items.AutoProductNavigationPage` instead of
   :class:`zyte_common_items.BaseProductNavigationPage`.
 
-* Moved eCommerce specific code from :class:`zyte_spider_templates.spiders.base.BaseSpider`
+* Moved e-commerce code from :class:`zyte_spider_templates.spiders.base.BaseSpider`
   to :class:`zyte_spider_templates.spiders.ecommerce.EcommerceSpider`.
 
 * Documentation improvements.
