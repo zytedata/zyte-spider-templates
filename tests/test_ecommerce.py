@@ -447,8 +447,11 @@ def test_metadata():
                 "url": {
                     "type": "string",
                     "title": "URL",
-                    "description": "Initial URL for the crawl.",
-                    "pattern": r"^https?:\/\/[^:\/\s]+(:\d{1,5})?(\/[^\s]*)*(#[^\s]*)?$",
+                    "description": (
+                        "Initial URL for the crawl. Enter the full URL including http(s), "
+                        "you can copy and paste it from your browser. Example: https://toscrape.com/"
+                    ),
+                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
                 },
             },
             "required": ["url"],
