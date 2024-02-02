@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.6.1 (YYYY-MM-DD)
+0.6.1 (2024-02-02)
 ------------------
 
 * Improved the :attr:`zyte_spider_templates.spiders.base.BaseSpiderParams.url`
