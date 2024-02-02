@@ -286,7 +286,11 @@ def test_arguments():
             "ZYTE_API_PROVIDER_PARAMS",
             None,
             "getdict",
-            {"geolocation": "DE"},
+            {
+                "geolocation": "DE",
+                "productOptions": {"extractFrom": "browserHtml"},
+                "productNavigationOptions": {"extractFrom": "browserHtml"},
+            },
         ),
         (
             "geolocation",
@@ -294,7 +298,12 @@ def test_arguments():
             "ZYTE_API_PROVIDER_PARAMS",
             '{"browserHtml": true}',
             "getdict",
-            {"browserHtml": True, "geolocation": "DE"},
+            {
+                "browserHtml": True,
+                "geolocation": "DE",
+                "productOptions": {"extractFrom": "browserHtml"},
+                "productNavigationOptions": {"extractFrom": "browserHtml"},
+            },
         ),
         (
             "geolocation",
@@ -302,7 +311,11 @@ def test_arguments():
             "ZYTE_API_PROVIDER_PARAMS",
             '{"geolocation": "IE"}',
             "getdict",
-            {"geolocation": "DE"},
+            {
+                "geolocation": "DE",
+                "productOptions": {"extractFrom": "browserHtml"},
+                "productNavigationOptions": {"extractFrom": "browserHtml"},
+            },
         ),
         (
             "extract_from",

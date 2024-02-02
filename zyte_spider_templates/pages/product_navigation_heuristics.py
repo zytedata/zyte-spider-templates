@@ -50,7 +50,9 @@ class HeuristicsProductNavigationPage(AutoProductNavigationPage):
         ignore_urls = set(self._urls_for_category())
 
         links = []
-        response = TextResponse(url=str(self.response.url), body=self.response.text.encode())
+        response = TextResponse(
+            url=str(self.response.url), body=self.response.text.encode()
+        )
         for link in link_extractor.extract_links(response):
             if link.url in ignore_urls:
                 continue

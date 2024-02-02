@@ -19,6 +19,6 @@ Parameters
 
 .. autoenum:: zyte_spider_templates.spiders.ecommerce.EcommerceCrawlStrategy
 
-.. autoenum:: zyte_spider_templates.spiders.ecommerce.ExtractFrom
+.. autoenum:: zyte_spider_templates.spiders.base.ExtractFrom
 
 .. autoenum:: zyte_spider_templates.spiders.base.Geolocation
