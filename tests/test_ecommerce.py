@@ -286,11 +286,7 @@ def test_arguments():
             "ZYTE_API_PROVIDER_PARAMS",
             None,
             "getdict",
-            {
-                "geolocation": "DE",
-                "productOptions": {"extractFrom": "browserHtml"},
-                "productNavigationOptions": {"extractFrom": "browserHtml"},
-            },
+            {"geolocation": "DE"},
         ),
         (
             "geolocation",
@@ -298,12 +294,7 @@ def test_arguments():
             "ZYTE_API_PROVIDER_PARAMS",
             '{"browserHtml": true}',
             "getdict",
-            {
-                "browserHtml": True,
-                "geolocation": "DE",
-                "productOptions": {"extractFrom": "browserHtml"},
-                "productNavigationOptions": {"extractFrom": "browserHtml"},
-            },
+            {"browserHtml": True, "geolocation": "DE"},
         ),
         (
             "geolocation",
@@ -311,11 +302,7 @@ def test_arguments():
             "ZYTE_API_PROVIDER_PARAMS",
             '{"geolocation": "IE"}',
             "getdict",
-            {
-                "geolocation": "DE",
-                "productOptions": {"extractFrom": "browserHtml"},
-                "productNavigationOptions": {"extractFrom": "browserHtml"},
-            },
+            {"geolocation": "DE"},
         ),
         (
             "extract_from",
@@ -394,7 +381,7 @@ def test_metadata():
                 },
                 "extract_from": {
                     "anyOf": [{"type": "string"}, {"type": "null"}],
-                    "default": "browserHtml",
+                    "default": None,
                     "title": "Extraction source",
                     "description": (
                         "Whether to perform extraction using a browser request "

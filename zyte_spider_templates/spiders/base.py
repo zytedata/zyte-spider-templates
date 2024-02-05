@@ -66,7 +66,7 @@ class BaseSpiderParams(BaseModel):
             "Whether to perform extraction using a browser request "
             "(browserHtml) or an HTTP request (httpResponseBody)."
         ),
-        default=ExtractFrom.browserHtml,
+        default=None,
         json_schema_extra={
             "enumMeta": {
                 ExtractFrom.browserHtml: {
