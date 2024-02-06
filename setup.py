@@ -15,7 +15,7 @@ setup(
         "pydantic>=2",
         "scrapy>=2.11.0",
         "scrapy-poet>=0.20.1",
-        "scrapy-spider-metadata>=0.1.2",
+        "scrapy-spider-metadata @ git+https://github.com/Gallaecio/scrapy-spider-metadata.git@param-inheritance",
         "scrapy-zyte-api[provider]>=0.15.0",
         "zyte-common-items>=0.13.0",
     ],

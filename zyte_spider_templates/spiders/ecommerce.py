@@ -1,93 +1,27 @@
-from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import scrapy
-from pydantic import Field
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
-from zyte_spider_templates.documentation import document_enum
-from zyte_spider_templates.spiders.base import (
-    ARG_SETTING_PRIORITY,
-    BaseSpider,
-    BaseSpiderParams,
-)
+from zyte_spider_templates import BaseSpider, make_params
+from zyte_spider_templates.params import CrawlStrategy
+from zyte_spider_templates.spiders.base import ARG_SETTING_PRIORITY
 from zyte_spider_templates.utils import get_domain
 
-
-@document_enum
-class EcommerceCrawlStrategy(str, Enum):
-    full: str = "full"
-    """Follow most links within the domain of URL in an attempt to discover and
-    extract as many products as possible."""
-
-    navigation: str = "navigation"
-    """Follow pagination, subcategories, and product detail pages."""
-
-    pagination_only: str = "pagination_only"
-    """Follow pagination and product detail pages. SubCategory links are
-    ignored. Use this when some subCategory links are misidentified by
-    ML-extraction."""
-
-
-@document_enum
-class ExtractFrom(str, Enum):
-    httpResponseBody: str = "httpResponseBody"
-    """Use HTTP responses. Cost-efficient and fast extraction method, which
-    works well on many websites."""
-
-    browserHtml: str = "browserHtml"
-    """Use browser rendering. Often provides the best quality."""
-
-
-class EcommerceSpiderParams(BaseSpiderParams):
-    crawl_strategy: EcommerceCrawlStrategy = Field(
-        title="Crawl strategy",
-        description="Determines how the start URL and follow-up URLs are crawled.",
-        default=EcommerceCrawlStrategy.navigation,
-        json_schema_extra={
-            "enumMeta": {
-                EcommerceCrawlStrategy.full: {
-                    "title": "Full",
-                    "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
-                },
-                EcommerceCrawlStrategy.navigation: {
-                    "title": "Navigation",
-                    "description": "Follow pagination, subcategories, and product detail pages.",
-                },
-                EcommerceCrawlStrategy.pagination_only: {
-                    "title": "Pagination Only",
-                    "description": (
-                        "Follow pagination and product detail pages. SubCategory links are ignored. "
-                        "Use this when some subCategory links are misidentified by ML-extraction."
-                    ),
-                },
-            },
-        },
-    )
-    extract_from: Optional[ExtractFrom] = Field(
-        title="Extraction source",
-        description=(
-            "Whether to perform extraction using a browser request "
-            "(browserHtml) or an HTTP request (httpResponseBody)."
-        ),
-        default=None,
-        json_schema_extra={
-            "enumMeta": {
-                ExtractFrom.browserHtml: {
-                    "title": "browserHtml",
-                    "description": "Use browser rendering. Often provides the best quality.",
-                },
-                ExtractFrom.httpResponseBody: {
-                    "title": "httpResponseBody",
-                    "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
-                },
-            },
-        },
-    )
+EcommerceSpiderParams = make_params(
+    "EcommerceSpiderParams",
+    [
+        "url",
+        "geolocation",
+        "max_requests",
+        "crawl_strategy",
+        "extract_from",
+    ],
+)
 
 
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
@@ -144,7 +78,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
     def start_requests(self) -> Iterable[Request]:
         page_params = {}
-        if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
+        if self.args.crawl_strategy == CrawlStrategy.full:
             page_params = {"full_domain": self.allowed_domains[0]}
 
         yield Request(
@@ -174,7 +108,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             else:
                 yield self.get_nextpage_request(navigation.nextPage)
 
-        if self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only:
+        if self.args.crawl_strategy != CrawlStrategy.pagination_only:
             for request in navigation.subCategories or []:
                 yield self.get_subcategory_request(request, page_params=page_params)
 
