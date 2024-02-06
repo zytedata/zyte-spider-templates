@@ -9,16 +9,13 @@ from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import get_spider_metadata
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation, Request
 
-from zyte_spider_templates import BaseSpiderParams
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS,
     GEOLOCATION_OPTIONS_WITH_CODE,
     Geolocation,
 )
-from zyte_spider_templates.spiders.ecommerce import (
-    EcommerceCrawlStrategy,
-    EcommerceSpider,
-)
+from zyte_spider_templates.params import AllParams, CrawlStrategy
+from zyte_spider_templates.spiders.ecommerce import EcommerceSpider
 
 from . import get_crawler
 from .test_utils import URL_TO_DOMAIN
@@ -29,9 +26,7 @@ def test_parameters():
         EcommerceSpider()
 
     EcommerceSpider(url="https://example.com")
-    EcommerceSpider(
-        url="https://example.com", crawl_strategy=EcommerceCrawlStrategy.full
-    )
+    EcommerceSpider(url="https://example.com", crawl_strategy=CrawlStrategy.full)
     EcommerceSpider(url="https://example.com", crawl_strategy="full")
 
     with pytest.raises(ValidationError):
@@ -354,6 +349,7 @@ def test_metadata():
         "title": "E-commerce",
         "description": "Template for spiders that extract product data from e-commerce websites.",
         "param_schema": {
+            "additionalProperties": False,
             "properties": {
                 "crawl_strategy": {
                     "default": "navigation",
@@ -494,7 +490,7 @@ def test_metadata():
     ],
 )
 def test_validation_url(url, valid):
-    url_re = BaseSpiderParams.model_fields["url"].metadata[0].pattern
+    url_re = AllParams.model_fields["url"].metadata[0].pattern
     assert bool(re.match(url_re, url)) == valid
 
 

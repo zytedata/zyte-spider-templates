@@ -5,13 +5,16 @@ Reference
 Base classes
 ============
 
-.. autopydantic_model:: zyte_spider_templates.spiders.base.BaseSpiderParams
-    :inherited-members: BaseModel
-
 .. autoclass:: zyte_spider_templates.spiders.base.BaseSpider
 
-.. autoenum:: zyte_spider_templates.spiders.base.Geolocation
-    :noindex:
+.. autopydantic_model:: zyte_spider_templates.params.AllParams
+    :inherited-members: BaseModel
+
+.. autoenum:: zyte_spider_templates.params.CrawlStrategy
+
+.. autoenum:: zyte_spider_templates.params.ExtractFrom
+
+.. autoenum:: zyte_spider_templates.params.Geolocation
 
 E-commerce
 ==========
@@ -19,15 +22,6 @@ E-commerce
 .. autopydantic_model:: zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams
     :noindex:
     :inherited-members: BaseModel
-
-.. autoenum:: zyte_spider_templates.spiders.ecommerce.EcommerceCrawlStrategy
-    :noindex:
-
-.. autoclass:: zyte_spider_templates.spiders.ecommerce.ExtractFrom
-    :noindex:
-
-.. autoclass:: zyte_spider_templates.spiders.ecommerce.EcommerceSpider
-    :noindex:
 
 Pages
 =====
