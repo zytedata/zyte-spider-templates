@@ -31,4 +31,5 @@ zyte-spider-templates documentation
    :caption: All the rest
    :hidden:
 
+   reference/index
    changes
