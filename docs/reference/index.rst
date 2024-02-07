@@ -10,6 +10,9 @@ Base classes
 
 .. autoclass:: zyte_spider_templates.spiders.base.BaseSpider
 
+.. autoenum:: zyte_spider_templates.spiders.base.ExtractFrom
+    :noindex:
+
 .. autoenum:: zyte_spider_templates.spiders.base.Geolocation
     :noindex:
 
@@ -21,9 +24,6 @@ E-commerce
     :inherited-members: BaseModel
 
 .. autoenum:: zyte_spider_templates.spiders.ecommerce.EcommerceCrawlStrategy
-    :noindex:
-
-.. autoclass:: zyte_spider_templates.spiders.ecommerce.ExtractFrom
     :noindex:
 
 .. autoclass:: zyte_spider_templates.spiders.ecommerce.EcommerceSpider
