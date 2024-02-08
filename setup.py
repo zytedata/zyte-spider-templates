@@ -14,11 +14,9 @@ setup(
     install_requires=[
         "pydantic>=2",
         "scrapy>=2.11.0",
-        # "scrapy-poet>=0.20.1",
-        "scrapy-poet @ git+https://git@github.com/scrapinghub/scrapy-poet@weak-cache#egg=scrapy-poet",
+        "scrapy-poet>=0.21.0",
         "scrapy-spider-metadata>=0.1.2",
-        # "scrapy-zyte-api[provider]>=0.15.0",
-        "scrapy-zyte-api @ git+https://git@github.com/scrapy-plugins/scrapy-zyte-api@http-or-browser-response#egg=scrapy-zyte-api",
+        "scrapy-zyte-api[provider]>=0.16.0",
         "zyte-common-items>=0.13.0",
     ],
     classifiers=[
