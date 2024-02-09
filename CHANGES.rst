@@ -10,7 +10,7 @@ Changes
   * :doc:`scrapy-zyte-api <scrapy-zyte-api:index>` >= 0.16.0
 
 * With the updated dependencies above, this fixes the issue of having 2 separate
-  Zyte API Requests (*productNavigation* and *product*) for the same URL. Note
+  Zyte API Requests (*productNavigation* and *httpResponseBody*) for the same URL. Note
   that this issue only occurs when requesting product navigation pages.
 * Moved :class:`zyte_spider_templates.spiders.ecommerce.ExtractFrom` into
   :class:`zyte_spider_templates.spiders.base.ExtractFrom`.
