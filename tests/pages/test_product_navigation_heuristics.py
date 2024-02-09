@@ -1,6 +1,6 @@
 import pytest
 from pytest_twisted import ensureDeferred
-from web_poet import HttpResponse, PageParams, RequestUrl
+from web_poet import AnyResponse, HttpResponse, PageParams, RequestUrl
 from zyte_common_items import ProbabilityRequest, ProductNavigation
 
 from zyte_spider_templates.pages.product_navigation_heuristics import (
@@ -38,7 +38,7 @@ async def test_unknown_product_page():
         </body>
         </html>
     """
-    response = HttpResponse("https://example.com", body)
+    response = AnyResponse(HttpResponse("https://example.com", body))
     navigation = ProductNavigation.from_dict(
         {
             "url": "https://example.com",
@@ -118,7 +118,7 @@ async def test_crawl_nofollow_links():
             </html>
         """
     url = "https://example.com"
-    response = HttpResponse(url, body)
+    response = AnyResponse(HttpResponse(url, body))
     request_url = RequestUrl(response.url)
     navigation = ProductNavigation(url=url)
 

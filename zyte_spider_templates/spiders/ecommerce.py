@@ -33,16 +33,6 @@ class EcommerceCrawlStrategy(str, Enum):
     ML-extraction."""
 
 
-@document_enum
-class ExtractFrom(str, Enum):
-    httpResponseBody: str = "httpResponseBody"
-    """Use HTTP responses. Cost-efficient and fast extraction method, which
-    works well on many websites."""
-
-    browserHtml: str = "browserHtml"
-    """Use browser rendering. Often provides the best quality."""
-
-
 class EcommerceSpiderParams(BaseSpiderParams):
     crawl_strategy: EcommerceCrawlStrategy = Field(
         title="Crawl strategy",
@@ -64,26 +54,6 @@ class EcommerceSpiderParams(BaseSpiderParams):
                         "Follow pagination and product detail pages. SubCategory links are ignored. "
                         "Use this when some subCategory links are misidentified by ML-extraction."
                     ),
-                },
-            },
-        },
-    )
-    extract_from: Optional[ExtractFrom] = Field(
-        title="Extraction source",
-        description=(
-            "Whether to perform extraction using a browser request "
-            "(browserHtml) or an HTTP request (httpResponseBody)."
-        ),
-        default=None,
-        json_schema_extra={
-            "enumMeta": {
-                ExtractFrom.browserHtml: {
-                    "title": "browserHtml",
-                    "description": "Use browser rendering. Often provides the best quality.",
-                },
-                ExtractFrom.httpResponseBody: {
-                    "title": "httpResponseBody",
-                    "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
                 },
             },
         },
