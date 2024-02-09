@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.7.0 (YYYY-MM-DD)
+0.7.0 (2024-02-09)
 ------------------
 
 * Updated requirement versions:
