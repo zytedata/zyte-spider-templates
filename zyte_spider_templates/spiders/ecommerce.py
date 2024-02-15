@@ -1,8 +1,8 @@
 from enum import Enum
-from typing import Any, Callable, Dict, Iterable, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import scrapy
-from pydantic import Field
+from pydantic import BaseModel, Field, field_validator
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse
@@ -12,8 +12,13 @@ from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 from zyte_spider_templates.documentation import document_enum
 from zyte_spider_templates.spiders.base import (
     ARG_SETTING_PRIORITY,
+    EXTRACT_FROM_FIELD,
+    GEOLOCATION_FIELD,
+    MAX_REQUESTS_FIELD,
     BaseSpider,
     BaseSpiderParams,
+    ExtractFrom,
+    Geolocation,
 )
 from zyte_spider_templates.utils import get_domain
 
@@ -33,31 +38,34 @@ class EcommerceCrawlStrategy(str, Enum):
     ML-extraction."""
 
 
-class EcommerceSpiderParams(BaseSpiderParams):
-    crawl_strategy: EcommerceCrawlStrategy = Field(
-        title="Crawl strategy",
-        description="Determines how the start URL and follow-up URLs are crawled.",
-        default=EcommerceCrawlStrategy.navigation,
-        json_schema_extra={
-            "enumMeta": {
-                EcommerceCrawlStrategy.full: {
-                    "title": "Full",
-                    "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
-                },
-                EcommerceCrawlStrategy.navigation: {
-                    "title": "Navigation",
-                    "description": "Follow pagination, subcategories, and product detail pages.",
-                },
-                EcommerceCrawlStrategy.pagination_only: {
-                    "title": "Pagination Only",
-                    "description": (
-                        "Follow pagination and product detail pages. SubCategory links are ignored. "
-                        "Use this when some subCategory links are misidentified by ML-extraction."
-                    ),
-                },
+CRAWL_STRATEGY_FIELD = Field(
+    title="Crawl strategy",
+    description="Determines how the start URL and follow-up URLs are crawled.",
+    default=EcommerceCrawlStrategy.navigation,
+    json_schema_extra={
+        "enumMeta": {
+            EcommerceCrawlStrategy.full: {
+                "title": "Full",
+                "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+            },
+            EcommerceCrawlStrategy.navigation: {
+                "title": "Navigation",
+                "description": "Follow pagination, subcategories, and product detail pages.",
+            },
+            EcommerceCrawlStrategy.pagination_only: {
+                "title": "Pagination Only",
+                "description": (
+                    "Follow pagination and product detail pages. SubCategory links are ignored. "
+                    "Use this when some subCategory links are misidentified by ML-extraction."
+                ),
             },
         },
-    )
+    },
+)
+
+
+class EcommerceSpiderParams(BaseSpiderParams):
+    crawl_strategy: EcommerceCrawlStrategy = CRAWL_STRATEGY_FIELD
 
 
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
@@ -95,7 +103,12 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        spider.allowed_domains = [get_domain(spider.args.url)]
+        url = getattr(spider.args, "url", None)
+        if url:
+            spider.start_urls = [url]
+        else:
+            spider.start_urls = spider.args.urls
+        spider.allowed_domains = [get_domain(url) for url in spider.start_urls]
 
         if spider.args.extract_from is not None:
             spider.settings.set(
@@ -117,14 +130,15 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
             page_params = {"full_domain": self.allowed_domains[0]}
 
-        yield Request(
-            url=self.args.url,
-            callback=self.parse_navigation,
-            meta={
-                "page_params": page_params,
-                "crawling_logs": {"page_type": "productNavigation"},
-            },
-        )
+        for url in self.start_urls:
+            yield Request(
+                url=url,
+                callback=self.parse_navigation,
+                meta={
+                    "page_params": page_params,
+                    "crawling_logs": {"page_type": "productNavigation"},
+                },
+            )
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
@@ -255,3 +269,48 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         )
         scrapy_request.meta["allow_offsite"] = True
         return scrapy_request
+
+
+class ExperimentalEcommerceSpiderParams(BaseModel):
+    urls: List[str] = Field(
+        title="URLs",
+        description=(
+            "Initial URLs for the crawl, separated by new lines. Enter the "
+            "full URL including http(s), you can copy and paste it from your "
+            "browser. Example: https://toscrape.com/"
+        ),
+    )
+    crawl_strategy: EcommerceCrawlStrategy = CRAWL_STRATEGY_FIELD
+    geolocation: Optional[Geolocation] = GEOLOCATION_FIELD
+    max_requests: Optional[int] = MAX_REQUESTS_FIELD
+    extract_from: Optional[ExtractFrom] = EXTRACT_FROM_FIELD
+
+    @field_validator("urls", mode="before")
+    @classmethod
+    def split_lines(cls, value: Union[List[str], str]) -> List[str]:
+        if isinstance(value, str):
+            value = value.split("\n")
+        return value
+
+
+class ExperimentalEcommerceSpider(
+    EcommerceSpider, Args[ExperimentalEcommerceSpiderParams]
+):
+    """Experimental alternative to :class:`EcommerceSpider`.
+
+    *urls* are the start URLs, e.g. homepages or category pages, as a
+    new-line-separated list. It replaces *url*.
+
+    For other parameters, see :class:`EcommerceSpider`.
+    """
+
+    name = "experimental-ecommerce"
+
+    metadata: Dict[str, Any] = {
+        **EcommerceSpider.metadata,
+        "title": "E-commerce (experimental)",
+        "description": (
+            "Experimental template for spiders that extract product data from "
+            "e-commerce websites."
+        ),
+    }
