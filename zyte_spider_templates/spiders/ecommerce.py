@@ -289,7 +289,8 @@ class ExperimentalEcommerceSpiderParams(BaseModel):
     @classmethod
     def split_lines(cls, value: Union[List[str], str]) -> List[str]:
         if isinstance(value, str):
-            value = value.split("\n")
+            value = [v.strip() for v in value.split("\n")]
+            value = [v for v in value if v]
         return value
 
 

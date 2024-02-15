@@ -18,6 +18,7 @@ from zyte_spider_templates._geolocations import (
 from zyte_spider_templates.spiders.ecommerce import (
     EcommerceCrawlStrategy,
     EcommerceSpider,
+    ExperimentalEcommerceSpider,
 )
 
 from . import get_crawler
@@ -632,3 +633,33 @@ def test_set_allowed_domains(url, allowed_domain):
     kwargs = {"url": url}
     spider = EcommerceSpider.from_crawler(crawler, **kwargs)
     assert spider.allowed_domains == [allowed_domain]
+
+
+def test_urls():
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = ExperimentalEcommerceSpider.from_crawler(crawler, urls=[url])
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_navigation
+
+    spider = ExperimentalEcommerceSpider.from_crawler(crawler, urls=url)
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_navigation
+
+    spider = ExperimentalEcommerceSpider.from_crawler(
+        crawler,
+        urls="https://a.example\n \nhttps://b.example\nhttps://c.example\n\n",
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 3
+    assert all(
+        request.callback == spider.parse_navigation for request in start_requests
+    )
+    assert start_requests[0].url == "https://a.example"
+    assert start_requests[1].url == "https://b.example"
+    assert start_requests[2].url == "https://c.example"
