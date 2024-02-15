@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, call
 import pytest
 import scrapy
 from pydantic import ValidationError
+from scrapy.http import TextResponse
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import get_spider_metadata
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation, Request
@@ -379,6 +380,17 @@ def test_metadata():
                         },
                     },
                 },
+                "use_url_lists": {
+                    "default": False,
+                    "title": "Use URL Lists",
+                    "description": (
+                        "Enable this option if the specified initial URL "
+                        "points to a list of URLs to crawl, with 1 URL per "
+                        "line. Note: When using this option, crawling outside "
+                        "the domain of the list URLs will be allowed."
+                    ),
+                    "type": "boolean",
+                },
                 "extract_from": {
                     "anyOf": [{"type": "string"}, {"type": "null"}],
                     "default": None,
@@ -631,3 +643,30 @@ def test_set_allowed_domains(url, allowed_domain):
     kwargs = {"url": url}
     spider = EcommerceSpider.from_crawler(crawler, **kwargs)
     assert spider.allowed_domains == [allowed_domain]
+
+
+def test_use_url_lists():
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = EcommerceSpider.from_crawler(crawler, url=url)
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].callback == spider.parse_navigation
+
+    spider = EcommerceSpider.from_crawler(crawler, url=url, use_url_lists=False)
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].callback == spider.parse_navigation
+
+    spider = EcommerceSpider.from_crawler(crawler, url=url, use_url_lists=True)
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].callback == spider.parse_url_list
+
+    response = TextResponse(url, body=b"https://a.example\nhttps://b.example")
+    requests = list(start_requests[0].callback(response))
+    assert len(requests) == 2
+    assert all(request.callback == spider.parse_navigation for request in requests)
+    assert requests[0].url == "https://a.example"
+    assert requests[1].url == "https://b.example"

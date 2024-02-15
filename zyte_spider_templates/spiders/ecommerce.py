@@ -5,6 +5,7 @@ import scrapy
 from pydantic import Field
 from scrapy import Request
 from scrapy.crawler import Crawler
+from scrapy.http import TextResponse
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
@@ -58,6 +59,16 @@ class EcommerceSpiderParams(BaseSpiderParams):
             },
         },
     )
+    use_url_lists: bool = Field(
+        title="Use URL Lists",
+        description=(
+            "Enable this option if the specified initial URL points to a list "
+            "of URLs to crawl, with 1 URL per line. Note: When using this "
+            "option, crawling outside the domain of the list URLs will be "
+            "allowed."
+        ),
+        default=False,
+    )
 
 
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
@@ -95,7 +106,10 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        spider.allowed_domains = [get_domain(spider.args.url)]
+        if not spider.args.use_url_lists:
+            spider.allowed_domains = [get_domain(spider.args.url)]
+        else:
+            pass  # https://github.com/scrapy/scrapy/issues/3257
 
         if spider.args.extract_from is not None:
             spider.settings.set(
@@ -112,19 +126,32 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
         return spider
 
-    def start_requests(self) -> Iterable[Request]:
-        page_params = {}
+    def get_start_request(self, url):
+        meta = {
+            "crawling_logs": {"page_type": "productNavigation"},
+        }
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
-            page_params = {"full_domain": self.allowed_domains[0]}
-
-        yield Request(
-            url=self.args.url,
+            meta["page_params"] = {"full_domain": get_domain(url)}
+        return Request(
+            url=url,
             callback=self.parse_navigation,
-            meta={
-                "page_params": page_params,
-                "crawling_logs": {"page_type": "productNavigation"},
-            },
+            meta=meta,
         )
+
+    def start_requests(self) -> Iterable[Request]:
+        if self.args.use_url_lists:
+            yield Request(
+                url=self.args.url,
+                callback=self.parse_url_list,
+            )
+            return
+        yield self.get_start_request(self.args.url)
+
+    def parse_url_list(self, response: TextResponse) -> Iterable[Request]:
+        urls = response.text.split("\n")
+        self.logger.info(f"Loaded {len(urls)} initial URLs from {response.url}.")
+        for url in urls:
+            yield self.get_start_request(url)
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
