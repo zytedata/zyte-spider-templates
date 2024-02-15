@@ -664,9 +664,13 @@ def test_use_url_lists():
     assert len(start_requests) == 1
     assert start_requests[0].callback == spider.parse_url_list
 
-    response = TextResponse(url, body=b"https://a.example\nhttps://b.example")
+    response = TextResponse(
+        url,
+        body=b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n",
+    )
     requests = list(start_requests[0].callback(response))
-    assert len(requests) == 2
+    assert len(requests) == 3
     assert all(request.callback == spider.parse_navigation for request in requests)
     assert requests[0].url == "https://a.example"
     assert requests[1].url == "https://b.example"
+    assert requests[2].url == "https://c.example"

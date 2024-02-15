@@ -148,7 +148,8 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         yield self.get_start_request(self.args.url)
 
     def parse_url_list(self, response: TextResponse) -> Iterable[Request]:
-        urls = response.text.split("\n")
+        urls = [url.strip() for url in response.text.split("\n")]
+        urls = [url for url in urls if url]
         self.logger.info(f"Loaded {len(urls)} initial URLs from {response.url}.")
         for url in urls:
             yield self.get_start_request(url)
