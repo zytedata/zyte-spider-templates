@@ -214,12 +214,12 @@ def test_crawl():
             assert request.callback == spider.parse_navigation
 
 
-def test_crawl_strategy_none():
+def test_crawl_strategy_direct_product():
     crawler = get_crawler()
     spider = EcommerceSpider.from_crawler(
         crawler,
         url="https://example.com",
-        crawl_strategy="none",
+        crawl_strategy="direct_product",
     )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
@@ -372,7 +372,7 @@ def test_metadata():
                     "title": "Crawl strategy",
                     "description": "Determines how the start URL and follow-up URLs are crawled.",
                     "type": "string",
-                    "enum": ["full", "navigation", "pagination_only", "none"],
+                    "enum": ["full", "navigation", "pagination_only", "direct_product"],
                     "enumMeta": {
                         "full": {
                             "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
@@ -389,12 +389,12 @@ def test_metadata():
                             ),
                             "title": "Pagination Only",
                         },
-                        "none": {
+                        "direct_product": {
                             "description": (
                                 "Treat input URLs as direct links to product detail pages, and "
                                 "extract a product from each."
                             ),
-                            "title": "None",
+                            "title": "Direct URLs to Product",
                         },
                     },
                 },

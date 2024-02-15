@@ -32,7 +32,7 @@ class EcommerceCrawlStrategy(str, Enum):
     ignored. Use this when some subCategory links are misidentified by
     ML-extraction."""
 
-    none: str = "none"
+    direct_product: str = "direct_product"
     """Treat input URLs as direct links to product detail pages, and
     extract a product from each."""
 
@@ -59,8 +59,8 @@ class EcommerceSpiderParams(BaseSpiderParams):
                         "Use this when some subCategory links are misidentified by ML-extraction."
                     ),
                 },
-                EcommerceCrawlStrategy.none: {
-                    "title": "None",
+                EcommerceCrawlStrategy.direct_product: {
+                    "title": "Direct URLs to Product",
                     "description": (
                         "Treat input URLs as direct links to product detail pages, and "
                         "extract a product from each."
@@ -126,7 +126,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     def start_requests(self) -> Iterable[Request]:
         callback = (
             self.parse_product
-            if self.args.crawl_strategy == EcommerceCrawlStrategy.none
+            if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_product
             else self.parse_navigation
         )
         page_params = {}
