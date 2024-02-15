@@ -368,7 +368,13 @@ def test_metadata():
                             "title": "Full",
                         },
                         "navigation": {
-                            "description": "Follow pagination, subcategories, and product detail pages. If the target URL does not have subcategories, Pagination Only is a better choice.",
+                            "description": (
+                                "Follow pagination, subcategories, and "
+                                "product detail pages. Pagination Only is a "
+                                "better choice if the target URL does not "
+                                "have subcategories, of if Zyte API is "
+                                "misidentifying some URLs as subcategories."
+                            ),
                             "title": "Navigation",
                         },
                         "pagination_only": {

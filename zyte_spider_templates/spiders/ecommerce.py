@@ -27,8 +27,8 @@ class EcommerceCrawlStrategy(str, Enum):
     navigation: str = "navigation"
     """Follow pagination, subcategories, and product detail pages.
 
-     If the target URL does not have subcategories, Pagination Only is a better
-    choice.
+    Pagination Only is a better choice if the target URL does not have
+    subcategories, of if Zyte API is misidentifying some URLs as subcategories.
     """
 
     pagination_only: str = "pagination_only"
@@ -49,7 +49,12 @@ class EcommerceSpiderParams(BaseSpiderParams):
                 },
                 EcommerceCrawlStrategy.navigation: {
                     "title": "Navigation",
-                    "description": "Follow pagination, subcategories, and product detail pages. If the target URL does not have subcategories, Pagination Only is a better choice.",
+                    "description": (
+                        "Follow pagination, subcategories, and product detail "
+                        "pages. Pagination Only is a better choice if the "
+                        "target URL does not have subcategories, of if Zyte "
+                        "API is misidentifying some URLs as subcategories."
+                    ),
                 },
                 EcommerceCrawlStrategy.pagination_only: {
                     "title": "Pagination Only",
