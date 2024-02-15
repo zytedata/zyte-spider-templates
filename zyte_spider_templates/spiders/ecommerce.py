@@ -25,19 +25,22 @@ class EcommerceCrawlStrategy(str, Enum):
     extract as many products as possible."""
 
     navigation: str = "navigation"
-    """Follow pagination, subcategories, and product detail pages."""
+    """Follow pagination, subcategories, and product detail pages.
+
+     If the target URL does not have subcategories, Pagination Only is a better
+    choice.
+    """
 
     pagination_only: str = "pagination_only"
-    """Follow pagination and product detail pages. SubCategory links are
-    ignored. Use this when some subCategory links are misidentified by
-    ML-extraction."""
+    """Follow pagination and product detail pages. Subcategory links are
+    ignored."""
 
 
 class EcommerceSpiderParams(BaseSpiderParams):
     crawl_strategy: EcommerceCrawlStrategy = Field(
         title="Crawl strategy",
         description="Determines how the start URL and follow-up URLs are crawled.",
-        default=EcommerceCrawlStrategy.navigation,
+        default=EcommerceCrawlStrategy.full,
         json_schema_extra={
             "enumMeta": {
                 EcommerceCrawlStrategy.full: {
@@ -46,13 +49,12 @@ class EcommerceSpiderParams(BaseSpiderParams):
                 },
                 EcommerceCrawlStrategy.navigation: {
                     "title": "Navigation",
-                    "description": "Follow pagination, subcategories, and product detail pages.",
+                    "description": "Follow pagination, subcategories, and product detail pages. If the target URL does not have subcategories, Pagination Only is a better choice.",
                 },
                 EcommerceCrawlStrategy.pagination_only: {
                     "title": "Pagination Only",
                     "description": (
-                        "Follow pagination and product detail pages. SubCategory links are ignored. "
-                        "Use this when some subCategory links are misidentified by ML-extraction."
+                        "Follow pagination and product detail pages. Subcategory links are ignored."
                     ),
                 },
             },
