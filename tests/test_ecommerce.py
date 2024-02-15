@@ -214,6 +214,18 @@ def test_crawl():
             assert request.callback == spider.parse_navigation
 
 
+def test_crawl_strategy_none():
+    crawler = get_crawler()
+    spider = EcommerceSpider.from_crawler(
+        crawler,
+        url="https://example.com",
+        crawl_strategy="none",
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].callback == spider.parse_product
+
+
 @pytest.mark.parametrize(
     "probability,has_item,item_drop",
     ((0.9, True, False), (0.09, False, True), (0.1, True, False), (None, True, False)),
@@ -360,7 +372,7 @@ def test_metadata():
                     "title": "Crawl strategy",
                     "description": "Determines how the start URL and follow-up URLs are crawled.",
                     "type": "string",
-                    "enum": ["full", "navigation", "pagination_only"],
+                    "enum": ["full", "navigation", "pagination_only", "none"],
                     "enumMeta": {
                         "full": {
                             "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
@@ -376,6 +388,13 @@ def test_metadata():
                                 "Use this when some subCategory links are misidentified by ML-extraction."
                             ),
                             "title": "Pagination Only",
+                        },
+                        "none": {
+                            "description": (
+                                "Treat input URLs as direct links to product detail pages, and "
+                                "extract a product from each."
+                            ),
+                            "title": "None",
                         },
                     },
                 },
