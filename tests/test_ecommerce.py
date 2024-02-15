@@ -39,8 +39,9 @@ def test_parameters():
 
 
 def test_start_requests():
+    crawler = get_crawler()
     url = "https://example.com"
-    spider = EcommerceSpider(url=url)
+    spider = EcommerceSpider.from_crawler(crawler, url=url)
     requests = list(spider.start_requests())
     assert len(requests) == 1
     assert requests[0].url == url
@@ -356,7 +357,7 @@ def test_metadata():
         "param_schema": {
             "properties": {
                 "crawl_strategy": {
-                    "default": "navigation",
+                    "default": "full",
                     "title": "Crawl strategy",
                     "description": "Determines how the start URL and follow-up URLs are crawled.",
                     "type": "string",
@@ -367,13 +368,18 @@ def test_metadata():
                             "title": "Full",
                         },
                         "navigation": {
-                            "description": "Follow pagination, subcategories, and product detail pages.",
+                            "description": (
+                                "Follow pagination, subcategories, and "
+                                "product detail pages. Pagination Only is a "
+                                "better choice if the target URL does not "
+                                "have subcategories, or if Zyte API is "
+                                "misidentifying some URLs as subcategories."
+                            ),
                             "title": "Navigation",
                         },
                         "pagination_only": {
                             "description": (
-                                "Follow pagination and product detail pages. SubCategory links are ignored. "
-                                "Use this when some subCategory links are misidentified by ML-extraction."
+                                "Follow pagination and product detail pages. Subcategory links are ignored."
                             ),
                             "title": "Pagination Only",
                         },
