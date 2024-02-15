@@ -372,7 +372,7 @@ def test_metadata():
                                 "Follow pagination, subcategories, and "
                                 "product detail pages. Pagination Only is a "
                                 "better choice if the target URL does not "
-                                "have subcategories, of if Zyte API is "
+                                "have subcategories, or if Zyte API is "
                                 "misidentifying some URLs as subcategories."
                             ),
                             "title": "Navigation",
