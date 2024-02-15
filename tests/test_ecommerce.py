@@ -39,8 +39,9 @@ def test_parameters():
 
 
 def test_start_requests():
+    crawler = get_crawler()
     url = "https://example.com"
-    spider = EcommerceSpider(url=url)
+    spider = EcommerceSpider.from_crawler(crawler, url=url)
     requests = list(spider.start_requests())
     assert len(requests) == 1
     assert requests[0].url == url
