@@ -1,4 +1,6 @@
+import re
 from enum import Enum
+from logging import getLogger
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import scrapy
@@ -11,6 +13,7 @@ from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
 from zyte_spider_templates.documentation import document_enum
 from zyte_spider_templates.spiders.base import (
+    _URL_PATTERN,
     ARG_SETTING_PRIORITY,
     EXTRACT_FROM_FIELD,
     GEOLOCATION_FIELD,
@@ -21,6 +24,8 @@ from zyte_spider_templates.spiders.base import (
     Geolocation,
 )
 from zyte_spider_templates.utils import get_domain
+
+logger = getLogger(__name__)
 
 
 @document_enum
@@ -296,8 +301,22 @@ class ExperimentalEcommerceSpiderParams(BaseModel):
     @classmethod
     def split_lines(cls, value: Union[List[str], str]) -> List[str]:
         if isinstance(value, str):
-            value = [v.strip() for v in value.split("\n")]
-            value = [v for v in value if v]
+            new_value = []
+            for v in value.split("\n"):
+                v = v.strip()
+                if not v:
+                    continue
+                if not re.search(_URL_PATTERN, v):
+                    logger.warning(
+                        f"{v!r}, from the 'urls' spider argument, is not a "
+                        f"valid URL and will be ignored."
+                    )
+                    continue
+                new_value.append(v)
+            if new_value:
+                value = new_value
+            else:
+                raise ValueError(f"No valid URL found in {value!r}")
         return value
 
 

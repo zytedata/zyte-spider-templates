@@ -75,12 +75,15 @@ MAX_REQUESTS_FIELD = Field(
 )
 
 
+_URL_PATTERN = r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$"
+
+
 class BaseSpiderParams(BaseModel):
     url: str = Field(
         title="URL",
         description="Initial URL for the crawl. Enter the full URL including http(s), "
         "you can copy and paste it from your browser. Example: https://toscrape.com/",
-        pattern=r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+        pattern=_URL_PATTERN,
     )
     geolocation: Optional[Geolocation] = GEOLOCATION_FIELD
     max_requests: Optional[int] = MAX_REQUESTS_FIELD

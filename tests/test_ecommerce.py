@@ -640,7 +640,7 @@ def test_set_allowed_domains(url, allowed_domain):
     assert spider.allowed_domains == [allowed_domain]
 
 
-def test_urls():
+def test_urls(caplog):
     crawler = get_crawler()
     url = "https://example.com"
 
@@ -656,10 +656,12 @@ def test_urls():
     assert start_requests[0].url == url
     assert start_requests[0].callback == spider.parse_navigation
 
+    caplog.clear()
     spider = ExperimentalEcommerceSpider.from_crawler(
         crawler,
-        urls="https://a.example\n \nhttps://b.example\nhttps://c.example\n\n",
+        urls="https://a.example\n \nhttps://b.example\nhttps://c.example\nfoo\n\n",
     )
+    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 3
     assert all(
@@ -668,3 +670,12 @@ def test_urls():
     assert start_requests[0].url == "https://a.example"
     assert start_requests[1].url == "https://b.example"
     assert start_requests[2].url == "https://c.example"
+
+    caplog.clear()
+    with pytest.raises(ValueError):
+        spider = ExperimentalEcommerceSpider.from_crawler(
+            crawler,
+            urls="foo\nbar",
+        )
+    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
+    assert "'bar', from the 'urls' spider argument, is not a valid URL" in caplog.text
