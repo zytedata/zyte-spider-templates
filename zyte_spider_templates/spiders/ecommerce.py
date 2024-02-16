@@ -30,18 +30,21 @@ class EcommerceCrawlStrategy(str, Enum):
     extract as many products as possible."""
 
     navigation: str = "navigation"
-    """Follow pagination, subcategories, and product detail pages."""
+    """Follow pagination, subcategories, and product detail pages.
+
+    Pagination Only is a better choice if the target URL does not have
+    subcategories, or if Zyte API is misidentifying some URLs as subcategories.
+    """
 
     pagination_only: str = "pagination_only"
-    """Follow pagination and product detail pages. SubCategory links are
-    ignored. Use this when some subCategory links are misidentified by
-    ML-extraction."""
+    """Follow pagination and product detail pages. Subcategory links are
+    ignored."""
 
 
 CRAWL_STRATEGY_FIELD = Field(
     title="Crawl strategy",
     description="Determines how the start URL and follow-up URLs are crawled.",
-    default=EcommerceCrawlStrategy.navigation,
+    default=EcommerceCrawlStrategy.full,
     json_schema_extra={
         "enumMeta": {
             EcommerceCrawlStrategy.full: {
@@ -50,13 +53,17 @@ CRAWL_STRATEGY_FIELD = Field(
             },
             EcommerceCrawlStrategy.navigation: {
                 "title": "Navigation",
-                "description": "Follow pagination, subcategories, and product detail pages.",
+                "description": (
+                    "Follow pagination, subcategories, and product detail "
+                    "pages. Pagination Only is a better choice if the "
+                    "target URL does not have subcategories, or if Zyte "
+                    "API is misidentifying some URLs as subcategories."
+                ),
             },
             EcommerceCrawlStrategy.pagination_only: {
                 "title": "Pagination Only",
                 "description": (
-                    "Follow pagination and product detail pages. SubCategory links are ignored. "
-                    "Use this when some subCategory links are misidentified by ML-extraction."
+                    "Follow pagination and product detail pages. Subcategory links are ignored."
                 ),
             },
         },
