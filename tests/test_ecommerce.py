@@ -1,11 +1,11 @@
 import logging
 import re
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
+import requests
 import scrapy
 from pydantic import ValidationError
-from scrapy.http import TextResponse
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import get_spider_metadata
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation, Request
@@ -652,25 +652,22 @@ def test_use_url_lists():
     spider = EcommerceSpider.from_crawler(crawler, url=url)
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
-    assert start_requests[0].callback == spider.parse_navigation
+    assert start_requests[0].url == url
 
     spider = EcommerceSpider.from_crawler(crawler, url=url, use_url_lists=False)
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
-    assert start_requests[0].callback == spider.parse_navigation
+    assert start_requests[0].url == url
 
-    spider = EcommerceSpider.from_crawler(crawler, url=url, use_url_lists=True)
+    with patch("zyte_spider_templates.spiders.ecommerce.requests.get") as mock_get:
+        response = requests.Response()
+        response._content = (
+            b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
+        )
+        mock_get.return_value = response
+        spider = EcommerceSpider.from_crawler(crawler, url=url, use_url_lists=True)
     start_requests = list(spider.start_requests())
-    assert len(start_requests) == 1
-    assert start_requests[0].callback == spider.parse_url_list
-
-    response = TextResponse(
-        url,
-        body=b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n",
-    )
-    requests = list(start_requests[0].callback(response))
-    assert len(requests) == 3
-    assert all(request.callback == spider.parse_navigation for request in requests)
-    assert requests[0].url == "https://a.example"
-    assert requests[1].url == "https://b.example"
-    assert requests[2].url == "https://c.example"
+    assert len(start_requests) == 3
+    assert start_requests[0].url == "https://a.example"
+    assert start_requests[1].url == "https://b.example"
+    assert start_requests[2].url == "https://c.example"

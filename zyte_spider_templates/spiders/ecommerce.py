@@ -1,11 +1,11 @@
 from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
+import requests
 import scrapy
 from pydantic import Field
 from scrapy import Request
 from scrapy.crawler import Crawler
-from scrapy.http import TextResponse
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
@@ -106,10 +106,16 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        if not spider.args.use_url_lists:
-            spider.allowed_domains = [get_domain(spider.args.url)]
+        if spider.args.use_url_lists:
+            response = requests.get(spider.args.url)
+            spider.start_urls = [url.strip() for url in response.text.split("\n")]
+            spider.start_urls = [url for url in spider.start_urls if url]
+            spider.logger.info(
+                f"Loaded {len(spider.start_urls)} initial URLs from {response.url}."
+            )
         else:
-            pass  # https://github.com/scrapy/scrapy/issues/3257
+            spider.start_urls = [spider.args.url]
+        spider.allowed_domains = list(set(get_domain(url) for url in spider.start_urls))
 
         if spider.args.extract_from is not None:
             spider.settings.set(
@@ -139,19 +145,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         )
 
     def start_requests(self) -> Iterable[Request]:
-        if self.args.use_url_lists:
-            yield Request(
-                url=self.args.url,
-                callback=self.parse_url_list,
-            )
-            return
-        yield self.get_start_request(self.args.url)
-
-    def parse_url_list(self, response: TextResponse) -> Iterable[Request]:
-        urls = [url.strip() for url in response.text.split("\n")]
-        urls = [url for url in urls if url]
-        self.logger.info(f"Loaded {len(urls)} initial URLs from {response.url}.")
-        for url in urls:
+        for url in self.start_urls:
             yield self.get_start_request(url)
 
     def parse_navigation(
