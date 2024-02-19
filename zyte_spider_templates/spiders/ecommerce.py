@@ -70,9 +70,7 @@ class EcommerceSpiderParams(BaseSpiderParams):
         title="Use URL Lists",
         description=(
             "Enable this option if the specified initial URL points to a list "
-            "of URLs to crawl, with 1 URL per line. Note: When using this "
-            "option, crawling outside the domain of the list URLs will be "
-            "allowed."
+            "of URLs to crawl, with 1 URL per line."
         ),
         default=False,
     )
