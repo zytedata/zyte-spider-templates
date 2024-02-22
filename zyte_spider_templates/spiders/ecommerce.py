@@ -70,25 +70,10 @@ class EcommerceSpiderParams(BaseSpiderParams):
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     """Yield products from an e-commerce website.
 
-    *url* is the start URL, e.g. a homepage or category page.
+    See :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams`
+    for supported parameters.
 
-    *crawl_strategy* determines how the start URL and follow-up URLs are
-    crawled:
-
-    -   ``"navigation"`` (default): follow pagination, subcategories, and
-        product detail pages.
-
-    -   ``"full"``: follow most links within the domain of *url* in an attempt to
-        discover and extract as many products as it can.
-
-    *geolocation* (optional) is an ISO 3166-1 alpha-2 2-character string specified in:
-    https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation
-
-    *max_requests* (optional) specifies the max number of Zyte API requests
-    allowed for the crawl.
-
-    *extract_from* (optional) allows to enforce extracting the data from
-    either "browserHtml" or "httpResponseBody".
+    .. seealso:: :ref:`e-commerce`.
     """
 
     name = "ecommerce"
