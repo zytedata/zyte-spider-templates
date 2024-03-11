@@ -73,6 +73,24 @@ lower price:
                     yield product
 
 
+You can also override existing parameters. For example, to hard-code the start
+URL:
+
+.. code-block:: python
+
+    from scrapy_spider_metadata import Args
+    from zyte_spider_templates import EcommerceSpider
+    from zyte_spider_templates.spiders.ecommerce import EcommerceSpiderParams
+
+
+    class MyParams(EcommerceSpiderParams):
+        url: str = "https://books.toscrape.com"
+
+
+    class MySpider(EcommerceSpider, Args[MyParams]):
+        name = "my_spider"
+
+
 .. _custom-crawl:
 
 Customizing the crawling logic
