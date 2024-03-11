@@ -66,14 +66,6 @@ class EcommerceSpiderParams(BaseSpiderParams):
             },
         },
     )
-    use_url_lists: bool = Field(
-        title="Use URL Lists",
-        description=(
-            "Enable this option if the specified initial URL points to a list "
-            "of URLs to crawl, with 1 URL per line."
-        ),
-        default=False,
-    )
 
 
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
@@ -96,13 +88,14 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        if spider.args.use_url_lists:
-            response = requests.get(spider.args.url)
-            spider.start_urls = [url.strip() for url in response.text.split("\n")]
-            spider.start_urls = [url for url in spider.start_urls if url]
-            spider.logger.info(
-                f"Loaded {len(spider.start_urls)} initial URLs from {response.url}."
-            )
+        if spider.args.seed_urls:
+            spider.start_urls = []
+            for seed_url in spider.args.seed_urls:
+                response = requests.get(seed_url)
+                urls = [url.strip() for url in response.text.split("\n")]
+                urls = [url for url in urls if url]
+                spider.start_urls.extend(urls)
+                spider.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
         else:
             spider.start_urls = [spider.args.url]
         spider.allowed_domains = list(set(get_domain(url) for url in spider.start_urls))

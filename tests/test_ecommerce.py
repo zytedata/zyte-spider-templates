@@ -356,6 +356,16 @@ def test_metadata():
         "title": "E-commerce",
         "description": "Template for spiders that extract product data from e-commerce websites.",
         "param_schema": {
+            "groups": [
+                {
+                    "id": "inputs",
+                    "title": "Inputs",
+                    "description": (
+                        "Input data that determines the start URLs of the crawl."
+                    ),
+                    "widget": "exclusive",
+                },
+            ],
             "properties": {
                 "crawl_strategy": {
                     "default": "full",
@@ -385,16 +395,6 @@ def test_metadata():
                             "title": "Pagination Only",
                         },
                     },
-                },
-                "use_url_lists": {
-                    "default": False,
-                    "title": "Use URL Lists",
-                    "description": (
-                        "Enable this option if the specified initial URL "
-                        "points to a list of URLs to crawl, with 1 URL per "
-                        "line."
-                    ),
-                    "type": "boolean",
                 },
                 "extract_from": {
                     "anyOf": [{"type": "string"}, {"type": "null"}],
@@ -456,9 +456,28 @@ def test_metadata():
                         "you can copy and paste it from your browser. Example: https://toscrape.com/"
                     ),
                     "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+                    "default": "",
+                    "group": "inputs",
+                },
+                "seed_urls": {
+                    "anyOf": [
+                        {"type": "array", "items": {"type": "string"}},
+                        {"type": "null"},
+                    ],
+                    "title": "Seed URLs",
+                    "description": (
+                        "URLs that point to lists with the initial URLs for "
+                        "the crawl. Both the list of seed URLs and the seed "
+                        "URL lists must be URLs separated by new lines. Enter "
+                        "the full URLs including http(s), you can copy and "
+                        "paste them from your browser. Example: "
+                        "https://toscrape.com/"
+                    ),
+                    "default": None,
+                    "group": "inputs",
+                    "widget": "textarea",
                 },
             },
-            "required": ["url"],
             "title": "EcommerceSpiderParams",
             "type": "object",
         },
@@ -650,19 +669,31 @@ def test_set_allowed_domains(url, allowed_domain):
     assert spider.allowed_domains == [allowed_domain]
 
 
-def test_use_url_lists():
+def test_input_none():
+    crawler = get_crawler()
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(crawler)
+
+
+def test_input_multiple():
+    crawler = get_crawler()
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(
+            crawler,
+            url="https://a.example",
+            seed_urls=["https://b.example"],
+        )
+
+
+def test_url_invalid():
+    crawler = get_crawler()
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(crawler, url="foo")
+
+
+def test_seed_urls():
     crawler = get_crawler()
     url = "https://example.com"
-
-    spider = EcommerceSpider.from_crawler(crawler, url=url)
-    start_requests = list(spider.start_requests())
-    assert len(start_requests) == 1
-    assert start_requests[0].url == url
-
-    spider = EcommerceSpider.from_crawler(crawler, url=url, use_url_lists=False)
-    start_requests = list(spider.start_requests())
-    assert len(start_requests) == 1
-    assert start_requests[0].url == url
 
     with patch("zyte_spider_templates.spiders.ecommerce.requests.get") as mock_get:
         response = requests.Response()
@@ -670,7 +701,9 @@ def test_use_url_lists():
             b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
         )
         mock_get.return_value = response
-        spider = EcommerceSpider.from_crawler(crawler, url=url, use_url_lists=True)
+        spider = EcommerceSpider.from_crawler(crawler, seed_urls=url)
+        mock_get.assert_called_with(url)
+
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 3
     assert start_requests[0].url == "https://a.example"
