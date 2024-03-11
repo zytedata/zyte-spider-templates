@@ -360,7 +360,7 @@ def test_metadata():
                     "id": "inputs",
                     "title": "Inputs",
                     "description": (
-                        "Input data that determines the start URLs of the " "crawl."
+                        "Input data that determines the start URLs of the crawl."
                     ),
                     "widget": "exclusive",
                 },
