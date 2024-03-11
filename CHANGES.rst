@@ -1,6 +1,20 @@
 Changes
 =======
 
+0.7.1 (2024-02-22)
+------------------
+
+* The
+  :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.crawl_strategy`
+  parameter of
+  :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpider`
+  now defaults to
+  :attr:`~zyte_spider_templates.spiders.ecommerce.EcommerceCrawlStrategy.full`
+  instead of
+  :attr:`~zyte_spider_templates.spiders.ecommerce.EcommerceCrawlStrategy.navigation`.
+  We also reworded some descriptions of :enum:`~.EcommerceCrawlStrategy` values
+  for clarification.
+
 0.7.0 (2024-02-09)
 ------------------
 

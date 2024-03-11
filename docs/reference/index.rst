@@ -27,7 +27,6 @@ E-commerce
     :noindex:
 
 .. autoclass:: zyte_spider_templates.spiders.ecommerce.EcommerceSpider
-    :noindex:
 
 Pages
 =====
