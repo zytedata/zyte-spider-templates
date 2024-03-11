@@ -123,10 +123,20 @@ class BaseSpiderParams(BaseModel):
 
     @field_validator("urls", mode="before")
     @classmethod
-    def split_lines(cls, value: Union[List[str], str]) -> List[str]:
+    def validate_url_list(cls, value: Union[List[str], str]) -> List[str]:
+        """Validate a list of URLs.
+
+        If a string is received as input, it is split into multiple strings
+        on new lines.
+
+        List items that do not match a URL pattern trigger a warning and are
+        removed from the list. If all URLs are invalid, validation fails.
+        """
         if isinstance(value, str):
+            value = value.split("\n")
+        if value:
             new_value = []
-            for v in value.split("\n"):
+            for v in value:
                 v = v.strip()
                 if not v:
                     continue
@@ -145,6 +155,12 @@ class BaseSpiderParams(BaseModel):
 
     @model_validator(mode="after")
     def single_input(self):
+        """Fields
+        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.url`
+        and
+        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.urls`
+        form a mandatory, mutually-exclusive field group: one of them must be
+        defined, the rest must not be defined."""
         input_fields = set(
             field for field in _INPUT_FIELDS if getattr(self, field, None)
         )
