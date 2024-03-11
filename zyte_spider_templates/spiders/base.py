@@ -1,9 +1,11 @@
+import re
 from enum import Enum
 from importlib.metadata import version
-from typing import Any, Dict, Optional
+from logging import getLogger
+from typing import Any, Dict, List, Optional, Union
 
 import scrapy
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from scrapy.crawler import Crawler
 
 from zyte_spider_templates._geolocations import (
@@ -14,6 +16,8 @@ from zyte_spider_templates.documentation import document_enum
 
 # Higher priority than command-line-defined settings (40).
 ARG_SETTING_PRIORITY: int = 50
+
+logger = getLogger(__name__)
 
 
 @document_enum
@@ -26,68 +30,139 @@ class ExtractFrom(str, Enum):
     """Use browser rendering. Often provides the best quality."""
 
 
-EXTRACT_FROM_FIELD = Field(
-    title="Extraction source",
-    description=(
-        "Whether to perform extraction using a browser request "
-        "(browserHtml) or an HTTP request (httpResponseBody)."
-    ),
-    default=None,
-    json_schema_extra={
-        "enumMeta": {
-            ExtractFrom.browserHtml: {
-                "title": "browserHtml",
-                "description": "Use browser rendering. Often provides the best quality.",
-            },
-            ExtractFrom.httpResponseBody: {
-                "title": "httpResponseBody",
-                "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
-            },
-        },
-    },
-)
-GEOLOCATION_FIELD = Field(
-    title="Geolocation",
-    description="ISO 3166-1 alpha-2 2-character string specified in "
-    "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
-    default=None,
-    json_schema_extra={
-        "enumMeta": {
-            code: {
-                "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
-            }
-            for code in Geolocation
-        }
-    },
-)
-MAX_REQUESTS_FIELD = Field(
-    description=(
-        "The maximum number of Zyte API requests allowed for the crawl.\n"
-        "\n"
-        "Requests with error responses that cannot be retried or exceed "
-        "their retry limit also count here, but they incur in no costs "
-        "and do not increase the request count in Scrapy Cloud."
-    ),
-    default=100,
-    json_schema_extra={
-        "widget": "request-limit",
-    },
-)
-
-
+_INPUT_FIELDS = ("url", "urls")
 _URL_PATTERN = r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$"
 
 
 class BaseSpiderParams(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "groups": [
+                {
+                    "id": "inputs",
+                    "title": "Inputs",
+                    "description": (
+                        "Input data that determines the start URLs of the " "crawl."
+                    ),
+                    "widget": "exclusive",
+                },
+            ],
+        },
+    )
+
     url: str = Field(
         title="URL",
         description="Initial URL for the crawl. Enter the full URL including http(s), "
         "you can copy and paste it from your browser. Example: https://toscrape.com/",
         pattern=_URL_PATTERN,
+        default="",
+        json_schema_extra={
+            "group": "inputs",
+        },
     )
-    geolocation: Optional[Geolocation] = GEOLOCATION_FIELD
-    max_requests: Optional[int] = MAX_REQUESTS_FIELD
-    extract_from: Optional[ExtractFrom] = EXTRACT_FROM_FIELD
+    urls: Optional[List[str]] = Field(
+        title="URLs",
+        description=(
+            "Initial URLs for the crawl, separated by new lines. Enter the "
+            "full URL including http(s), you can copy and paste it from your "
+            "browser. Example: https://toscrape.com/"
+        ),
+        default=None,
+        json_schema_extra={
+            "group": "inputs",
+            "widget": "textarea",
+        },
+    )
+    geolocation: Optional[Geolocation] = Field(
+        title="Geolocation",
+        description="ISO 3166-1 alpha-2 2-character string specified in "
+        "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
+                }
+                for code in Geolocation
+            }
+        },
+    )
+    max_requests: Optional[int] = Field(
+        description=(
+            "The maximum number of Zyte API requests allowed for the crawl.\n"
+            "\n"
+            "Requests with error responses that cannot be retried or exceed "
+            "their retry limit also count here, but they incur in no costs "
+            "and do not increase the request count in Scrapy Cloud."
+        ),
+        default=100,
+        json_schema_extra={
+            "widget": "request-limit",
+        },
+    )
+    extract_from: Optional[ExtractFrom] = Field(
+        title="Extraction source",
+        description=(
+            "Whether to perform extraction using a browser request "
+            "(browserHtml) or an HTTP request (httpResponseBody)."
+        ),
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                ExtractFrom.browserHtml: {
+                    "title": "browserHtml",
+                    "description": "Use browser rendering. Often provides the best quality.",
+                },
+                ExtractFrom.httpResponseBody: {
+                    "title": "httpResponseBody",
+                    "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
+                },
+            },
+        },
+    )
+
+    @field_validator("urls", mode="before")
+    @classmethod
+    def split_lines(cls, value: Union[List[str], str]) -> List[str]:
+        if isinstance(value, str):
+            new_value = []
+            for v in value.split("\n"):
+                v = v.strip()
+                if not v:
+                    continue
+                if not re.search(_URL_PATTERN, v):
+                    logger.warning(
+                        f"{v!r}, from the 'urls' spider argument, is not a "
+                        f"valid URL and will be ignored."
+                    )
+                    continue
+                new_value.append(v)
+            if new_value:
+                value = new_value
+            else:
+                raise ValueError(f"No valid URL found in {value!r}")
+        return value
+
+    @model_validator(mode="after")
+    def single_input(self):
+        input_fields = set(
+            field for field in _INPUT_FIELDS if getattr(self, field, None)
+        )
+        if not input_fields:
+            input_field_list = ", ".join(_INPUT_FIELDS)
+            raise ValueError(
+                f"No input parameter defined. Please, define one of: "
+                f"{input_field_list}."
+            )
+        elif len(input_fields) > 1:
+            input_field_list = ", ".join(
+                f"{field} ({getattr(self, field)!r})" for field in input_fields
+            )
+            raise ValueError(
+                f"Expected a single input parameter, got {len(input_fields)}: "
+                f"{input_field_list}."
+            )
+        return self
 
 
 class BaseSpider(scrapy.Spider):
