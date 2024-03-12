@@ -458,6 +458,7 @@ def test_metadata():
                     "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
                     "default": "",
                     "group": "inputs",
+                    "exclusiveRequired": True,
                 },
                 "seed_url": {
                     "type": "string",
@@ -470,6 +471,7 @@ def test_metadata():
                     "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
                     "default": "",
                     "group": "inputs",
+                    "exclusiveRequired": True,
                 },
             },
             "title": "EcommerceSpiderParams",

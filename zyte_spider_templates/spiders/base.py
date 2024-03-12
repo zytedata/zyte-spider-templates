@@ -57,6 +57,7 @@ class BaseSpiderParams(BaseModel):
         default="",
         json_schema_extra={
             "group": "inputs",
+            "exclusiveRequired": True,
         },
     )
     seed_url: str = Field(
@@ -70,6 +71,7 @@ class BaseSpiderParams(BaseModel):
         default="",
         json_schema_extra={
             "group": "inputs",
+            "exclusiveRequired": True,
         },
     )
     geolocation: Optional[Geolocation] = Field(
