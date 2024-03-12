@@ -457,6 +457,7 @@ def test_metadata():
                     "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
                     "default": "",
                     "group": "inputs",
+                    "exclusiveRequired": True,
                 },
                 "urls": {
                     "anyOf": [
@@ -471,6 +472,7 @@ def test_metadata():
                     ),
                     "default": None,
                     "group": "inputs",
+                    "exclusiveRequired": True,
                     "widget": "textarea",
                 },
             },

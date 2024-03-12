@@ -58,6 +58,7 @@ class BaseSpiderParams(BaseModel):
         default="",
         json_schema_extra={
             "group": "inputs",
+            "exclusiveRequired": True,
         },
     )
     urls: Optional[List[str]] = Field(
@@ -70,6 +71,7 @@ class BaseSpiderParams(BaseModel):
         default=None,
         json_schema_extra={
             "group": "inputs",
+            "exclusiveRequired": True,
             "widget": "textarea",
         },
     )
