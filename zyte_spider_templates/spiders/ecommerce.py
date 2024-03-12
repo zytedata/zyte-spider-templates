@@ -88,14 +88,13 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        if spider.args.seed_urls:
-            spider.start_urls = []
-            for seed_url in spider.args.seed_urls:
-                response = requests.get(seed_url)
-                urls = [url.strip() for url in response.text.split("\n")]
-                urls = [url for url in urls if url]
-                spider.start_urls.extend(urls)
-                spider.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
+        seed_url = spider.args.seed_url
+        if seed_url:
+            response = requests.get(seed_url)
+            urls = [url.strip() for url in response.text.split("\n")]
+            urls = [url for url in urls if url]
+            spider.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
+            spider.start_urls = urls
         else:
             spider.start_urls = [spider.args.url]
         spider.allowed_domains = list(set(get_domain(url) for url in spider.start_urls))

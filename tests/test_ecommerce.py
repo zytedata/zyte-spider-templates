@@ -459,23 +459,17 @@ def test_metadata():
                     "default": "",
                     "group": "inputs",
                 },
-                "seed_urls": {
-                    "anyOf": [
-                        {"type": "array", "items": {"type": "string"}},
-                        {"type": "null"},
-                    ],
-                    "title": "Seed URLs",
+                "seed_url": {
+                    "type": "string",
+                    "title": "Seed URL",
                     "description": (
-                        "URLs that point to lists with the initial URLs for "
-                        "the crawl. Both the list of seed URLs and the seed "
-                        "URL lists must be URLs separated by new lines. Enter "
-                        "the full URLs including http(s), you can copy and "
-                        "paste them from your browser. Example: "
-                        "https://toscrape.com/"
+                        "URL that point to a list of URLs to crawl, e.g. "
+                        "https://example.com/url-list.txt. The linked list "
+                        "must contain 1 URL per line."
                     ),
-                    "default": None,
+                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+                    "default": "",
                     "group": "inputs",
-                    "widget": "textarea",
                 },
             },
             "title": "EcommerceSpiderParams",
@@ -681,7 +675,7 @@ def test_input_multiple():
         EcommerceSpider.from_crawler(
             crawler,
             url="https://a.example",
-            seed_urls=["https://b.example"],
+            seed_url="https://b.example",
         )
 
 
@@ -691,7 +685,7 @@ def test_url_invalid():
         EcommerceSpider.from_crawler(crawler, url="foo")
 
 
-def test_seed_urls():
+def test_seed_url():
     crawler = get_crawler()
     url = "https://example.com"
 
@@ -701,7 +695,7 @@ def test_seed_urls():
             b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
         )
         mock_get.return_value = response
-        spider = EcommerceSpider.from_crawler(crawler, seed_urls=url)
+        spider = EcommerceSpider.from_crawler(crawler, seed_url=url)
         mock_get.assert_called_with(url)
 
     start_requests = list(spider.start_requests())

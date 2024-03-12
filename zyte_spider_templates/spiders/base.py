@@ -1,11 +1,10 @@
-import re
 from enum import Enum
 from importlib.metadata import version
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 import scrapy
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scrapy.crawler import Crawler
 
 from zyte_spider_templates._geolocations import (
@@ -30,7 +29,7 @@ class ExtractFrom(str, Enum):
     """Use browser rendering. Often provides the best quality."""
 
 
-_INPUT_FIELDS = ("url", "seed_urls")
+_INPUT_FIELDS = ("url", "seed_url")
 _URL_PATTERN = r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$"
 
 
@@ -60,19 +59,17 @@ class BaseSpiderParams(BaseModel):
             "group": "inputs",
         },
     )
-    seed_urls: Optional[List[str]] = Field(
-        title="Seed URLs",
+    seed_url: str = Field(
+        title="Seed URL",
         description=(
-            "URLs that point to lists with the initial URLs for the crawl. "
-            "Both the list of seed URLs and the seed URL lists must be URLs "
-            "separated by new lines. Enter the full URLs including http(s), "
-            "you can copy and paste them from your browser. Example: "
-            "https://toscrape.com/"
+            "URL that point to a list of URLs to crawl, e.g. "
+            "https://example.com/url-list.txt. The linked list must contain 1 "
+            "URL per line."
         ),
-        default=None,
+        pattern=_URL_PATTERN,
+        default="",
         json_schema_extra={
             "group": "inputs",
-            "widget": "textarea",
         },
     )
     geolocation: Optional[Geolocation] = Field(
@@ -123,44 +120,12 @@ class BaseSpiderParams(BaseModel):
         },
     )
 
-    @field_validator("seed_urls", mode="before")
-    @classmethod
-    def validate_url_list(cls, value: Union[List[str], str]) -> List[str]:
-        """Validate a list of URLs.
-
-        If a string is received as input, it is split into multiple strings
-        on new lines.
-
-        List items that do not match a URL pattern trigger a warning and are
-        removed from the list. If all URLs are invalid, validation fails.
-        """
-        if isinstance(value, str):
-            value = value.split("\n")
-        if value:
-            new_value = []
-            for v in value:
-                v = v.strip()
-                if not v:
-                    continue
-                if not re.search(_URL_PATTERN, v):
-                    logger.warning(
-                        f"{v!r}, from the 'seed_urls' spider parameter, is "
-                        f"not a valid URL and will be ignored."
-                    )
-                    continue
-                new_value.append(v)
-            if new_value:
-                value = new_value
-            else:
-                raise ValueError(f"No valid URL found in {value!r}")
-        return value
-
     @model_validator(mode="after")
     def single_input(self):
         """Fields
         :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.url`
         and
-        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.seed_urls`
+        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.seed_url`
         form a mandatory, mutually-exclusive field group: one of them must be
         defined, the rest must not be defined."""
         input_fields = set(
