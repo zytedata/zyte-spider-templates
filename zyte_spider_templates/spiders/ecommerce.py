@@ -1,4 +1,5 @@
 from enum import Enum
+from logging import getLogger
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import scrapy
@@ -16,6 +17,8 @@ from zyte_spider_templates.spiders.base import (
     BaseSpiderParams,
 )
 from zyte_spider_templates.utils import get_domain
+
+logger = getLogger(__name__)
 
 
 @document_enum
@@ -87,7 +90,12 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        spider.allowed_domains = [get_domain(spider.args.url)]
+        url = getattr(spider.args, "url", None)
+        if url:
+            spider.start_urls = [url]
+        else:
+            spider.start_urls = spider.args.urls
+        spider.allowed_domains = [get_domain(url) for url in spider.start_urls]
 
         if spider.args.extract_from is not None:
             spider.settings.set(
@@ -109,14 +117,15 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
             page_params = {"full_domain": self.allowed_domains[0]}
 
-        yield Request(
-            url=self.args.url,
-            callback=self.parse_navigation,
-            meta={
-                "page_params": page_params,
-                "crawling_logs": {"page_type": "productNavigation"},
-            },
-        )
+        for url in self.start_urls:
+            yield Request(
+                url=url,
+                callback=self.parse_navigation,
+                meta={
+                    "page_params": page_params,
+                    "crawling_logs": {"page_type": "productNavigation"},
+                },
+            )
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation

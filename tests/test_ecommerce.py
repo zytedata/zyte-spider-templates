@@ -355,6 +355,16 @@ def test_metadata():
         "title": "E-commerce",
         "description": "Template for spiders that extract product data from e-commerce websites.",
         "param_schema": {
+            "groups": [
+                {
+                    "id": "inputs",
+                    "title": "Inputs",
+                    "description": (
+                        "Input data that determines the start URLs of the crawl."
+                    ),
+                    "widget": "exclusive",
+                },
+            ],
             "properties": {
                 "crawl_strategy": {
                     "default": "full",
@@ -445,9 +455,27 @@ def test_metadata():
                         "you can copy and paste it from your browser. Example: https://toscrape.com/"
                     ),
                     "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+                    "default": "",
+                    "group": "inputs",
+                    "exclusiveRequired": True,
+                },
+                "urls": {
+                    "anyOf": [
+                        {"type": "array", "items": {"type": "string"}},
+                        {"type": "null"},
+                    ],
+                    "title": "URLs",
+                    "description": (
+                        "Initial URLs for the crawl, separated by new lines. Enter the "
+                        "full URL including http(s), you can copy and paste it from your "
+                        "browser. Example: https://toscrape.com/"
+                    ),
+                    "default": None,
+                    "group": "inputs",
+                    "exclusiveRequired": True,
+                    "widget": "textarea",
                 },
             },
-            "required": ["url"],
             "title": "EcommerceSpiderParams",
             "type": "object",
         },
@@ -637,3 +665,66 @@ def test_set_allowed_domains(url, allowed_domain):
     kwargs = {"url": url}
     spider = EcommerceSpider.from_crawler(crawler, **kwargs)
     assert spider.allowed_domains == [allowed_domain]
+
+
+def test_input_none():
+    crawler = get_crawler()
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(crawler)
+
+
+def test_input_multiple():
+    crawler = get_crawler()
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(
+            crawler,
+            url="https://a.example",
+            urls=["https://b.example"],
+        )
+
+
+def test_url_invalid():
+    crawler = get_crawler()
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(crawler, url="foo")
+
+
+def test_urls(caplog):
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = EcommerceSpider.from_crawler(crawler, urls=[url])
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_navigation
+
+    spider = EcommerceSpider.from_crawler(crawler, urls=url)
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_navigation
+
+    caplog.clear()
+    spider = EcommerceSpider.from_crawler(
+        crawler,
+        urls="https://a.example\n \nhttps://b.example\nhttps://c.example\nfoo\n\n",
+    )
+    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 3
+    assert all(
+        request.callback == spider.parse_navigation for request in start_requests
+    )
+    assert start_requests[0].url == "https://a.example"
+    assert start_requests[1].url == "https://b.example"
+    assert start_requests[2].url == "https://c.example"
+
+    caplog.clear()
+    with pytest.raises(ValueError):
+        spider = EcommerceSpider.from_crawler(
+            crawler,
+            urls="foo\nbar",
+        )
+    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
+    assert "'bar', from the 'urls' spider argument, is not a valid URL" in caplog.text
