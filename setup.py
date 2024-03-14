@@ -13,6 +13,7 @@ setup(
     include_package_data=True,
     install_requires=[
         "pydantic>=2",
+        "requests>=0.10.1",
         "scrapy>=2.11.0",
         "scrapy-poet>=0.21.0",
         "scrapy-spider-metadata>=0.1.2",

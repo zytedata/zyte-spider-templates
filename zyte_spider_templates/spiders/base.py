@@ -1,9 +1,10 @@
 from enum import Enum
 from importlib.metadata import version
+from logging import getLogger
 from typing import Any, Dict, Optional
 
 import scrapy
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scrapy.crawler import Crawler
 
 from zyte_spider_templates._geolocations import (
@@ -14,6 +15,8 @@ from zyte_spider_templates.documentation import document_enum
 
 # Higher priority than command-line-defined settings (40).
 ARG_SETTING_PRIORITY: int = 50
+
+logger = getLogger(__name__)
 
 
 @document_enum
@@ -26,12 +29,50 @@ class ExtractFrom(str, Enum):
     """Use browser rendering. Often provides the best quality."""
 
 
+_INPUT_FIELDS = ("url", "seed_url")
+_URL_PATTERN = r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$"
+
+
 class BaseSpiderParams(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "groups": [
+                {
+                    "id": "inputs",
+                    "title": "Inputs",
+                    "description": (
+                        "Input data that determines the start URLs of the crawl."
+                    ),
+                    "widget": "exclusive",
+                },
+            ],
+        },
+    )
+
     url: str = Field(
         title="URL",
         description="Initial URL for the crawl. Enter the full URL including http(s), "
         "you can copy and paste it from your browser. Example: https://toscrape.com/",
-        pattern=r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+        pattern=_URL_PATTERN,
+        default="",
+        json_schema_extra={
+            "group": "inputs",
+            "exclusiveRequired": True,
+        },
+    )
+    seed_url: str = Field(
+        title="Seed URL",
+        description=(
+            "URL that point to a list of URLs to crawl, e.g. "
+            "https://example.com/url-list.txt. The linked list must contain 1 "
+            "URL per line."
+        ),
+        pattern=_URL_PATTERN,
+        default="",
+        json_schema_extra={
+            "group": "inputs",
+            "exclusiveRequired": True,
+        },
     )
     geolocation: Optional[Geolocation] = Field(
         title="Geolocation",
@@ -80,6 +121,33 @@ class BaseSpiderParams(BaseModel):
             },
         },
     )
+
+    @model_validator(mode="after")
+    def single_input(self):
+        """Fields
+        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.url`
+        and
+        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.seed_url`
+        form a mandatory, mutually-exclusive field group: one of them must be
+        defined, the rest must not be defined."""
+        input_fields = set(
+            field for field in _INPUT_FIELDS if getattr(self, field, None)
+        )
+        if not input_fields:
+            input_field_list = ", ".join(_INPUT_FIELDS)
+            raise ValueError(
+                f"No input parameter defined. Please, define one of: "
+                f"{input_field_list}."
+            )
+        elif len(input_fields) > 1:
+            input_field_list = ", ".join(
+                f"{field} ({getattr(self, field)!r})" for field in input_fields
+            )
+            raise ValueError(
+                f"Expected a single input parameter, got {len(input_fields)}: "
+                f"{input_field_list}."
+            )
+        return self
 
 
 class BaseSpider(scrapy.Spider):
