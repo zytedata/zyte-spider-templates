@@ -2,20 +2,21 @@ from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import scrapy
-from pydantic import Field
+from pydantic import BaseModel, Field
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
-from zyte_spider_templates.documentation import document_enum
 from zyte_spider_templates.spiders.base import (
     ARG_SETTING_PRIORITY,
     BaseSpider,
     BaseSpiderParams,
 )
 from zyte_spider_templates.utils import get_domain
+
+from ..documentation import document_enum
 
 
 @document_enum
@@ -36,7 +37,7 @@ class EcommerceCrawlStrategy(str, Enum):
     ignored."""
 
 
-class EcommerceSpiderParams(BaseSpiderParams):
+class EcommerceCrawlStrategyParam(BaseModel):
     crawl_strategy: EcommerceCrawlStrategy = Field(
         title="Crawl strategy",
         description="Determines how the start URL and follow-up URLs are crawled.",
@@ -65,6 +66,10 @@ class EcommerceSpiderParams(BaseSpiderParams):
             },
         },
     )
+
+
+class EcommerceSpiderParams(EcommerceCrawlStrategyParam, BaseSpiderParams):
+    pass
 
 
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
