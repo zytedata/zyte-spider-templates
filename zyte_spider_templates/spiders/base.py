@@ -12,10 +12,10 @@ ARG_SETTING_PRIORITY: int = 50
 
 
 class BaseSpiderParams(
-    UrlParam,
-    GeolocationParam,
-    MaxRequestsParam,
     ExtractFromParam,
+    MaxRequestsParam,
+    GeolocationParam,
+    UrlParam,
     BaseModel,
 ):
     pass
