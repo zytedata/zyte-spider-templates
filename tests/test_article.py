@@ -29,9 +29,7 @@ def test_parameters():
         ArticleSpider()
 
     ArticleSpider(url="https://example.com")
-    ArticleSpider(
-        url="https://example.com", crawl_strategy=ArticleCrawlStrategy.full
-    )
+    ArticleSpider(url="https://example.com", crawl_strategy=ArticleCrawlStrategy.full)
     ArticleSpider(url="https://example.com", crawl_strategy="full")
 
     with pytest.raises(ValidationError):
@@ -192,9 +190,7 @@ def test_crawl():
     assert [request.priority for request in requests] == [199, 183]
 
     # Test parse_navigation() behavior on pagination_only crawl strategy.
-    spider = ArticleSpider(
-        url="https://example.com/", crawl_strategy="pagination_only"
-    )
+    spider = ArticleSpider(url="https://example.com/", crawl_strategy="pagination_only")
 
     # nextpage + articles
     navigation = ArticleNavigation.from_dict(
