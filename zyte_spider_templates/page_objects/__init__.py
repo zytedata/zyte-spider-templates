@@ -1,6 +1,6 @@
 from warnings import warn
 
-from ..pages import HeuristicsProductNavigationPage
+from ..pages import HeuristicsArticleNavigationPage, HeuristicsProductNavigationPage
 
 warn(
     "The zyte_spider_templates.page_objects module is deprecated, use "

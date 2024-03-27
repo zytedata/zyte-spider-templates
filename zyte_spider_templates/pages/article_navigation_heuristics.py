@@ -4,25 +4,25 @@ import attrs
 from scrapy.http import TextResponse
 from scrapy.linkextractors import LinkExtractor
 from web_poet import AnyResponse, PageParams, field, handle_urls
-from zyte_common_items import AutoProductNavigationPage, ProbabilityRequest
+from zyte_common_items import AutoArticleNavigationPage, ProbabilityRequest
 
-from zyte_spider_templates.heuristics import product_filter
+from zyte_spider_templates.heuristics import article_filter
 
 
 @handle_urls("")
 @attrs.define
-class HeuristicsProductNavigationPage(AutoProductNavigationPage):
+class HeuristicsArticleNavigationPage(AutoArticleNavigationPage):
     response: AnyResponse
     page_params: PageParams
-    content_filter = product_filter
+    content_filter = article_filter
 
     @field
     def subCategories(self) -> Optional[List[ProbabilityRequest]]:
         if self.page_params.get("full_domain"):
             return (
-                self.product_navigation.subCategories or []
+                self.article_navigation.subCategories or []
             ) + self._probably_relevant_links()
-        return self.product_navigation.subCategories
+        return self.article_navigation.subCategories
 
     def _urls_for_navigation(self) -> List[str]:
         """Return a list of all URLs in the navigation item:
@@ -31,13 +31,13 @@ class HeuristicsProductNavigationPage(AutoProductNavigationPage):
         - subcategories
         """
         navigation_urls = []
-        if self.product_navigation.items:
+        if self.article_navigation.items:
             navigation_urls.extend(
-                [r.url for r in self.product_navigation.subCategories or []]
+                [r.url for r in self.article_navigation.subCategories or []]
             )
-            navigation_urls.extend([r.url for r in self.product_navigation.items or []])
-            if self.product_navigation.nextPage:
-                navigation_urls.append(self.product_navigation.nextPage.url)
+            navigation_urls.extend([r.url for r in self.article_navigation.items or []])
+            if self.article_navigation.nextPage:
+                navigation_urls.append(self.article_navigation.nextPage.url)
         return navigation_urls
 
     def _probably_relevant_links(self) -> List[ProbabilityRequest]:

@@ -18,6 +18,7 @@ zyte-spider-templates documentation
 
    templates/index
    E-commerce <templates/e-commerce>
+   Article <templates/article>
 
 .. toctree::
    :caption: Customization
