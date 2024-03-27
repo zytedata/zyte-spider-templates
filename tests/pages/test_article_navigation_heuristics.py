@@ -1,36 +1,36 @@
 import pytest
 from pytest_twisted import ensureDeferred
 from web_poet import AnyResponse, HttpResponse, PageParams, RequestUrl
-from zyte_common_items import ProbabilityRequest, ProductNavigation
+from zyte_common_items import ArticleNavigation, ProbabilityRequest
 
-from zyte_spider_templates.pages.product_navigation_heuristics import (
-    HeuristicsProductNavigationPage,
+from zyte_spider_templates.pages.article_navigation_heuristics import (
+    HeuristicsArticleNavigationPage,
 )
 
 
 @ensureDeferred
-async def test_unknown_product_page():
+async def test_unknown_article_page():
     body = b"""
         <html>
         <body>
             <div>
-                <h1>Subcategories<h1>
+                <h1>Categories</h1>
                 <div>
-                    <a href="https://example.com/categ/sentinels">Sentinels</a>
-                    <a href="https://example.com/categ/duelists">Duelists</a>
+                    <a href="https://example.com/category/news">News</a>
+                    <a href="https://example.com/category/sports">Sports</a>
                 </div>
             </div>
             <div>
-                <h1>Items<h1>
+                <h1>Articles</h1>
                 <div>
-                    <a href="https://example.com/p?id=reyna">Reyna</a>
-                    <a href="https://example.com/p?id=jett">Jett</a>
+                    <a href="https://example.com/article?id=breaking-news">Breaking News</a>
+                    <a href="https://example.com/article?id=latest-scores">Latest Scores</a>
                 </div>
                 <span>
                     <a href="https://example.com/page-2">Next Page</a>
                 </span>
             </div>
-            <a href="https://example.com/categ/probably">category??</a>
+            <a href="https://example.com/category/probably-relevant">Probably Relevant?</a>
             <footer>
                 <a href="https://example.com/privacy-policy">Privacy Policy</a>
                 <a href="https://another-example.com">Link to other domain</a>
@@ -39,16 +39,22 @@ async def test_unknown_product_page():
         </html>
     """
     response = AnyResponse(HttpResponse("https://example.com", body))
-    navigation = ProductNavigation.from_dict(
+    navigation = ArticleNavigation.from_dict(
         {
             "url": "https://example.com",
             "subCategories": [
-                {"url": "https://example.com/categ/sentinels", "name": "Sentinels"},
-                {"url": "https://example.com/categ/duelists", "name": "Duelists"},
+                {"url": "https://example.com/category/news", "name": "News"},
+                {"url": "https://example.com/category/sports", "name": "Sports"},
             ],
             "items": [
-                {"url": "https://example.com/p?id=reyna", "name": "Reyna"},
-                {"url": "https://example.com/p?id=jett", "name": "Jett"},
+                {
+                    "url": "https://example.com/article?id=breaking-news",
+                    "name": "Breaking News",
+                },
+                {
+                    "url": "https://example.com/article?id=latest-scores",
+                    "name": "Latest Scores",
+                },
             ],
             "nextPage": {
                 "url": "https://example.com/page-2",
@@ -58,25 +64,25 @@ async def test_unknown_product_page():
         }
     )
     all_valid_urls = [
-        "https://example.com/categ/sentinels",
-        "https://example.com/categ/duelists",
-        "https://example.com/p?id=reyna",
-        "https://example.com/p?id=jett",
+        "https://example.com/category/news",
+        "https://example.com/category/sports",
+        "https://example.com/article?id=breaking-news",
+        "https://example.com/article?id=latest-scores",
         "https://example.com/page-2",
     ]
     urls_subcategories = [
         ProbabilityRequest.from_dict(
-            {"url": "https://example.com/categ/sentinels", "name": "Sentinels"}
+            {"url": "https://example.com/category/news", "name": "News"}
         ),
         ProbabilityRequest.from_dict(
-            {"url": "https://example.com/categ/duelists", "name": "Duelists"}
+            {"url": "https://example.com/category/sports", "name": "Sports"}
         ),
     ]
 
     # Heuristics turned OFF
     request_url = RequestUrl(response.url)
     page_params = PageParams({"allow_domains": "example.com"})
-    page = HeuristicsProductNavigationPage(
+    page = HeuristicsArticleNavigationPage(
         request_url, navigation, response, page_params
     )
     item = await page.to_item()
@@ -86,7 +92,7 @@ async def test_unknown_product_page():
 
     # Heuristics turned ON
     page_params = PageParams({"full_domain": "example.com"})
-    page = HeuristicsProductNavigationPage(
+    page = HeuristicsArticleNavigationPage(
         request_url, navigation, response, page_params
     )
     item = await page.to_item()
@@ -94,8 +100,8 @@ async def test_unknown_product_page():
     assert item.subCategories == urls_subcategories + [
         ProbabilityRequest.from_dict(
             {
-                "url": "https://example.com/categ/probably",
-                "name": "[heuristics] category??",
+                "url": "https://example.com/category/probably-relevant",
+                "name": "[heuristics] Probably Relevant?",
                 "metadata": {"probability": 0.1},
             }
         )
@@ -120,24 +126,22 @@ async def test_crawl_nofollow_links():
     url = "https://example.com"
     response = AnyResponse(HttpResponse(url, body))
     request_url = RequestUrl(response.url)
-    navigation = ProductNavigation(url=url)
+    navigation = ArticleNavigation(url=url)
 
-    page = HeuristicsProductNavigationPage(
+    page = HeuristicsArticleNavigationPage(
         request_url, navigation, response, page_params
     )
     assert [req.url for req in page.subCategories] == ["https://example.com/can-follow"]
 
 
 def test_deprecated_page_objects():
-
-    # We cannot test this warning as it will be ignored after the test run for aticles
-    # with pytest.warns(DeprecationWarning, match="page_objects"):
-    #     from zyte_spider_templates.page_objects import (  # noqa: F401
-    #         HeuristicsProductNavigationPage,
-    #     )
+    with pytest.warns(DeprecationWarning, match="page_objects"):
+        from zyte_spider_templates.page_objects import (  # noqa: F401
+            HeuristicsArticleNavigationPage,
+        )
 
     # We cannot test the warning again because duplicate warnings are ignored,
     # but we still want to ensure that we can import the class.
-    from zyte_spider_templates.page_objects.product_navigation_heuristics import (  # noqa: F401, F811
-        HeuristicsProductNavigationPage,
+    from zyte_spider_templates.page_objects.article_navigation_heuristics import (  # noqa: F401, F811
+        HeuristicsArticleNavigationPage,
     )
