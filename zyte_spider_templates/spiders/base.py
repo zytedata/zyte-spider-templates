@@ -30,7 +30,7 @@ class ExtractFrom(str, Enum):
     """Use browser rendering. Often provides the best quality."""
 
 
-_INPUT_FIELDS = ("url", "urls")
+_INPUT_FIELDS = ("url", "urls", "seed_url")
 _URL_PATTERN = r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$"
 
 
@@ -73,6 +73,20 @@ class BaseSpiderParams(BaseModel):
             "group": "inputs",
             "exclusiveRequired": True,
             "widget": "textarea",
+        },
+    )
+    seed_url: str = Field(
+        title="Seed URL",
+        description=(
+            "URL that point to a list of URLs to crawl, e.g. "
+            "https://example.com/url-list.txt. The linked list must contain 1 "
+            "URL per line."
+        ),
+        pattern=_URL_PATTERN,
+        default="",
+        json_schema_extra={
+            "group": "inputs",
+            "exclusiveRequired": True,
         },
     )
     geolocation: Optional[Geolocation] = Field(

@@ -2,6 +2,7 @@ from enum import Enum
 from logging import getLogger
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
+import requests
 import scrapy
 from pydantic import Field
 from scrapy import Request
@@ -90,12 +91,18 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        url = getattr(spider.args, "url", None)
-        if url:
-            spider.start_urls = [url]
-        else:
+        seed_url = spider.args.seed_url
+        if seed_url:
+            response = requests.get(seed_url)
+            urls = [url.strip() for url in response.text.split("\n")]
+            urls = [url for url in urls if url]
+            spider.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
+            spider.start_urls = urls
+        elif spider.args.urls:
             spider.start_urls = spider.args.urls
-        spider.allowed_domains = [get_domain(url) for url in spider.start_urls]
+        else:
+            spider.start_urls = [spider.args.url]
+        spider.allowed_domains = list(set(get_domain(url) for url in spider.start_urls))
 
         if spider.args.extract_from is not None:
             spider.settings.set(
@@ -112,20 +119,21 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
         return spider
 
-    def start_requests(self) -> Iterable[Request]:
-        page_params = {}
+    def get_start_request(self, url):
+        meta = {
+            "crawling_logs": {"page_type": "productNavigation"},
+        }
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
-            page_params = {"full_domain": self.allowed_domains[0]}
+            meta["page_params"] = {"full_domain": get_domain(url)}
+        return Request(
+            url=url,
+            callback=self.parse_navigation,
+            meta=meta,
+        )
 
+    def start_requests(self) -> Iterable[Request]:
         for url in self.start_urls:
-            yield Request(
-                url=url,
-                callback=self.parse_navigation,
-                meta={
-                    "page_params": page_params,
-                    "crawling_logs": {"page_type": "productNavigation"},
-                },
-            )
+            yield self.get_start_request(url)
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
