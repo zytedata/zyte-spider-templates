@@ -90,6 +90,24 @@ URL:
     class MySpider(EcommerceSpider, Args[MyParams]):
         name = "my_spider"
 
+A mixin class exists for every spider parameter (see :ref:`parameter-mixins`),
+so you can use any combination of them in any order you like in your custom
+classes, while enjoying future improvements to validation, documentation or
+UI integration for Scrapy Cloud:
+
+.. code-block:: python
+
+    from scrapy_spider_metadata import Args
+    from zyte_spider_templates.params import GeolocationParam, UrlParam
+
+
+    class MyParams(GeolocationParam, UrlParam):
+        pass
+
+
+    class MySpider(Args[MyParams]):
+        name = "my_spider"
+
 
 .. _custom-crawl:
 

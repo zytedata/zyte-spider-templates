@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from unittest.mock import MagicMock, call
@@ -348,20 +349,96 @@ def test_arguments():
         assert spider.allowed_domains == ["example.com"]
 
 
+def assertEqualJson(actual, expected):
+    """Compare the JSON representation of 2 Python objects.
+
+    This allows to take into account things like the order of key-value pairs
+    in dictionaries, which would not be taken into account when comparing
+    dictionaries directly.
+
+    It also generates a better diff in pytest output when enums are involved,
+    e.g. geolocation values.
+    """
+    actual_json = json.dumps(actual, indent=2)
+    expected_json = json.dumps(expected, indent=2)
+    assert actual_json == expected_json
+
+
 def test_metadata():
-    metadata = get_spider_metadata(EcommerceSpider, normalize=True)
-    assert metadata == {
+    actual_metadata = get_spider_metadata(EcommerceSpider, normalize=True)
+    expected_metadata = {
         "template": True,
         "title": "E-commerce",
         "description": "Template for spiders that extract product data from e-commerce websites.",
         "param_schema": {
             "properties": {
+                "url": {
+                    "description": (
+                        "Initial URL for the crawl. Enter the full URL including http(s), "
+                        "you can copy and paste it from your browser. Example: https://toscrape.com/"
+                    ),
+                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+                    "title": "URL",
+                    "type": "string",
+                },
+                "geolocation": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": (
+                        "ISO 3166-1 alpha-2 2-character string specified in "
+                        "https://docs.zyte.com/zyte-api/usage/reference.html"
+                        "#operation/extract/request/geolocation."
+                    ),
+                    "enumMeta": {
+                        code: {
+                            "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
+                        }
+                        for code in sorted(Geolocation)
+                    },
+                    "title": "Geolocation",
+                    "enum": list(
+                        sorted(GEOLOCATION_OPTIONS, key=GEOLOCATION_OPTIONS.__getitem__)
+                    ),
+                },
+                "max_requests": {
+                    "anyOf": [{"type": "integer"}, {"type": "null"}],
+                    "default": 100,
+                    "description": (
+                        "The maximum number of Zyte API requests allowed for the crawl.\n"
+                        "\n"
+                        "Requests with error responses that cannot be retried or exceed "
+                        "their retry limit also count here, but they incur in no costs "
+                        "and do not increase the request count in Scrapy Cloud."
+                    ),
+                    "title": "Max Requests",
+                    "widget": "request-limit",
+                },
+                "extract_from": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": None,
+                    "description": (
+                        "Whether to perform extraction using a browser request "
+                        "(browserHtml) or an HTTP request (httpResponseBody)."
+                    ),
+                    "enumMeta": {
+                        "browserHtml": {
+                            "description": "Use browser rendering. Often provides the best quality.",
+                            "title": "browserHtml",
+                        },
+                        "httpResponseBody": {
+                            "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
+                            "title": "httpResponseBody",
+                        },
+                    },
+                    "title": "Extraction source",
+                    "enum": ["httpResponseBody", "browserHtml"],
+                },
                 "crawl_strategy": {
                     "default": "full",
-                    "title": "Crawl strategy",
                     "description": "Determines how the start URL and follow-up URLs are crawled.",
-                    "type": "string",
-                    "enum": ["full", "navigation", "pagination_only"],
                     "enumMeta": {
                         "full": {
                             "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
@@ -384,67 +461,9 @@ def test_metadata():
                             "title": "Pagination Only",
                         },
                     },
-                },
-                "extract_from": {
-                    "anyOf": [{"type": "string"}, {"type": "null"}],
-                    "default": None,
-                    "title": "Extraction source",
-                    "description": (
-                        "Whether to perform extraction using a browser request "
-                        "(browserHtml) or an HTTP request (httpResponseBody)."
-                    ),
-                    "enum": ["httpResponseBody", "browserHtml"],
-                    "enumMeta": {
-                        "httpResponseBody": {
-                            "title": "httpResponseBody",
-                            "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
-                        },
-                        "browserHtml": {
-                            "title": "browserHtml",
-                            "description": "Use browser rendering. Often provides the best quality.",
-                        },
-                    },
-                },
-                "geolocation": {
-                    "anyOf": [
-                        {"type": "string"},
-                        {"type": "null"},
-                    ],
-                    "default": None,
-                    "title": "Geolocation",
-                    "description": "ISO 3166-1 alpha-2 2-character string specified in "
-                    "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
-                    "enum": list(
-                        sorted(GEOLOCATION_OPTIONS, key=GEOLOCATION_OPTIONS.__getitem__)
-                    ),
-                    "enumMeta": {
-                        code: {
-                            "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
-                        }
-                        for code in Geolocation
-                    },
-                },
-                "max_requests": {
-                    "anyOf": [{"type": "integer"}, {"type": "null"}],
-                    "default": 100,
-                    "title": "Max Requests",
-                    "description": (
-                        "The maximum number of Zyte API requests allowed for the crawl.\n"
-                        "\n"
-                        "Requests with error responses that cannot be retried or exceed "
-                        "their retry limit also count here, but they incur in no costs "
-                        "and do not increase the request count in Scrapy Cloud."
-                    ),
-                    "widget": "request-limit",
-                },
-                "url": {
+                    "title": "Crawl strategy",
+                    "enum": ["full", "navigation", "pagination_only"],
                     "type": "string",
-                    "title": "URL",
-                    "description": (
-                        "Initial URL for the crawl. Enter the full URL including http(s), "
-                        "you can copy and paste it from your browser. Example: https://toscrape.com/"
-                    ),
-                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
                 },
             },
             "required": ["url"],
@@ -452,7 +471,9 @@ def test_metadata():
             "type": "object",
         },
     }
-    geolocation = metadata["param_schema"]["properties"]["geolocation"]
+    assertEqualJson(actual_metadata, expected_metadata)
+
+    geolocation = actual_metadata["param_schema"]["properties"]["geolocation"]
     assert geolocation["enum"][0] == "AF"
     assert geolocation["enumMeta"]["UY"] == {"title": "Uruguay (UY)"}
     assert set(geolocation["enum"]) == set(geolocation["enumMeta"])
