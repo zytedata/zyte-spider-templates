@@ -16,6 +16,8 @@ Pages
 .. autoclass:: zyte_spider_templates.pages.HeuristicsProductNavigationPage
 
 
+.. _parameter-mixins:
+
 Parameter mixins
 ================
 
