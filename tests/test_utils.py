@@ -1,6 +1,6 @@
 import pytest
 
-from zyte_spider_templates.utils import get_domain
+from zyte_spider_templates.utils import get_domain, load_url_list
 
 URL_TO_DOMAIN = (
     ("https://example.com", "example.com"),
@@ -18,3 +18,24 @@ URL_TO_DOMAIN = (
 @pytest.mark.parametrize("url,domain", URL_TO_DOMAIN)
 def test_get_domain(url, domain):
     assert get_domain(url) == domain
+
+
+@pytest.mark.parametrize(
+    "input_urls,expected_urls",
+    (
+        (
+            "https://a.example",
+            ["https://a.example"],
+        ),
+        (
+            "   https://a.example    ",
+            ["https://a.example"],
+        ),
+        (
+            "https://a.example\n \nhttps://b.example\nhttps://c.example\n\n",
+            ["https://a.example", "https://b.example", "https://c.example"],
+        ),
+    ),
+)
+def test_load_url_list(input_urls, expected_urls):
+    assert load_url_list(input_urls) == expected_urls

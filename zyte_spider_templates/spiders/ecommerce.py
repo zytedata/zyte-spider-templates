@@ -18,6 +18,7 @@ from zyte_spider_templates.spiders.base import (
 from zyte_spider_templates.utils import get_domain
 
 from ..documentation import document_enum
+from ..utils import load_url_list
 
 
 @document_enum
@@ -101,8 +102,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         seed_url = self.args.seed_url
         if seed_url:
             response = requests.get(seed_url)
-            urls = [url.strip() for url in response.text.split("\n")]
-            urls = [url for url in urls if url]
+            urls = load_url_list(response.text)
             self.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
             self.start_urls = urls
         else:
