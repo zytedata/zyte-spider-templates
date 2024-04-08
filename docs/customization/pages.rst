@@ -34,14 +34,14 @@ extract that field. For example:
 
     import attrs
     from number_parser import parse_number
-    from web_poet import HttpResponse, field, handle_urls
+    from web_poet import AnyResponse, field, handle_urls
     from zyte_common_items import AggregateRating, AutoProductPage
 
 
     @handle_urls("books.toscrape.com")
     @attrs.define
     class BooksToScrapeComProductPage(AutoProductPage):
-        response: HttpResponse
+        response: AnyResponse
 
         @field
         async def aggregateRating(self):
@@ -62,7 +62,7 @@ to define your new field.
 .. _zyte-common-items: https://zyte-common-items.readthedocs.io/en/latest/
 
 The page object above is decorated with ``@attrs.define`` so that it can
-declare a dependency on :class:`~web_poet.page_inputs.http.HttpResponse` and
+declare a dependency on :class:`~web_poet.page_inputs.response.AnyResponse` and
 use that to implement custom parsing logic. You could alternatively use
 :class:`~web_poet.page_inputs.browser.BrowserHtml` if needed.
 
