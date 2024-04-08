@@ -9,7 +9,7 @@ from zyte_spider_templates._geolocations import (
 )
 from zyte_spider_templates.documentation import document_enum
 
-_URL_PATTERN = r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$"
+from .utils import _URL_PATTERN
 
 
 @document_enum

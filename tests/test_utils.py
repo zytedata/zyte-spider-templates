@@ -21,7 +21,7 @@ def test_get_domain(url, domain):
 
 
 @pytest.mark.parametrize(
-    "input_urls,expected_urls",
+    "input_urls,expected",
     (
         (
             "https://a.example",
@@ -35,7 +35,15 @@ def test_get_domain(url, domain):
             "https://a.example\n \nhttps://b.example\nhttps://c.example\n\n",
             ["https://a.example", "https://b.example", "https://c.example"],
         ),
+        (
+            "ftp://a.example",
+            ValueError,
+        ),
     ),
 )
-def test_load_url_list(input_urls, expected_urls):
-    assert load_url_list(input_urls) == expected_urls
+def test_load_url_list(input_urls, expected):
+    if isinstance(expected, list):
+        assert load_url_list(input_urls) == expected
+        return
+    with pytest.raises(expected):
+        load_url_list(input_urls)
