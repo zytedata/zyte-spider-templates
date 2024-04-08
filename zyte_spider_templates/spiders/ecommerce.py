@@ -93,31 +93,33 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        seed_url = spider.args.seed_url
+        spider._init_input()
+        spider._init_extract_from()
+        return spider
+
+    def _init_input(self):
+        seed_url = self.args.seed_url
         if seed_url:
             response = requests.get(seed_url)
             urls = [url.strip() for url in response.text.split("\n")]
             urls = [url for url in urls if url]
-            spider.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
-            spider.start_urls = urls
+            self.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
+            self.start_urls = urls
         else:
-            spider.start_urls = [spider.args.url]
-        spider.allowed_domains = list(set(get_domain(url) for url in spider.start_urls))
+            self.start_urls = [self.args.url]
+        self.allowed_domains = list(set(get_domain(url) for url in self.start_urls))
 
-        if spider.args.extract_from is not None:
-            spider.settings.set(
+    def _init_extract_from(self):
+        if self.args.extract_from is not None:
+            self.settings.set(
                 "ZYTE_API_PROVIDER_PARAMS",
                 {
-                    "productOptions": {"extractFrom": spider.args.extract_from},
-                    "productNavigationOptions": {
-                        "extractFrom": spider.args.extract_from
-                    },
-                    **spider.settings.get("ZYTE_API_PROVIDER_PARAMS", {}),
+                    "productOptions": {"extractFrom": self.args.extract_from},
+                    "productNavigationOptions": {"extractFrom": self.args.extract_from},
+                    **self.settings.get("ZYTE_API_PROVIDER_PARAMS", {}),
                 },
                 priority=ARG_SETTING_PRIORITY,
             )
-
-        return spider
 
     def get_start_request(self, url):
         meta = {
