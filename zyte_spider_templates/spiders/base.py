@@ -1,39 +1,32 @@
-from enum import Enum
 from importlib.metadata import version
-from logging import getLogger
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import scrapy
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 from scrapy.crawler import Crawler
 
-from zyte_spider_templates._geolocations import (
-    GEOLOCATION_OPTIONS_WITH_CODE,
-    Geolocation,
+from ..params import (
+    ExtractFromParam,
+    GeolocationParam,
+    MaxRequestsParam,
+    SeedUrlParam,
+    UrlParam,
 )
-from zyte_spider_templates.documentation import document_enum
 
 # Higher priority than command-line-defined settings (40).
 ARG_SETTING_PRIORITY: int = 50
 
-logger = getLogger(__name__)
-
-
-@document_enum
-class ExtractFrom(str, Enum):
-    httpResponseBody: str = "httpResponseBody"
-    """Use HTTP responses. Cost-efficient and fast extraction method, which
-    works well on many websites."""
-
-    browserHtml: str = "browserHtml"
-    """Use browser rendering. Often provides the best quality."""
-
-
 _INPUT_FIELDS = ("url", "seed_url")
-_URL_PATTERN = r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$"
 
 
-class BaseSpiderParams(BaseModel):
+class BaseSpiderParams(
+    ExtractFromParam,
+    MaxRequestsParam,
+    GeolocationParam,
+    SeedUrlParam,
+    UrlParam,
+    BaseModel,
+):
     model_config = ConfigDict(
         json_schema_extra={
             "groups": [
@@ -46,79 +39,6 @@ class BaseSpiderParams(BaseModel):
                     "widget": "exclusive",
                 },
             ],
-        },
-    )
-
-    url: str = Field(
-        title="URL",
-        description="Initial URL for the crawl. Enter the full URL including http(s), "
-        "you can copy and paste it from your browser. Example: https://toscrape.com/",
-        pattern=_URL_PATTERN,
-        default="",
-        json_schema_extra={
-            "group": "inputs",
-            "exclusiveRequired": True,
-        },
-    )
-    seed_url: str = Field(
-        title="Seed URL",
-        description=(
-            "URL that point to a list of URLs to crawl, e.g. "
-            "https://example.com/url-list.txt. The linked list must contain 1 "
-            "URL per line."
-        ),
-        pattern=_URL_PATTERN,
-        default="",
-        json_schema_extra={
-            "group": "inputs",
-            "exclusiveRequired": True,
-        },
-    )
-    geolocation: Optional[Geolocation] = Field(
-        title="Geolocation",
-        description="ISO 3166-1 alpha-2 2-character string specified in "
-        "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
-        default=None,
-        json_schema_extra={
-            "enumMeta": {
-                code: {
-                    "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
-                }
-                for code in Geolocation
-            }
-        },
-    )
-    max_requests: Optional[int] = Field(
-        description=(
-            "The maximum number of Zyte API requests allowed for the crawl.\n"
-            "\n"
-            "Requests with error responses that cannot be retried or exceed "
-            "their retry limit also count here, but they incur in no costs "
-            "and do not increase the request count in Scrapy Cloud."
-        ),
-        default=100,
-        json_schema_extra={
-            "widget": "request-limit",
-        },
-    )
-    extract_from: Optional[ExtractFrom] = Field(
-        title="Extraction source",
-        description=(
-            "Whether to perform extraction using a browser request "
-            "(browserHtml) or an HTTP request (httpResponseBody)."
-        ),
-        default=None,
-        json_schema_extra={
-            "enumMeta": {
-                ExtractFrom.browserHtml: {
-                    "title": "browserHtml",
-                    "description": "Use browser rendering. Often provides the best quality.",
-                },
-                ExtractFrom.httpResponseBody: {
-                    "title": "httpResponseBody",
-                    "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
-                },
-            },
         },
     )
 
