@@ -9,6 +9,8 @@ from zyte_spider_templates._geolocations import (
 )
 from zyte_spider_templates.documentation import document_enum
 
+from .utils import _URL_PATTERN
+
 
 @document_enum
 class ExtractFrom(str, Enum):
@@ -76,10 +78,32 @@ class MaxRequestsParam(BaseModel):
     )
 
 
+class SeedUrlParam(BaseModel):
+    seed_url: str = Field(
+        title="Seed URL",
+        description=(
+            "URL that point to a list of URLs to crawl, e.g. "
+            "https://example.com/url-list.txt. The linked list must contain 1 "
+            "URL per line."
+        ),
+        pattern=_URL_PATTERN,
+        default="",
+        json_schema_extra={
+            "group": "inputs",
+            "exclusiveRequired": True,
+        },
+    )
+
+
 class UrlParam(BaseModel):
     url: str = Field(
         title="URL",
         description="Initial URL for the crawl. Enter the full URL including http(s), "
         "you can copy and paste it from your browser. Example: https://toscrape.com/",
-        pattern=r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+        pattern=_URL_PATTERN,
+        default="",
+        json_schema_extra={
+            "group": "inputs",
+            "exclusiveRequired": True,
+        },
     )
