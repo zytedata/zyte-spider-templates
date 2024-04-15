@@ -1,21 +1,24 @@
 from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
+import requests
 import scrapy
-from pydantic import Field
+from pydantic import BaseModel, Field
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
-from zyte_spider_templates.documentation import document_enum
 from zyte_spider_templates.spiders.base import (
     ARG_SETTING_PRIORITY,
     BaseSpider,
     BaseSpiderParams,
 )
 from zyte_spider_templates.utils import get_domain
+
+from ..documentation import document_enum
+from ..utils import load_url_list
 
 
 @document_enum
@@ -25,23 +28,26 @@ class EcommerceCrawlStrategy(str, Enum):
     extract as many products as possible."""
 
     navigation: str = "navigation"
-    """Follow pagination, subcategories, and product detail pages."""
+    """Follow pagination, subcategories, and product detail pages.
+
+    Pagination Only is a better choice if the target URL does not have
+    subcategories, or if Zyte API is misidentifying some URLs as subcategories.
+    """
 
     pagination_only: str = "pagination_only"
-    """Follow pagination and product detail pages. SubCategory links are
-    ignored. Use this when some subCategory links are misidentified by
-    ML-extraction."""
+    """Follow pagination and product detail pages. Subcategory links are
+    ignored."""
 
     direct_product: str = "direct_product"
     """Treat input URLs as direct links to product detail pages, and
     extract a product from each."""
 
 
-class EcommerceSpiderParams(BaseSpiderParams):
+class EcommerceCrawlStrategyParam(BaseModel):
     crawl_strategy: EcommerceCrawlStrategy = Field(
         title="Crawl strategy",
         description="Determines how the start URL and follow-up URLs are crawled.",
-        default=EcommerceCrawlStrategy.navigation,
+        default=EcommerceCrawlStrategy.full,
         json_schema_extra={
             "enumMeta": {
                 EcommerceCrawlStrategy.full: {
@@ -50,13 +56,17 @@ class EcommerceSpiderParams(BaseSpiderParams):
                 },
                 EcommerceCrawlStrategy.navigation: {
                     "title": "Navigation",
-                    "description": "Follow pagination, subcategories, and product detail pages.",
+                    "description": (
+                        "Follow pagination, subcategories, and product detail "
+                        "pages. Pagination Only is a better choice if the "
+                        "target URL does not have subcategories, or if Zyte "
+                        "API is misidentifying some URLs as subcategories."
+                    ),
                 },
                 EcommerceCrawlStrategy.pagination_only: {
                     "title": "Pagination Only",
                     "description": (
-                        "Follow pagination and product detail pages. SubCategory links are ignored. "
-                        "Use this when some subCategory links are misidentified by ML-extraction."
+                        "Follow pagination and product detail pages. Subcategory links are ignored."
                     ),
                 },
                 EcommerceCrawlStrategy.direct_product: {
@@ -71,28 +81,17 @@ class EcommerceSpiderParams(BaseSpiderParams):
     )
 
 
+class EcommerceSpiderParams(EcommerceCrawlStrategyParam, BaseSpiderParams):
+    pass
+
+
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     """Yield products from an e-commerce website.
 
-    *url* is the start URL, e.g. a homepage or category page.
+    See :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams`
+    for supported parameters.
 
-    *crawl_strategy* determines how the start URL and follow-up URLs are
-    crawled:
-
-    -   ``"navigation"`` (default): follow pagination, subcategories, and
-        product detail pages.
-
-    -   ``"full"``: follow most links within the domain of *url* in an attempt to
-        discover and extract as many products as it can.
-
-    *geolocation* (optional) is an ISO 3166-1 alpha-2 2-character string specified in:
-    https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation
-
-    *max_requests* (optional) specifies the max number of Zyte API requests
-    allowed for the crawl.
-
-    *extract_from* (optional) allows to enforce extracting the data from
-    either "browserHtml" or "httpResponseBody".
+    .. seealso:: :ref:`e-commerce`.
     """
 
     name = "ecommerce"
@@ -106,40 +105,53 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        spider.allowed_domains = [get_domain(spider.args.url)]
+        spider._init_input()
+        spider._init_extract_from()
+        return spider
 
-        if spider.args.extract_from is not None:
-            spider.settings.set(
+    def _init_input(self):
+        seed_url = self.args.seed_url
+        if seed_url:
+            response = requests.get(seed_url)
+            urls = load_url_list(response.text)
+            self.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
+            self.start_urls = urls
+        else:
+            self.start_urls = [self.args.url]
+        self.allowed_domains = list(set(get_domain(url) for url in self.start_urls))
+
+    def _init_extract_from(self):
+        if self.args.extract_from is not None:
+            self.settings.set(
                 "ZYTE_API_PROVIDER_PARAMS",
                 {
-                    "productOptions": {"extractFrom": spider.args.extract_from},
-                    "productNavigationOptions": {
-                        "extractFrom": spider.args.extract_from
-                    },
-                    **spider.settings.get("ZYTE_API_PROVIDER_PARAMS", {}),
+                    "productOptions": {"extractFrom": self.args.extract_from},
+                    "productNavigationOptions": {"extractFrom": self.args.extract_from},
+                    **self.settings.get("ZYTE_API_PROVIDER_PARAMS", {}),
                 },
                 priority=ARG_SETTING_PRIORITY,
             )
 
-        return spider
-
-    def start_requests(self) -> Iterable[Request]:
+    def get_start_request(self, url):
         callback = (
             self.parse_product
             if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_product
             else self.parse_navigation
         )
-        page_params = {}
+        meta = {
+            "crawling_logs": {"page_type": "productNavigation"},
+        }
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
-            page_params = {"full_domain": self.allowed_domains[0]}
-        yield Request(
-            url=self.args.url,
+            meta["page_params"] = {"full_domain": get_domain(url)}
+        return Request(
+            url=url,
             callback=callback,
-            meta={
-                "page_params": page_params,
-                "crawling_logs": {"page_type": "productNavigation"},
-            },
+            meta=meta,
         )
+
+    def start_requests(self) -> Iterable[Request]:
+        for url in self.start_urls:
+            yield self.get_start_request(url)
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation

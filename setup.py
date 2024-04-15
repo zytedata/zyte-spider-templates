@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="zyte-spider-templates",
-    version="0.7.0",
+    version="0.7.1",
     description="Spider templates for automatic crawlers.",
     long_description=open("README.rst").read(),
     long_description_content_type="text/x-rst",
@@ -13,6 +13,7 @@ setup(
     include_package_data=True,
     install_requires=[
         "pydantic>=2",
+        "requests>=0.10.1",
         "scrapy>=2.11.0",
         "scrapy-poet>=0.21.0",
         "scrapy-spider-metadata>=0.1.2",

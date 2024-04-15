@@ -1,8 +1,10 @@
+import json
 import logging
 import re
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
+import requests
 import scrapy
 from pydantic import ValidationError
 from scrapy_poet import DummyResponse
@@ -40,7 +42,8 @@ def test_parameters():
 
 def test_start_requests():
     url = "https://example.com"
-    spider = EcommerceSpider(url=url)
+    crawler = get_crawler()
+    spider = EcommerceSpider.from_crawler(crawler, url=url)
     requests = list(spider.start_requests())
     assert len(requests) == 1
     assert requests[0].url == url
@@ -359,64 +362,63 @@ def test_arguments():
         assert spider.allowed_domains == ["example.com"]
 
 
+def assertEqualJson(actual, expected):
+    """Compare the JSON representation of 2 Python objects.
+
+    This allows to take into account things like the order of key-value pairs
+    in dictionaries, which would not be taken into account when comparing
+    dictionaries directly.
+
+    It also generates a better diff in pytest output when enums are involved,
+    e.g. geolocation values.
+    """
+    actual_json = json.dumps(actual, indent=2)
+    expected_json = json.dumps(expected, indent=2)
+    assert actual_json == expected_json
+
+
 def test_metadata():
-    metadata = get_spider_metadata(EcommerceSpider, normalize=True)
-    assert metadata == {
+    actual_metadata = get_spider_metadata(EcommerceSpider, normalize=True)
+    expected_metadata = {
         "template": True,
         "title": "E-commerce",
         "description": "Template for spiders that extract product data from e-commerce websites.",
         "param_schema": {
-            "properties": {
-                "crawl_strategy": {
-                    "default": "navigation",
-                    "title": "Crawl strategy",
-                    "description": "Determines how the start URL and follow-up URLs are crawled.",
-                    "type": "string",
-                    "enum": ["full", "navigation", "pagination_only", "direct_product"],
-                    "enumMeta": {
-                        "full": {
-                            "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
-                            "title": "Full",
-                        },
-                        "navigation": {
-                            "description": "Follow pagination, subcategories, and product detail pages.",
-                            "title": "Navigation",
-                        },
-                        "pagination_only": {
-                            "description": (
-                                "Follow pagination and product detail pages. SubCategory links are ignored. "
-                                "Use this when some subCategory links are misidentified by ML-extraction."
-                            ),
-                            "title": "Pagination Only",
-                        },
-                        "direct_product": {
-                            "description": (
-                                "Treat input URLs as direct links to product detail pages, and "
-                                "extract a product from each."
-                            ),
-                            "title": "Direct URLs to Product",
-                        },
-                    },
-                },
-                "extract_from": {
-                    "anyOf": [{"type": "string"}, {"type": "null"}],
-                    "default": None,
-                    "title": "Extraction source",
+            "groups": [
+                {
                     "description": (
-                        "Whether to perform extraction using a browser request "
-                        "(browserHtml) or an HTTP request (httpResponseBody)."
+                        "Input data that determines the start URLs of the crawl."
                     ),
-                    "enum": ["httpResponseBody", "browserHtml"],
-                    "enumMeta": {
-                        "httpResponseBody": {
-                            "title": "httpResponseBody",
-                            "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
-                        },
-                        "browserHtml": {
-                            "title": "browserHtml",
-                            "description": "Use browser rendering. Often provides the best quality.",
-                        },
-                    },
+                    "id": "inputs",
+                    "title": "Inputs",
+                    "widget": "exclusive",
+                },
+            ],
+            "properties": {
+                "url": {
+                    "default": "",
+                    "description": (
+                        "Initial URL for the crawl. Enter the full URL including http(s), "
+                        "you can copy and paste it from your browser. Example: https://toscrape.com/"
+                    ),
+                    "exclusiveRequired": True,
+                    "group": "inputs",
+                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+                    "title": "URL",
+                    "type": "string",
+                },
+                "seed_url": {
+                    "default": "",
+                    "description": (
+                        "URL that point to a list of URLs to crawl, e.g. "
+                        "https://example.com/url-list.txt. The linked list "
+                        "must contain 1 URL per line."
+                    ),
+                    "exclusiveRequired": True,
+                    "group": "inputs",
+                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+                    "title": "Seed URL",
+                    "type": "string",
                 },
                 "geolocation": {
                     "anyOf": [
@@ -424,23 +426,25 @@ def test_metadata():
                         {"type": "null"},
                     ],
                     "default": None,
-                    "title": "Geolocation",
-                    "description": "ISO 3166-1 alpha-2 2-character string specified in "
-                    "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
-                    "enum": list(
-                        sorted(GEOLOCATION_OPTIONS, key=GEOLOCATION_OPTIONS.__getitem__)
+                    "description": (
+                        "ISO 3166-1 alpha-2 2-character string specified in "
+                        "https://docs.zyte.com/zyte-api/usage/reference.html"
+                        "#operation/extract/request/geolocation."
                     ),
                     "enumMeta": {
                         code: {
                             "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
                         }
-                        for code in Geolocation
+                        for code in sorted(Geolocation)
                     },
+                    "title": "Geolocation",
+                    "enum": list(
+                        sorted(GEOLOCATION_OPTIONS, key=GEOLOCATION_OPTIONS.__getitem__)
+                    ),
                 },
                 "max_requests": {
                     "anyOf": [{"type": "integer"}, {"type": "null"}],
                     "default": 100,
-                    "title": "Max Requests",
                     "description": (
                         "The maximum number of Zyte API requests allowed for the crawl.\n"
                         "\n"
@@ -448,24 +452,73 @@ def test_metadata():
                         "their retry limit also count here, but they incur in no costs "
                         "and do not increase the request count in Scrapy Cloud."
                     ),
+                    "title": "Max Requests",
                     "widget": "request-limit",
                 },
-                "url": {
-                    "type": "string",
-                    "title": "URL",
+                "extract_from": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": None,
                     "description": (
-                        "Initial URL for the crawl. Enter the full URL including http(s), "
-                        "you can copy and paste it from your browser. Example: https://toscrape.com/"
+                        "Whether to perform extraction using a browser request "
+                        "(browserHtml) or an HTTP request (httpResponseBody)."
                     ),
-                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
+                    "enumMeta": {
+                        "browserHtml": {
+                            "description": "Use browser rendering. Often provides the best quality.",
+                            "title": "browserHtml",
+                        },
+                        "httpResponseBody": {
+                            "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
+                            "title": "httpResponseBody",
+                        },
+                    },
+                    "title": "Extraction source",
+                    "enum": ["httpResponseBody", "browserHtml"],
+                },
+                "crawl_strategy": {
+                    "default": "full",
+                    "description": "Determines how the start URL and follow-up URLs are crawled.",
+                    "enumMeta": {
+                        "direct_product": {
+                            "description": (
+                                "Treat input URLs as direct links to product detail pages, and "
+                                "extract a product from each."
+                            ),
+                            "title": "Direct URLs to Product",
+                        },
+                        "full": {
+                            "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+                            "title": "Full",
+                        },
+                        "navigation": {
+                            "description": (
+                                "Follow pagination, subcategories, and "
+                                "product detail pages. Pagination Only is a "
+                                "better choice if the target URL does not "
+                                "have subcategories, or if Zyte API is "
+                                "misidentifying some URLs as subcategories."
+                            ),
+                            "title": "Navigation",
+                        },
+                        "pagination_only": {
+                            "description": (
+                                "Follow pagination and product detail pages. Subcategory links are ignored."
+                            ),
+                            "title": "Pagination Only",
+                        },
+                    },
+                    "title": "Crawl strategy",
+                    "enum": ["full", "navigation", "pagination_only", "direct_product"],
+                    "type": "string",
                 },
             },
-            "required": ["url"],
             "title": "EcommerceSpiderParams",
             "type": "object",
         },
     }
-    geolocation = metadata["param_schema"]["properties"]["geolocation"]
+    assertEqualJson(actual_metadata, expected_metadata)
+
+    geolocation = actual_metadata["param_schema"]["properties"]["geolocation"]
     assert geolocation["enum"][0] == "AF"
     assert geolocation["enumMeta"]["UY"] == {"title": "Uruguay (UY)"}
     assert set(geolocation["enum"]) == set(geolocation["enumMeta"])
@@ -650,3 +703,45 @@ def test_set_allowed_domains(url, allowed_domain):
     kwargs = {"url": url}
     spider = EcommerceSpider.from_crawler(crawler, **kwargs)
     assert spider.allowed_domains == [allowed_domain]
+
+
+def test_input_none():
+    crawler = get_crawler()
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(crawler)
+
+
+def test_input_multiple():
+    crawler = get_crawler()
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(
+            crawler,
+            url="https://a.example",
+            seed_url="https://b.example",
+        )
+
+
+def test_url_invalid():
+    crawler = get_crawler()
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(crawler, url="foo")
+
+
+def test_seed_url():
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    with patch("zyte_spider_templates.spiders.ecommerce.requests.get") as mock_get:
+        response = requests.Response()
+        response._content = (
+            b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
+        )
+        mock_get.return_value = response
+        spider = EcommerceSpider.from_crawler(crawler, seed_url=url)
+        mock_get.assert_called_with(url)
+
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 3
+    assert start_requests[0].url == "https://a.example"
+    assert start_requests[1].url == "https://b.example"
+    assert start_requests[2].url == "https://c.example"
