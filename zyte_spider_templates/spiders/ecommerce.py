@@ -1,5 +1,4 @@
 from enum import Enum
-from logging import getLogger
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import requests
@@ -20,8 +19,6 @@ from zyte_spider_templates.utils import get_domain
 
 from ..documentation import document_enum
 from ..utils import load_url_list
-
-logger = getLogger(__name__)
 
 
 @document_enum
