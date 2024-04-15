@@ -11,9 +11,9 @@ from zyte_spider_templates._geolocations import (
 )
 from zyte_spider_templates.documentation import document_enum
 
-logger = getLogger(__name__)
+from .utils import _URL_PATTERN
 
-_URL_PATTERN = r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$"
+logger = getLogger(__name__)
 
 
 @document_enum
@@ -78,6 +78,23 @@ class MaxRequestsParam(BaseModel):
         default=100,
         json_schema_extra={
             "widget": "request-limit",
+        },
+    )
+
+
+class SeedUrlParam(BaseModel):
+    seed_url: str = Field(
+        title="Seed URL",
+        description=(
+            "URL that point to a list of URLs to crawl, e.g. "
+            "https://example.com/url-list.txt. The linked list must contain 1 "
+            "URL per line."
+        ),
+        pattern=_URL_PATTERN,
+        default="",
+        json_schema_extra={
+            "group": "inputs",
+            "exclusiveRequired": True,
         },
     )
 

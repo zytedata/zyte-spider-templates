@@ -2,6 +2,7 @@ from enum import Enum
 from logging import getLogger
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
+import requests
 import scrapy
 from pydantic import BaseModel, Field
 from scrapy import Request
@@ -18,6 +19,7 @@ from zyte_spider_templates.spiders.base import (
 from zyte_spider_templates.utils import get_domain
 
 from ..documentation import document_enum
+from ..utils import load_url_list
 
 logger = getLogger(__name__)
 
@@ -95,42 +97,50 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        url = getattr(spider.args, "url", None)
-        if url:
-            spider.start_urls = [url]
-        else:
-            spider.start_urls = spider.args.urls
-        spider.allowed_domains = [get_domain(url) for url in spider.start_urls]
+        spider._init_input()
+        spider._init_extract_from()
+        return spider
 
-        if spider.args.extract_from is not None:
-            spider.settings.set(
+    def _init_input(self):
+        seed_url = self.args.seed_url
+        if seed_url:
+            response = requests.get(seed_url)
+            urls = load_url_list(response.text)
+            self.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
+            self.start_urls = urls
+        elif self.args.urls:
+            self.start_urls = self.args.urls
+        else:
+            self.start_urls = [self.args.url]
+        self.allowed_domains = list(set(get_domain(url) for url in self.start_urls))
+
+    def _init_extract_from(self):
+        if self.args.extract_from is not None:
+            self.settings.set(
                 "ZYTE_API_PROVIDER_PARAMS",
                 {
-                    "productOptions": {"extractFrom": spider.args.extract_from},
-                    "productNavigationOptions": {
-                        "extractFrom": spider.args.extract_from
-                    },
-                    **spider.settings.get("ZYTE_API_PROVIDER_PARAMS", {}),
+                    "productOptions": {"extractFrom": self.args.extract_from},
+                    "productNavigationOptions": {"extractFrom": self.args.extract_from},
+                    **self.settings.get("ZYTE_API_PROVIDER_PARAMS", {}),
                 },
                 priority=ARG_SETTING_PRIORITY,
             )
 
-        return spider
+    def get_start_request(self, url):
+        meta = {
+            "crawling_logs": {"page_type": "productNavigation"},
+        }
+        if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
+            meta["page_params"] = {"full_domain": get_domain(url)}
+        return Request(
+            url=url,
+            callback=self.parse_navigation,
+            meta=meta,
+        )
 
     def start_requests(self) -> Iterable[Request]:
-        page_params = {}
-        if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
-            page_params = {"full_domain": self.allowed_domains[0]}
-
         for url in self.start_urls:
-            yield Request(
-                url=url,
-                callback=self.parse_navigation,
-                meta={
-                    "page_params": page_params,
-                    "crawling_logs": {"page_type": "productNavigation"},
-                },
-            )
+            yield self.get_start_request(url)
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
