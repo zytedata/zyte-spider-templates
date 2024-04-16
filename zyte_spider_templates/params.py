@@ -142,21 +142,20 @@ class UrlsParam(BaseModel):
         """
         if isinstance(value, str):
             value = value.split("\n")
-        if value:
-            new_value = []
-            for v in value:
-                v = v.strip()
-                if not v:
-                    continue
-                if not re.search(_URL_PATTERN, v):
-                    logger.warning(
-                        f"{v!r}, from the 'urls' spider argument, is not a "
-                        f"valid URL and will be ignored."
-                    )
-                    continue
-                new_value.append(v)
-            if new_value:
-                value = new_value
-            else:
-                raise ValueError(f"No valid URL found in {value!r}")
-        return value
+        if not value:
+            return value
+        result = []
+        for v in value:
+            v = v.strip()
+            if not v:
+                continue
+            if not re.search(_URL_PATTERN, v):
+                logger.warning(
+                    f"{v!r}, from the 'urls' spider argument, is not a "
+                    f"valid URL and will be ignored."
+                )
+                continue
+            result.append(v)
+        if not result:
+            raise ValueError(f"No valid URL found in {value!r}")
+        return result
