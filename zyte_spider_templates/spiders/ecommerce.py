@@ -99,11 +99,11 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         return spider
 
     def _init_input(self):
-        seed_url = self.args.seed_url
-        if seed_url:
-            response = requests.get(seed_url)
+        urls_file = self.args.urls_file
+        if urls_file:
+            response = requests.get(urls_file)
             urls = load_url_list(response.text)
-            self.logger.info(f"Loaded {len(urls)} initial URLs from {seed_url}.")
+            self.logger.info(f"Loaded {len(urls)} initial URLs from {urls_file}.")
             self.start_urls = urls
         else:
             self.start_urls = [self.args.url]
