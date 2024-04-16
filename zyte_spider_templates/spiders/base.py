@@ -9,21 +9,21 @@ from ..params import (
     ExtractFromParam,
     GeolocationParam,
     MaxRequestsParam,
-    SeedUrlParam,
     UrlParam,
+    UrlsFileParam,
 )
 
 # Higher priority than command-line-defined settings (40).
 ARG_SETTING_PRIORITY: int = 50
 
-_INPUT_FIELDS = ("url", "seed_url")
+_INPUT_FIELDS = ("url", "urls_file")
 
 
 class BaseSpiderParams(
     ExtractFromParam,
     MaxRequestsParam,
     GeolocationParam,
-    SeedUrlParam,
+    UrlsFileParam,
     UrlParam,
     BaseModel,
 ):
@@ -47,7 +47,7 @@ class BaseSpiderParams(
         """Fields
         :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.url`
         and
-        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.seed_url`
+        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.urls_file`
         form a mandatory, mutually-exclusive field group: one of them must be
         defined, the rest must not be defined."""
         input_fields = set(

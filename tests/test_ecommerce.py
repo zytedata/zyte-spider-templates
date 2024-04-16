@@ -395,17 +395,18 @@ def test_metadata():
                     "title": "URL",
                     "type": "string",
                 },
-                "seed_url": {
+                "urls_file": {
                     "default": "",
                     "description": (
-                        "URL that point to a list of URLs to crawl, e.g. "
+                        "URL that point to a plain-text file with a list of "
+                        "URLs to crawl, e.g. "
                         "https://example.com/url-list.txt. The linked list "
                         "must contain 1 URL per line."
                     ),
                     "exclusiveRequired": True,
                     "group": "inputs",
                     "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
-                    "title": "Seed URL",
+                    "title": "URLs file",
                     "type": "string",
                 },
                 "geolocation": {
@@ -698,7 +699,7 @@ def test_input_multiple():
         EcommerceSpider.from_crawler(
             crawler,
             url="https://a.example",
-            seed_url="https://b.example",
+            urls_file="https://b.example",
         )
 
 
@@ -708,7 +709,7 @@ def test_url_invalid():
         EcommerceSpider.from_crawler(crawler, url="foo")
 
 
-def test_seed_url():
+def test_urls_file():
     crawler = get_crawler()
     url = "https://example.com"
 
@@ -718,7 +719,7 @@ def test_seed_url():
             b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
         )
         mock_get.return_value = response
-        spider = EcommerceSpider.from_crawler(crawler, seed_url=url)
+        spider = EcommerceSpider.from_crawler(crawler, urls_file=url)
         mock_get.assert_called_with(url)
 
     start_requests = list(spider.start_requests())

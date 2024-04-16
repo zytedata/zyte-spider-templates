@@ -78,13 +78,13 @@ class MaxRequestsParam(BaseModel):
     )
 
 
-class SeedUrlParam(BaseModel):
-    seed_url: str = Field(
-        title="Seed URL",
+class UrlsFileParam(BaseModel):
+    urls_file: str = Field(
+        title="URLs file",
         description=(
-            "URL that point to a list of URLs to crawl, e.g. "
-            "https://example.com/url-list.txt. The linked list must contain 1 "
-            "URL per line."
+            "URL that point to a plain-text file with a list of URLs to "
+            "crawl, e.g. https://example.com/url-list.txt. The linked list "
+            "must contain 1 URL per line."
         ),
         pattern=_URL_PATTERN,
         default="",
