@@ -32,9 +32,9 @@ def test_parameters():
 
     EcommerceSpider(url="https://example.com")
     EcommerceSpider(
-        url="https://example.com", crawl_strategy=EcommerceCrawlStrategy.full
+        url="https://example.com", crawl_strategy=EcommerceCrawlStrategy.default
     )
-    EcommerceSpider(url="https://example.com", crawl_strategy="full")
+    EcommerceSpider(url="https://example.com", crawl_strategy="default")
 
     with pytest.raises(ValidationError):
         EcommerceSpider(url="https://example.com", crawl_strategy="unknown")
@@ -465,18 +465,30 @@ def test_metadata():
                     "enum": ["httpResponseBody", "browserHtml"],
                 },
                 "crawl_strategy": {
-                    "default": "full",
+                    "default": "default",
                     "description": "Determines how the start URL and follow-up URLs are crawled.",
                     "enumMeta": {
+                        "default": {
+                            "description": (
+                                "Follow pagination, subcategories, and product detail pages. "
+                                "If starting on a homepage, it would attempt to discover other "
+                                "URLs in the page using heuristics."
+                            ),
+                            "title": "Default",
+                        },
                         "full": {
-                            "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+                            "description": (
+                                "(Deprecated. Use Default instead) Follow most links "
+                                "within the domain of URL in an attempt to discover and "
+                                "extract as many products as possible."
+                            ),
                             "title": "Full",
                         },
                         "navigation": {
                             "description": (
-                                "Follow pagination, subcategories, and "
-                                "product detail pages. Pagination Only is a "
-                                "better choice if the target URL does not "
+                                "(Deprecated. Use Default instead) Follow pagination, "
+                                "subcategories, and product detail pages. Pagination "
+                                "Only is a better choice if the target URL does not "
                                 "have subcategories, or if Zyte API is "
                                 "misidentifying some URLs as subcategories."
                             ),
@@ -490,7 +502,7 @@ def test_metadata():
                         },
                     },
                     "title": "Crawl strategy",
-                    "enum": ["full", "navigation", "pagination_only"],
+                    "enum": ["default", "full", "navigation", "pagination_only"],
                     "type": "string",
                 },
             },
@@ -727,3 +739,57 @@ def test_urls_file():
     assert start_requests[0].url == "https://a.example"
     assert start_requests[1].url == "https://b.example"
     assert start_requests[2].url == "https://c.example"
+
+
+@pytest.mark.parametrize(
+    "url,has_full_domain",
+    (
+        ("https://example.com", (True, True, False, False)),
+        ("https://example.com/", (True, True, False, False)),
+        ("https://example.com/index.htm", (True, True, False, False)),
+        ("https://example.com/index.html", (True, True, False, False)),
+        ("https://example.com/index.php", (True, True, False, False)),
+        ("https://example.com/home", (True, True, False, False)),
+        ("https://example.com/some/category", (False, True, False, False)),
+        ("https://example.com/some/category?pid=123", (False, True, False, False)),
+    ),
+)
+def test_get_start_request_default_strategy(url, has_full_domain):
+    def assert_meta(has_page_params):
+        meta = {"crawling_logs": {"page_type": "productNavigation"}}
+        if has_page_params:
+            meta["page_params"] = {"full_domain": "example.com"}
+        assert result.meta == meta
+
+    for i, crawl_strategy in enumerate(
+        ["default", "full", "navigation", "pagination_only"]
+    ):
+        spider = EcommerceSpider.from_crawler(
+            get_crawler(), url=url, crawl_strategy=crawl_strategy
+        )
+        result = spider.get_start_request(url)
+        assert result.url == url
+        assert result.callback == spider.parse_navigation
+        assert_meta(has_full_domain[i])
+
+
+@pytest.mark.parametrize(
+    "crawl_strategy,expected_page_params",
+    (
+        ("default", {}),
+        ("full", {"full_domain": "example.com"}),
+        ("navigation", {}),
+        ("pagination_only", {}),
+    ),
+)
+def test_page_params_for_heuristics(crawl_strategy, expected_page_params):
+    url = "https://example.com"
+    meta = {"page_params": {"full_domain": "example.com"}}
+    request = scrapy.Request(url, meta=meta)
+    response = DummyResponse(url=url, request=request)
+
+    spider = EcommerceSpider.from_crawler(
+        get_crawler(), url=url, crawl_strategy=crawl_strategy
+    )
+    page_params = spider.page_params_for_heuristics(response)
+    assert page_params == expected_page_params

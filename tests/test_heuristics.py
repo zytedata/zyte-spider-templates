@@ -1,6 +1,6 @@
 import pytest
 
-from zyte_spider_templates.heuristics import might_be_category
+from zyte_spider_templates.heuristics import is_homepage, might_be_category
 
 
 @pytest.mark.parametrize(
@@ -50,3 +50,21 @@ from zyte_spider_templates.heuristics import might_be_category
 )
 def test_might_be_category(test_input, expected):
     assert might_be_category(test_input) == expected
+
+
+@pytest.mark.parametrize(
+    "url,expected",
+    (
+        ("https://example.com", True),
+        ("https://example.com/", True),
+        ("https://example.com/index.htm", True),
+        ("https://example.com/index.html", True),
+        ("https://example.com/index.php", True),
+        ("https://example.com/home", True),
+        ("https://example.com/?ref=abc", False),
+        ("https://example.com/some/category", False),
+        ("https://example.com/some/category?query=2123", False),
+    ),
+)
+def test_is_homepage(url, expected):
+    assert is_homepage(url) == expected

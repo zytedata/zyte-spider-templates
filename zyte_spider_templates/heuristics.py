@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit
 
 NO_CONTENT_PATHS = (
     "/authenticate",
@@ -56,3 +56,19 @@ def might_be_category(url: str) -> bool:
                 return False
 
     return True
+
+
+INDEX_URL_PATHS = {
+    "",
+    "/",
+    "/index.html",
+    "/index.htm",
+    "/index.php",
+    "/home",
+}
+
+
+# TODO: support localization suffixes? Example: /en, /en-us
+def is_homepage(url: str) -> bool:
+    url_split = urlsplit(url)
+    return url_split.path in INDEX_URL_PATHS and not url_split.query

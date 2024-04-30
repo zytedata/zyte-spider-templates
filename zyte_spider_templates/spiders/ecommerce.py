@@ -10,6 +10,7 @@ from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
+from zyte_spider_templates.heuristics import is_homepage
 from zyte_spider_templates.spiders.base import (
     ARG_SETTING_PRIORITY,
     BaseSpider,
@@ -23,6 +24,13 @@ from ..utils import load_url_list
 
 @document_enum
 class EcommerceCrawlStrategy(str, Enum):
+    default: str = "default"
+    """Follow pagination, subcategories, and product detail pages.
+
+    If the starting URL points to a homepage, it would attempt to discover other
+    URLs in the page using heuristics.
+    """
+
     full: str = "full"
     """Follow most links within the domain of URL in an attempt to discover and
     extract as many products as possible."""
@@ -43,20 +51,32 @@ class EcommerceCrawlStrategyParam(BaseModel):
     crawl_strategy: EcommerceCrawlStrategy = Field(
         title="Crawl strategy",
         description="Determines how the start URL and follow-up URLs are crawled.",
-        default=EcommerceCrawlStrategy.full,
+        default=EcommerceCrawlStrategy.default,
         json_schema_extra={
             "enumMeta": {
+                EcommerceCrawlStrategy.default: {
+                    "description": (
+                        "Follow pagination, subcategories, and product detail pages. "
+                        "If starting on a homepage, it would attempt to discover other "
+                        "URLs in the page using heuristics."
+                    ),
+                    "title": "Default",
+                },
                 EcommerceCrawlStrategy.full: {
                     "title": "Full",
-                    "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+                    "description": (
+                        "(Deprecated. Use Default instead) Follow most links within the "
+                        "domain of URL in an attempt to discover and extract as many "
+                        "products as possible."
+                    ),
                 },
                 EcommerceCrawlStrategy.navigation: {
                     "title": "Navigation",
                     "description": (
-                        "Follow pagination, subcategories, and product detail "
-                        "pages. Pagination Only is a better choice if the "
-                        "target URL does not have subcategories, or if Zyte "
-                        "API is misidentifying some URLs as subcategories."
+                        "(Deprecated. Use Default instead) Follow pagination, "
+                        "subcategories, and product detail pages. Pagination Only is a "
+                        "better choice if the target URL does not have subcategories, "
+                        "or if Zyte API is misidentifying some URLs as subcategories."
                     ),
                 },
                 EcommerceCrawlStrategy.pagination_only: {
@@ -125,7 +145,10 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         meta = {
             "crawling_logs": {"page_type": "productNavigation"},
         }
-        if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
+        if self.args.crawl_strategy == EcommerceCrawlStrategy.full or (
+            self.args.crawl_strategy == EcommerceCrawlStrategy.default
+            and is_homepage(url)
+        ):
             meta["page_params"] = {"full_domain": get_domain(url)}
         return Request(
             url=url,
@@ -140,7 +163,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
     ) -> Iterable[Request]:
-        page_params = response.meta.get("page_params")
+        page_params = self.page_params_for_heuristics(response)
 
         products = navigation.items or []
         for request in products:
@@ -266,3 +289,17 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         )
         scrapy_request.meta["allow_offsite"] = True
         return scrapy_request
+
+    def page_params_for_heuristics(
+        self, response: DummyResponse
+    ) -> Optional[Dict[str, Any]]:
+        page_params = response.meta.get("page_params")
+
+        # Only allow heuristic extraction of links in non-homepage when on "full" crawl.
+        if (
+            self.args.crawl_strategy != EcommerceCrawlStrategy.full
+            and "full_domain" in (page_params or {})
+        ):
+            page_params.pop("full_domain")
+
+        return page_params
