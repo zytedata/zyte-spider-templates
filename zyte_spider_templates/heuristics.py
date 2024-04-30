@@ -1,5 +1,13 @@
 import re
+from typing import List, Tuple, Union
 from urllib.parse import urlparse, urlsplit
+
+from zyte_spider_templates._geolocations import GEOLOCATION_OPTIONS
+from zyte_spider_templates._lang_codes import LANG_CODES as _LANG_CODES
+
+COUNTRY_CODES = set([k.lower() for k in GEOLOCATION_OPTIONS])
+LANG_CODES = set(_LANG_CODES)
+
 
 NO_CONTENT_PATHS = (
     "/authenticate",
@@ -60,7 +68,7 @@ def might_be_category(url: str) -> bool:
 
 INDEX_URL_PATHS = {
     "",
-    "/",
+    "/index",
     "/index.html",
     "/index.htm",
     "/index.php",
@@ -68,7 +76,33 @@ INDEX_URL_PATHS = {
 }
 
 
-# TODO: support localization suffixes? Example: /en, /en-us
 def is_homepage(url: str) -> bool:
+    """Given a URL, returns True if the URL could be a homepage."""
     url_split = urlsplit(url)
-    return url_split.path in INDEX_URL_PATHS and not url_split.query
+    url_path = url_split.path.rstrip("/").lower()
+
+    # Finds and removes URL subpaths like "/us/en", "en-us", "en-uk", etc.
+    match = re.search(r"/(\w{2})[^a-z](\w{2})(?!\w)", url_path)
+    if match and _check_url_locale_pair(match.groups()):
+        url_path = url_path[6:]
+
+    # Finds and removes URL subpaths like "/en", "/fr", etc.
+    match = re.search(r"/(\w{2})(?!\w)", url_path)
+    if match and (match.group(1) in LANG_CODES or match.group(1) in COUNTRY_CODES):
+        url_path = url_path[3:]
+
+    if url_path in INDEX_URL_PATHS and not url_split.query:
+        return True
+
+    return False
+
+
+def _check_url_locale_pair(data: Union[List, Tuple]) -> bool:
+    if len(data) != 2:
+        return False
+    x, y = data
+    if x in LANG_CODES and y in COUNTRY_CODES:
+        return True
+    if y in LANG_CODES and x in COUNTRY_CODES:
+        return True
+    return False

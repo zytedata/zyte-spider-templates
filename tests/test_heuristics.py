@@ -52,19 +52,62 @@ def test_might_be_category(test_input, expected):
     assert might_be_category(test_input) == expected
 
 
+LOCALES = (
+    "/us/en",
+    "/en/us",
+    "/us-en",
+    "/us_en",
+    "/AT_en",
+    "/pt-br",
+    "/PT-br",
+    "/en-us",
+    "/en-AT",
+    "/en",
+    "/uk",
+)
+
+
 @pytest.mark.parametrize(
-    "url,expected",
+    "url_path,expected",
     (
-        ("https://example.com", True),
-        ("https://example.com/", True),
-        ("https://example.com/index.htm", True),
-        ("https://example.com/index.html", True),
-        ("https://example.com/index.php", True),
-        ("https://example.com/home", True),
-        ("https://example.com/?ref=abc", False),
-        ("https://example.com/some/category", False),
-        ("https://example.com/some/category?query=2123", False),
+        ("", True),
+        ("/", True),
+        ("/index", True),
+        ("/index.htm", True),
+        ("/index.html", True),
+        ("/index.php", True),
+        ("/home", True),
+        ("/home/", True),
+        ("?ref=abc", False),
+        ("/some/category", False),
+        ("/some/category?query=2123", False),
     ),
 )
-def test_is_homepage(url, expected):
-    assert is_homepage(url) == expected
+@pytest.mark.parametrize("locale", LOCALES)
+def test_is_homepage(locale, url_path, expected):
+    assert is_homepage("https://example.com" + url_path) == expected
+    assert is_homepage("https://example.com" + locale + url_path) == expected
+
+
+@pytest.mark.parametrize(
+    "url",
+    (
+        "https://example.com/zz/dd",
+        "https://example.com/dd/zz",
+        "https://example.com/dd-zz",
+        "https://example.com/dd_zz",
+        "https://example.com/DD_zz",
+        "https://example.com/bb-DD",
+        "https://example.com/DD-BB",
+        "https://example.com/dd-zz",
+        "https://example.com/dd-ZZ",
+        "https://example.com/dd",
+        "https://example.com/zz",
+    ),
+)
+def test_is_homepage_localization_bad(url):
+    """If the url locale pattern doesn't match the country and language codes,
+    then it should not be identified as homepage.
+    """
+    assert not is_homepage(url)
+    assert not is_homepage(url + "/")
