@@ -65,18 +65,17 @@ class EcommerceCrawlStrategyParam(BaseModel):
                 EcommerceCrawlStrategy.full: {
                     "title": "Full",
                     "description": (
-                        "(Deprecated. Use Default instead) Follow most links within the "
-                        "domain of URL in an attempt to discover and extract as many "
-                        "products as possible."
+                        "Follow most links within the domain of URL in an attempt to "
+                        "discover and extract as many products as possible."
                     ),
                 },
                 EcommerceCrawlStrategy.navigation: {
                     "title": "Navigation",
                     "description": (
-                        "(Deprecated. Use Default instead) Follow pagination, "
-                        "subcategories, and product detail pages. Pagination Only is a "
-                        "better choice if the target URL does not have subcategories, "
-                        "or if Zyte API is misidentifying some URLs as subcategories."
+                        "Follow pagination, subcategories, and product detail pages. "
+                        "Pagination Only is a better choice if the target URL does not "
+                        "have subcategories, or if Zyte API is misidentifying some URLs "
+                        "as subcategories."
                     ),
                 },
                 EcommerceCrawlStrategy.pagination_only: {
