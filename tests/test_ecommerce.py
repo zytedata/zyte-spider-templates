@@ -32,9 +32,9 @@ def test_parameters():
 
     EcommerceSpider(url="https://example.com")
     EcommerceSpider(
-        url="https://example.com", crawl_strategy=EcommerceCrawlStrategy.default
+        url="https://example.com", crawl_strategy=EcommerceCrawlStrategy.automatic
     )
-    EcommerceSpider(url="https://example.com", crawl_strategy="default")
+    EcommerceSpider(url="https://example.com", crawl_strategy="automatic")
 
     with pytest.raises(ValidationError):
         EcommerceSpider(url="https://example.com", crawl_strategy="unknown")
@@ -465,16 +465,16 @@ def test_metadata():
                     "enum": ["httpResponseBody", "browserHtml"],
                 },
                 "crawl_strategy": {
-                    "default": "default",
+                    "default": "automatic",
                     "description": "Determines how the start URL and follow-up URLs are crawled.",
                     "enumMeta": {
-                        "default": {
+                        "automatic": {
                             "description": (
                                 "Follow pagination, subcategories, and product detail pages. "
                                 "If starting on a homepage, it would attempt to discover other "
                                 "URLs in the page using heuristics."
                             ),
-                            "title": "Default",
+                            "title": "Automatic",
                         },
                         "full": {
                             "description": (
@@ -500,7 +500,7 @@ def test_metadata():
                         },
                     },
                     "title": "Crawl strategy",
-                    "enum": ["default", "full", "navigation", "pagination_only"],
+                    "enum": ["automatic", "full", "navigation", "pagination_only"],
                     "type": "string",
                 },
             },
@@ -760,7 +760,7 @@ def test_get_start_request_default_strategy(url, has_full_domain):
         assert result.meta == meta
 
     for i, crawl_strategy in enumerate(
-        ["default", "full", "navigation", "pagination_only"]
+        ["automatic", "full", "navigation", "pagination_only"]
     ):
         spider = EcommerceSpider.from_crawler(
             get_crawler(), url=url, crawl_strategy=crawl_strategy
@@ -774,7 +774,7 @@ def test_get_start_request_default_strategy(url, has_full_domain):
 @pytest.mark.parametrize(
     "crawl_strategy,expected_page_params",
     (
-        ("default", {}),
+        ("automatic", {}),
         ("full", {"full_domain": "example.com"}),
         ("navigation", {}),
         ("pagination_only", {}),

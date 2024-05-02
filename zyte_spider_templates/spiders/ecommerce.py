@@ -24,7 +24,7 @@ from ..utils import load_url_list
 
 @document_enum
 class EcommerceCrawlStrategy(str, Enum):
-    default: str = "default"
+    automatic: str = "automatic"
     """Follow pagination, subcategories, and product detail pages.
 
     If the starting URL points to a homepage, it would attempt to discover other
@@ -51,16 +51,16 @@ class EcommerceCrawlStrategyParam(BaseModel):
     crawl_strategy: EcommerceCrawlStrategy = Field(
         title="Crawl strategy",
         description="Determines how the start URL and follow-up URLs are crawled.",
-        default=EcommerceCrawlStrategy.default,
+        default=EcommerceCrawlStrategy.automatic,
         json_schema_extra={
             "enumMeta": {
-                EcommerceCrawlStrategy.default: {
+                EcommerceCrawlStrategy.automatic: {
                     "description": (
                         "Follow pagination, subcategories, and product detail pages. "
                         "If starting on a homepage, it would attempt to discover other "
                         "URLs in the page using heuristics."
                     ),
-                    "title": "Default",
+                    "title": "Automatic",
                 },
                 EcommerceCrawlStrategy.full: {
                     "title": "Full",
@@ -145,7 +145,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             "crawling_logs": {"page_type": "productNavigation"},
         }
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full or (
-            self.args.crawl_strategy == EcommerceCrawlStrategy.default
+            self.args.crawl_strategy == EcommerceCrawlStrategy.automatic
             and is_homepage(url)
         ):
             meta["page_params"] = {"full_domain": get_domain(url)}
