@@ -1,5 +1,4 @@
 import re
-from typing import List, Tuple, Union
 from urllib.parse import urlparse, urlsplit
 
 from zyte_spider_templates._geolocations import GEOLOCATION_OPTIONS
@@ -82,8 +81,7 @@ def is_homepage(url: str) -> bool:
     url_path = url_split.path.rstrip("/").lower()
 
     # Finds and removes URL subpaths like "/us/en", "en-us", "en-uk", etc.
-    match = re.search(r"/(\w{2})[^a-z](\w{2})(?!\w)", url_path)
-    if match and _check_url_locale_pair(match.groups()):
+    if _url_has_locale_pair(url_path):
         url_path = url_path[6:]
 
     # Finds and removes URL subpaths like "/en", "/fr", etc.
@@ -97,12 +95,11 @@ def is_homepage(url: str) -> bool:
     return False
 
 
-def _check_url_locale_pair(data: Union[List, Tuple]) -> bool:
-    if len(data) != 2:
-        return False
-    x, y = data
-    if x in LANG_CODES and y in COUNTRY_CODES:
-        return True
-    if y in LANG_CODES and x in COUNTRY_CODES:
-        return True
+def _url_has_locale_pair(url_path: str) -> bool:
+    if match := re.search(r"/(\w{2})[^a-z](\w{2})(?!\w)", url_path):
+        x, y = match.groups()
+        if x in LANG_CODES and y in COUNTRY_CODES:
+            return True
+        if y in LANG_CODES and x in COUNTRY_CODES:
+            return True
     return False
