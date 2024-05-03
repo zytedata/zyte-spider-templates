@@ -781,12 +781,12 @@ def test_get_start_request_default_strategy(url, has_full_domain):
         ("pagination_only", {}),
     ),
 )
-def test_page_params_for_heuristics(crawl_strategy, expected_page_params):
+def test_modify_page_params_for_heuristics(crawl_strategy, expected_page_params):
     url = "https://example.com"
     page_params = {"full_domain": "example.com"}
 
     spider = EcommerceSpider.from_crawler(
         get_crawler(), url=url, crawl_strategy=crawl_strategy
     )
-    page_params = spider._page_params_for_heuristics(page_params)
+    page_params = spider._modify_page_params_for_heuristics(page_params)
     assert page_params == expected_page_params
