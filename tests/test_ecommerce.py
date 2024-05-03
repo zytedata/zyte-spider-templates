@@ -470,9 +470,10 @@ def test_metadata():
                     "enumMeta": {
                         "automatic": {
                             "description": (
-                                "Follow pagination, subcategories, and product detail pages. "
-                                "If starting on a homepage, it would attempt to discover other "
-                                "URLs in the page using heuristics."
+                                "Automatically use the best crawl strategy based on the given "
+                                "URL inputs. If given a homepage URL, it would attempt to crawl "
+                                "as many products it can discover. Otherwise, it attempt to "
+                                "crawl the products on a given page category."
                             ),
                             "title": "Automatic",
                         },
