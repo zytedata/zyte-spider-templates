@@ -162,7 +162,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
     ) -> Iterable[Request]:
-        page_params = self.page_params_for_heuristics(response)
+        page_params = self._page_params_for_heuristics(response.meta.get("page_params"))
 
         products = navigation.items or []
         for request in products:
@@ -289,11 +289,9 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         scrapy_request.meta["allow_offsite"] = True
         return scrapy_request
 
-    def page_params_for_heuristics(
-        self, response: DummyResponse
+    def _page_params_for_heuristics(
+        self, page_params: Optional[Dict]
     ) -> Optional[Dict[str, Any]]:
-        page_params = response.meta.get("page_params")
-
         # Only allow heuristic extraction of links in non-homepage when on "full" crawl.
         if (
             self.args.crawl_strategy != EcommerceCrawlStrategy.full
