@@ -146,11 +146,21 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         meta = {
             "crawling_logs": {"page_type": "productNavigation"},
         }
-        if self.args.crawl_strategy == EcommerceCrawlStrategy.full or (
-            self.args.crawl_strategy == EcommerceCrawlStrategy.automatic
-            and is_homepage(url)
-        ):
+        if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
             meta["page_params"] = {"full_domain": get_domain(url)}
+        elif self.args.crawl_strategy == EcommerceCrawlStrategy.automatic:
+            if is_homepage(url):
+                meta["page_params"] = {"full_domain": get_domain(url)}
+                self.logger.info(
+                    f"[Automatic Strategy] The input URL {url} seems to be a homepage. "
+                    f"Heuristics will be used on it to crawl other pages which might have products."
+                )
+            else:
+                self.logger.info(
+                    f"[Automatic Strategy] The input URL {url} doesn't seem to be a homepage. "
+                    f"Heuristics won't be used to crawl other pages which might have products."
+                )
+
         return Request(
             url=url,
             callback=self.parse_navigation,
