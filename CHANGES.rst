@@ -1,6 +1,18 @@
 Changes
 =======
 
+0.7.2 (2024-05-07)
+------------------
+
+* Implemented :ref:`mixin classes for spider parameters <parameter-mixins>`, to
+  improve reuse.
+
+* Improved docs, providing an example about overriding existing parameters when
+  :ref:`customizing parameters <custom-params>`, and featuring
+  :class:`~web_poet.AnyResponse` in the :ref:`example about overriding parsing
+  <override-parsing>`.
+
+
 0.7.1 (2024-02-22)
 ------------------
 
