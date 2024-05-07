@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.7.2 (2024-MM-YY)
+0.7.2 (2024-05-07)
 ------------------
 
 * Implemented :ref:`mixin classes for spider parameters <parameter-mixins>`, to
