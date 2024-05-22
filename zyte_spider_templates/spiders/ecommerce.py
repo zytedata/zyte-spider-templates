@@ -38,6 +38,10 @@ class EcommerceCrawlStrategy(str, Enum):
     """Follow pagination and product detail pages. Subcategory links are
     ignored."""
 
+    direct_product: str = "direct_product"
+    """Treat input URLs as direct links to product detail pages, and
+    extract a product from each."""
+
 
 class EcommerceCrawlStrategyParam(BaseModel):
     crawl_strategy: EcommerceCrawlStrategy = Field(
@@ -63,6 +67,13 @@ class EcommerceCrawlStrategyParam(BaseModel):
                     "title": "Pagination Only",
                     "description": (
                         "Follow pagination and product detail pages. Subcategory links are ignored."
+                    ),
+                },
+                EcommerceCrawlStrategy.direct_product: {
+                    "title": "Direct URLs to Product",
+                    "description": (
+                        "Treat input URLs as direct links to product detail pages, and "
+                        "extract a product from each."
                     ),
                 },
             },
@@ -122,6 +133,11 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             )
 
     def get_start_request(self, url):
+        callback = (
+            self.parse_product
+            if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_product
+            else self.parse_navigation
+        )
         meta = {
             "crawling_logs": {"page_type": "productNavigation"},
         }
@@ -129,7 +145,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             meta["page_params"] = {"full_domain": get_domain(url)}
         return Request(
             url=url,
-            callback=self.parse_navigation,
+            callback=callback,
             meta=meta,
         )
 
