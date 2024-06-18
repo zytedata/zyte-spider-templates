@@ -1,6 +1,6 @@
 import pytest
 
-from zyte_spider_templates.heuristics import might_be_category
+from zyte_spider_templates.heuristics import is_homepage, might_be_category
 
 
 @pytest.mark.parametrize(
@@ -50,3 +50,64 @@ from zyte_spider_templates.heuristics import might_be_category
 )
 def test_might_be_category(test_input, expected):
     assert might_be_category(test_input) == expected
+
+
+LOCALES = (
+    "/us/en",
+    "/en/us",
+    "/us-en",
+    "/us_en",
+    "/AT_en",
+    "/pt-br",
+    "/PT-br",
+    "/en-us",
+    "/en-AT",
+    "/en",
+    "/uk",
+)
+
+
+@pytest.mark.parametrize(
+    "url_path,expected",
+    (
+        ("", True),
+        ("/", True),
+        ("/index", True),
+        ("/index.htm", True),
+        ("/index.html", True),
+        ("/index.php", True),
+        ("/home", True),
+        ("/home/", True),
+        ("?ref=abc", False),
+        ("/some/category", False),
+        ("/some/category?query=2123", False),
+    ),
+)
+@pytest.mark.parametrize("locale", LOCALES)
+def test_is_homepage(locale, url_path, expected):
+    assert is_homepage("https://example.com" + url_path) == expected
+    assert is_homepage("https://example.com" + locale + url_path) == expected
+
+
+@pytest.mark.parametrize(
+    "url",
+    (
+        "https://example.com/zz/dd",
+        "https://example.com/dd/zz",
+        "https://example.com/dd-zz",
+        "https://example.com/dd_zz",
+        "https://example.com/DD_zz",
+        "https://example.com/bb-DD",
+        "https://example.com/DD-BB",
+        "https://example.com/dd-zz",
+        "https://example.com/dd-ZZ",
+        "https://example.com/dd",
+        "https://example.com/zz",
+    ),
+)
+def test_is_homepage_localization_bad(url):
+    """If the url locale pattern doesn't match the country and language codes,
+    then it should not be identified as homepage.
+    """
+    assert not is_homepage(url)
+    assert not is_homepage(url + "/")
