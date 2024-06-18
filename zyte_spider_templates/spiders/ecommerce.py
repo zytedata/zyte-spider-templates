@@ -308,10 +308,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     ) -> Dict[str, Any]:
         page_params = page_params or {}
         # Only allow heuristic extraction of links in non-homepage when on "full" crawl.
-        if (
-            self.args.crawl_strategy != EcommerceCrawlStrategy.full
-            and "full_domain" in page_params
-        ):
-            page_params.pop("full_domain")
+        if self.args.crawl_strategy != EcommerceCrawlStrategy.full:
+            page_params.pop("full_domain", None)
 
         return page_params
