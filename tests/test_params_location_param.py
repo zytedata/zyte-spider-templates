@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from zyte_spider_templates.params import LocationParam
 
+
 def test_valid_location_param():
     valid_address_dict = {
         "streetAddress": "123 Main St",
@@ -47,4 +48,3 @@ def test_invalid_validation_location_param():
     invalid_address_json = '{"nonExpectedInputField": "67890"}'
     with pytest.raises(ValidationError, match=r"Extra inputs are not permitted .*"):
         LocationParam(location=invalid_address_json)
-

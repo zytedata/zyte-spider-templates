@@ -2,7 +2,7 @@ import json
 from enum import Enum
 from typing import Optional, Union
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -84,6 +84,7 @@ class UrlParam(BaseModel):
         "you can copy and paste it from your browser. Example: https://toscrape.com/",
         pattern=r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
     )
+
 
 class PostalAddress(BaseModel):
     """
