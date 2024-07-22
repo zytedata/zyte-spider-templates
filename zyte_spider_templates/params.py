@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from typing import Optional
+from typing import Dict, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -157,7 +157,7 @@ class LocationParam(BaseModel):
     @field_validator("location", mode="before")
     @classmethod
     def validate_location(
-        cls, value: Optional[PostalAddress | str | dict]
+        cls, value: Optional[Union[PostalAddress, str, Dict]]
     ) -> Optional[PostalAddress]:
         """Validate location field and cast it into PostalAddress if needed"""
         if value is None or isinstance(value, PostalAddress):
