@@ -1,7 +1,8 @@
+import json
 from enum import Enum
-from typing import Optional
+from typing import Dict, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -83,3 +84,68 @@ class UrlParam(BaseModel):
         "you can copy and paste it from your browser. Example: https://toscrape.com/",
         pattern=r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
     )
+
+
+class PostalAddress(BaseModel):
+    """
+    Represents a postal address with various optional components such as
+    street address, postal code, region, and country.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    streetAddress: Optional[str] = Field(
+        title="Street Address",
+        description="The street address",
+        default=None,
+    )
+
+    postalCode: Optional[str] = Field(
+        title="Postal Code",
+        description="The postal code",
+        default=None,
+    )
+
+    addressRegion: Optional[str] = Field(
+        title="Address Region",
+        description="The region in which the address is. This value is specific to the website",
+        default=None,
+    )
+
+    addressCountry: Optional[str] = Field(
+        title="Adress Country",
+        description="The country code in ISO 3166-1 alpha-2",
+        default=None,
+    )
+
+
+class LocationParam(BaseModel):
+    """
+    Represents a parameter containing a postal address to be set as the user location on websites.
+    """
+
+    location: Optional[PostalAddress] = Field(
+        title="Location",
+        description="Postal address to be set as the user location on websites",
+        default=None,
+    )
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def validate_location(
+        cls, value: Optional[Union[PostalAddress, str, Dict]]
+    ) -> Optional[PostalAddress]:
+        """Validate location field and cast it into PostalAddress if needed"""
+        if value is None or isinstance(value, PostalAddress):
+            return value
+
+        if isinstance(value, str):
+            try:
+                return PostalAddress(**json.loads(value))
+            except json.decoder.JSONDecodeError as err:
+                raise ValueError(f"{value!r} is not a valid JSON object") from err
+
+        elif isinstance(value, dict):
+            return PostalAddress(**value)
+
+        raise ValueError(f"{value!r} type {type(value)} is not a supported type")
