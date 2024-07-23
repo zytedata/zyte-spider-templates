@@ -1,6 +1,12 @@
 Changes
 =======
 
+0.7.3 (2024-07-23)
+------------------
+
+* Add :class:`params.LocationParam
+  <zyte_spider_templates.params.LocationParam>`.
+
 0.7.2 (2024-05-07)
 ------------------
 
