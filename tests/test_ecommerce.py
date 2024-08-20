@@ -32,9 +32,9 @@ def test_parameters():
 
     EcommerceSpider(url="https://example.com")
     EcommerceSpider(
-        url="https://example.com", crawl_strategy=EcommerceCrawlStrategy.full
+        url="https://example.com", crawl_strategy=EcommerceCrawlStrategy.automatic
     )
-    EcommerceSpider(url="https://example.com", crawl_strategy="full")
+    EcommerceSpider(url="https://example.com", crawl_strategy="automatic")
 
     with pytest.raises(ValidationError):
         EcommerceSpider(url="https://example.com", crawl_strategy="unknown")
@@ -407,17 +407,34 @@ def test_metadata():
                     "title": "URL",
                     "type": "string",
                 },
-                "seed_url": {
+                "urls": {
+                    "anyOf": [
+                        {"items": {"type": "string"}, "type": "array"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": (
+                        "Initial URLs for the crawl, separated by new lines. Enter the "
+                        "full URL including http(s), you can copy and paste it from your "
+                        "browser. Example: https://toscrape.com/"
+                    ),
+                    "exclusiveRequired": True,
+                    "group": "inputs",
+                    "title": "URLs",
+                    "widget": "textarea",
+                },
+                "urls_file": {
                     "default": "",
                     "description": (
-                        "URL that point to a list of URLs to crawl, e.g. "
+                        "URL that point to a plain-text file with a list of "
+                        "URLs to crawl, e.g. "
                         "https://example.com/url-list.txt. The linked list "
                         "must contain 1 URL per line."
                     ),
                     "exclusiveRequired": True,
                     "group": "inputs",
                     "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
-                    "title": "Seed URL",
+                    "title": "URLs file",
                     "type": "string",
                 },
                 "geolocation": {
@@ -476,9 +493,18 @@ def test_metadata():
                     "enum": ["httpResponseBody", "browserHtml"],
                 },
                 "crawl_strategy": {
-                    "default": "full",
+                    "default": "automatic",
                     "description": "Determines how the start URL and follow-up URLs are crawled.",
                     "enumMeta": {
+                        "automatic": {
+                            "description": (
+                                "Automatically use the best crawl strategy based on the given "
+                                "URL inputs. If given a homepage URL, it would attempt to crawl "
+                                "as many products it can discover. Otherwise, it attempt to "
+                                "crawl the products on a given page category."
+                            ),
+                            "title": "Automatic",
+                        },
                         "direct_item": {
                             "description": (
                                 "Treat input URLs as direct links to product detail pages, and "
@@ -487,15 +513,17 @@ def test_metadata():
                             "title": "Direct URLs to Product",
                         },
                         "full": {
-                            "description": "Follow most links within the domain of URL in an attempt to discover and extract as many products as possible.",
+                            "description": (
+                                "Follow most links within the domain of URL in an attempt "
+                                "to discover and extract as many products as possible."
+                            ),
                             "title": "Full",
                         },
                         "navigation": {
                             "description": (
-                                "Follow pagination, subcategories, and "
-                                "product detail pages. Pagination Only is a "
-                                "better choice if the target URL does not "
-                                "have subcategories, or if Zyte API is "
+                                "Follow pagination, subcategories, and product detail "
+                                "pages. Pagination Only is a better choice if the target "
+                                "URL does not have subcategories, or if Zyte API is "
                                 "misidentifying some URLs as subcategories."
                             ),
                             "title": "Navigation",
@@ -508,7 +536,13 @@ def test_metadata():
                         },
                     },
                     "title": "Crawl strategy",
-                    "enum": ["full", "navigation", "pagination_only", "direct_item"],
+                    "enum": [
+                        "automatic",
+                        "full",
+                        "navigation",
+                        "pagination_only",
+                        "direct_item",
+                    ],
                     "type": "string",
                 },
             },
@@ -717,7 +751,19 @@ def test_input_multiple():
         EcommerceSpider.from_crawler(
             crawler,
             url="https://a.example",
-            seed_url="https://b.example",
+            urls=["https://b.example"],
+        )
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(
+            crawler,
+            url="https://a.example",
+            urls_file="https://b.example",
+        )
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(
+            crawler,
+            urls=["https://a.example"],
+            urls_file="https://b.example",
         )
 
 
@@ -727,7 +773,48 @@ def test_url_invalid():
         EcommerceSpider.from_crawler(crawler, url="foo")
 
 
-def test_seed_url():
+def test_urls(caplog):
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = EcommerceSpider.from_crawler(crawler, urls=[url])
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_navigation
+
+    spider = EcommerceSpider.from_crawler(crawler, urls=url)
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_navigation
+
+    caplog.clear()
+    spider = EcommerceSpider.from_crawler(
+        crawler,
+        urls="https://a.example\n \nhttps://b.example\nhttps://c.example\nfoo\n\n",
+    )
+    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 3
+    assert all(
+        request.callback == spider.parse_navigation for request in start_requests
+    )
+    assert start_requests[0].url == "https://a.example"
+    assert start_requests[1].url == "https://b.example"
+    assert start_requests[2].url == "https://c.example"
+
+    caplog.clear()
+    with pytest.raises(ValueError):
+        spider = EcommerceSpider.from_crawler(
+            crawler,
+            urls="foo\nbar",
+        )
+    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
+    assert "'bar', from the 'urls' spider argument, is not a valid URL" in caplog.text
+
+
+def test_urls_file():
     crawler = get_crawler()
     url = "https://example.com"
 
@@ -737,7 +824,7 @@ def test_seed_url():
             b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
         )
         mock_get.return_value = response
-        spider = EcommerceSpider.from_crawler(crawler, seed_url=url)
+        spider = EcommerceSpider.from_crawler(crawler, urls_file=url)
         mock_get.assert_called_with(url)
 
     start_requests = list(spider.start_requests())
@@ -745,3 +832,55 @@ def test_seed_url():
     assert start_requests[0].url == "https://a.example"
     assert start_requests[1].url == "https://b.example"
     assert start_requests[2].url == "https://c.example"
+
+
+@pytest.mark.parametrize(
+    "url,has_full_domain",
+    (
+        ("https://example.com", (True, True, False, False)),
+        ("https://example.com/", (True, True, False, False)),
+        ("https://example.com/index.htm", (True, True, False, False)),
+        ("https://example.com/index.html", (True, True, False, False)),
+        ("https://example.com/index.php", (True, True, False, False)),
+        ("https://example.com/home", (True, True, False, False)),
+        ("https://example.com/some/category", (False, True, False, False)),
+        ("https://example.com/some/category?pid=123", (False, True, False, False)),
+    ),
+)
+def test_get_start_request_default_strategy(url, has_full_domain):
+    def assert_meta(has_page_params):
+        meta = {"crawling_logs": {"page_type": "productNavigation"}}
+        if has_page_params:
+            meta["page_params"] = {"full_domain": "example.com"}
+        assert result.meta == meta
+
+    for i, crawl_strategy in enumerate(
+        ["automatic", "full", "navigation", "pagination_only"]
+    ):
+        spider = EcommerceSpider.from_crawler(
+            get_crawler(), url=url, crawl_strategy=crawl_strategy
+        )
+        result = spider.get_start_request(url)
+        assert result.url == url
+        assert result.callback == spider.parse_navigation
+        assert_meta(has_full_domain[i])
+
+
+@pytest.mark.parametrize(
+    "crawl_strategy,expected_page_params",
+    (
+        ("automatic", {}),
+        ("full", {"full_domain": "example.com"}),
+        ("navigation", {}),
+        ("pagination_only", {}),
+    ),
+)
+def test_modify_page_params_for_heuristics(crawl_strategy, expected_page_params):
+    url = "https://example.com"
+    page_params = {"full_domain": "example.com"}
+
+    spider = EcommerceSpider.from_crawler(
+        get_crawler(), url=url, crawl_strategy=crawl_strategy
+    )
+    page_params = spider._modify_page_params_for_heuristics(page_params)
+    assert page_params == expected_page_params
