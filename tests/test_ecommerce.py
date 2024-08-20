@@ -217,6 +217,18 @@ def test_crawl():
             assert request.callback == spider.parse_navigation
 
 
+def test_crawl_strategy_direct_item():
+    crawler = get_crawler()
+    spider = EcommerceSpider.from_crawler(
+        crawler,
+        url="https://example.com",
+        crawl_strategy="direct_item",
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].callback == spider.parse_product
+
+
 @pytest.mark.parametrize(
     "probability,has_item,item_drop",
     ((0.9, True, False), (0.09, False, True), (0.1, True, False), (None, True, False)),
@@ -493,6 +505,13 @@ def test_metadata():
                             ),
                             "title": "Automatic",
                         },
+                        "direct_item": {
+                            "description": (
+                                "Treat input URLs as direct links to product detail pages, and "
+                                "extract a product from each."
+                            ),
+                            "title": "Direct URLs to Product",
+                        },
                         "full": {
                             "description": (
                                 "Follow most links within the domain of URL in an attempt "
@@ -517,7 +536,13 @@ def test_metadata():
                         },
                     },
                     "title": "Crawl strategy",
-                    "enum": ["automatic", "full", "navigation", "pagination_only"],
+                    "enum": [
+                        "automatic",
+                        "full",
+                        "navigation",
+                        "pagination_only",
+                        "direct_item",
+                    ],
                     "type": "string",
                 },
             },

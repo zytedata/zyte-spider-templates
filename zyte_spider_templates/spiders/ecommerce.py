@@ -47,6 +47,10 @@ class EcommerceCrawlStrategy(str, Enum):
     """Follow pagination and product detail pages. Subcategory links are
     ignored."""
 
+    direct_item: str = "direct_item"
+    """Treat input URLs as direct links to product detail pages, and extract an
+    product from each."""
+
 
 class EcommerceCrawlStrategyParam(BaseModel):
     crawl_strategy: EcommerceCrawlStrategy = Field(
@@ -84,6 +88,13 @@ class EcommerceCrawlStrategyParam(BaseModel):
                     "title": "Pagination Only",
                     "description": (
                         "Follow pagination and product detail pages. Subcategory links are ignored."
+                    ),
+                },
+                EcommerceCrawlStrategy.direct_item: {
+                    "title": "Direct URLs to Product",
+                    "description": (
+                        "Treat input URLs as direct links to product detail pages, and "
+                        "extract a product from each."
                     ),
                 },
             },
@@ -145,8 +156,17 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             )
 
     def get_start_request(self, url):
+        callback = (
+            self.parse_product
+            if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
+            else self.parse_navigation
+        )
         meta = {
-            "crawling_logs": {"page_type": "productNavigation"},
+            "crawling_logs": {
+                "page_type": "product"
+                if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
+                else "productNavigation"
+            },
         }
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
             meta["page_params"] = {"full_domain": get_domain(url)}
@@ -165,7 +185,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
         return Request(
             url=url,
-            callback=self.parse_navigation,
+            callback=callback,
             meta=meta,
         )
 
