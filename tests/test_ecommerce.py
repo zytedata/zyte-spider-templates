@@ -395,6 +395,22 @@ def test_metadata():
                     "title": "URL",
                     "type": "string",
                 },
+                "urls": {
+                    "anyOf": [
+                        {"items": {"type": "string"}, "type": "array"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": (
+                        "Initial URLs for the crawl, separated by new lines. Enter the "
+                        "full URL including http(s), you can copy and paste it from your "
+                        "browser. Example: https://toscrape.com/"
+                    ),
+                    "exclusiveRequired": True,
+                    "group": "inputs",
+                    "title": "URLs",
+                    "widget": "textarea",
+                },
                 "urls_file": {
                     "default": "",
                     "description": (
@@ -710,6 +726,18 @@ def test_input_multiple():
         EcommerceSpider.from_crawler(
             crawler,
             url="https://a.example",
+            urls=["https://b.example"],
+        )
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(
+            crawler,
+            url="https://a.example",
+            urls_file="https://b.example",
+        )
+    with pytest.raises(ValueError):
+        EcommerceSpider.from_crawler(
+            crawler,
+            urls=["https://a.example"],
             urls_file="https://b.example",
         )
 
@@ -718,6 +746,47 @@ def test_url_invalid():
     crawler = get_crawler()
     with pytest.raises(ValueError):
         EcommerceSpider.from_crawler(crawler, url="foo")
+
+
+def test_urls(caplog):
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = EcommerceSpider.from_crawler(crawler, urls=[url])
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_navigation
+
+    spider = EcommerceSpider.from_crawler(crawler, urls=url)
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_navigation
+
+    caplog.clear()
+    spider = EcommerceSpider.from_crawler(
+        crawler,
+        urls="https://a.example\n \nhttps://b.example\nhttps://c.example\nfoo\n\n",
+    )
+    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 3
+    assert all(
+        request.callback == spider.parse_navigation for request in start_requests
+    )
+    assert start_requests[0].url == "https://a.example"
+    assert start_requests[1].url == "https://b.example"
+    assert start_requests[2].url == "https://c.example"
+
+    caplog.clear()
+    with pytest.raises(ValueError):
+        spider = EcommerceSpider.from_crawler(
+            crawler,
+            urls="foo\nbar",
+        )
+    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
+    assert "'bar', from the 'urls' spider argument, is not a valid URL" in caplog.text
 
 
 def test_urls_file():

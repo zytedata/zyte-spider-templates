@@ -1,6 +1,8 @@
 import json
+import re
 from enum import Enum
-from typing import Dict, Optional, Union
+from logging import getLogger
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -11,6 +13,8 @@ from zyte_spider_templates._geolocations import (
 from zyte_spider_templates.documentation import document_enum
 
 from .utils import _URL_PATTERN
+
+logger = getLogger(__name__)
 
 
 @document_enum
@@ -108,6 +112,54 @@ class UrlParam(BaseModel):
             "exclusiveRequired": True,
         },
     )
+
+
+class UrlsParam(BaseModel):
+    urls: Optional[List[str]] = Field(
+        title="URLs",
+        description=(
+            "Initial URLs for the crawl, separated by new lines. Enter the "
+            "full URL including http(s), you can copy and paste it from your "
+            "browser. Example: https://toscrape.com/"
+        ),
+        default=None,
+        json_schema_extra={
+            "group": "inputs",
+            "exclusiveRequired": True,
+            "widget": "textarea",
+        },
+    )
+
+    @field_validator("urls", mode="before")
+    @classmethod
+    def validate_url_list(cls, value: Union[List[str], str]) -> List[str]:
+        """Validate a list of URLs.
+
+        If a string is received as input, it is split into multiple strings
+        on new lines.
+
+        List items that do not match a URL pattern trigger a warning and are
+        removed from the list. If all URLs are invalid, validation fails.
+        """
+        if isinstance(value, str):
+            value = value.split("\n")
+        if not value:
+            return value
+        result = []
+        for v in value:
+            v = v.strip()
+            if not v:
+                continue
+            if not re.search(_URL_PATTERN, v):
+                logger.warning(
+                    f"{v!r}, from the 'urls' spider argument, is not a "
+                    f"valid URL and will be ignored."
+                )
+                continue
+            result.append(v)
+        if not result:
+            raise ValueError(f"No valid URL found in {value!r}")
+        return result
 
 
 class PostalAddress(BaseModel):

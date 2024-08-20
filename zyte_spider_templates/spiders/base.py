@@ -11,12 +11,13 @@ from ..params import (
     MaxRequestsParam,
     UrlParam,
     UrlsFileParam,
+    UrlsParam,
 )
 
 # Higher priority than command-line-defined settings (40).
 ARG_SETTING_PRIORITY: int = 50
 
-_INPUT_FIELDS = ("url", "urls_file")
+_INPUT_FIELDS = ("url", "urls", "urls_file")
 
 
 class BaseSpiderParams(
@@ -24,6 +25,7 @@ class BaseSpiderParams(
     MaxRequestsParam,
     GeolocationParam,
     UrlsFileParam,
+    UrlsParam,
     UrlParam,
     BaseModel,
 ):

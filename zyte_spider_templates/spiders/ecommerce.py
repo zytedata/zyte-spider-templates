@@ -126,6 +126,8 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             urls = load_url_list(response.text)
             self.logger.info(f"Loaded {len(urls)} initial URLs from {urls_file}.")
             self.start_urls = urls
+        elif self.args.urls:
+            self.start_urls = self.args.urls
         else:
             self.start_urls = [self.args.url]
         self.allowed_domains = list(set(get_domain(url) for url in self.start_urls))
