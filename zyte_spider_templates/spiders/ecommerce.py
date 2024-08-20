@@ -139,7 +139,11 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             else self.parse_navigation
         )
         meta = {
-            "crawling_logs": {"page_type": "productNavigation"},
+            "crawling_logs": {
+                "page_type": "product"
+                if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
+                else "productNavigation"
+            },
         }
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
             meta["page_params"] = {"full_domain": get_domain(url)}
