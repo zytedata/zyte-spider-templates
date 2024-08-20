@@ -1,9 +1,10 @@
+import json
 import re
 from enum import Enum
 from logging import getLogger
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -82,13 +83,13 @@ class MaxRequestsParam(BaseModel):
     )
 
 
-class SeedUrlParam(BaseModel):
-    seed_url: str = Field(
-        title="Seed URL",
+class UrlsFileParam(BaseModel):
+    urls_file: str = Field(
+        title="URLs file",
         description=(
-            "URL that point to a list of URLs to crawl, e.g. "
-            "https://example.com/url-list.txt. The linked list must contain 1 "
-            "URL per line."
+            "URL that point to a plain-text file with a list of URLs to "
+            "crawl, e.g. https://example.com/url-list.txt. The linked list "
+            "must contain 1 URL per line."
         ),
         pattern=_URL_PATTERN,
         default="",
@@ -159,3 +160,68 @@ class UrlsParam(BaseModel):
         if not result:
             raise ValueError(f"No valid URL found in {value!r}")
         return result
+
+
+class PostalAddress(BaseModel):
+    """
+    Represents a postal address with various optional components such as
+    street address, postal code, region, and country.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    streetAddress: Optional[str] = Field(
+        title="Street Address",
+        description="The street address",
+        default=None,
+    )
+
+    postalCode: Optional[str] = Field(
+        title="Postal Code",
+        description="The postal code",
+        default=None,
+    )
+
+    addressRegion: Optional[str] = Field(
+        title="Address Region",
+        description="The region in which the address is. This value is specific to the website",
+        default=None,
+    )
+
+    addressCountry: Optional[str] = Field(
+        title="Adress Country",
+        description="The country code in ISO 3166-1 alpha-2",
+        default=None,
+    )
+
+
+class LocationParam(BaseModel):
+    """
+    Represents a parameter containing a postal address to be set as the user location on websites.
+    """
+
+    location: Optional[PostalAddress] = Field(
+        title="Location",
+        description="Postal address to be set as the user location on websites",
+        default=None,
+    )
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def validate_location(
+        cls, value: Optional[Union[PostalAddress, str, Dict]]
+    ) -> Optional[PostalAddress]:
+        """Validate location field and cast it into PostalAddress if needed"""
+        if value is None or isinstance(value, PostalAddress):
+            return value
+
+        if isinstance(value, str):
+            try:
+                return PostalAddress(**json.loads(value))
+            except json.decoder.JSONDecodeError as err:
+                raise ValueError(f"{value!r} is not a valid JSON object") from err
+
+        elif isinstance(value, dict):
+            return PostalAddress(**value)
+
+        raise ValueError(f"{value!r} type {type(value)} is not a supported type")
