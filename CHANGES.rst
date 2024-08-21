@@ -6,6 +6,7 @@ Changes
 
 * Added new input parameter ``urls`` which accepts a newline-delimited list of
   URLs.
+
 * Added new crawling strategies:
 
   * ``automatic`` - uses heuristics to see if an input URL is a homepage, for
@@ -17,6 +18,7 @@ Changes
 * Added new parameters classes: ``LocationParam`` and ``PostalAddress``. Note
   that these are available for use when customizing the templates and are not
   currently being utilized by any template.
+
 * Backward incompatible changes:
 
   * ``automatic`` becomes the new default crawling strategy instead of ``full``.
