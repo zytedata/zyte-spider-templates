@@ -4,7 +4,7 @@ from pathlib import Path
 project = "zyte-spider-templates"
 copyright = "2023, Zyte Group Ltd"
 author = "Zyte Group Ltd"
-release = "0.7.2"
+release = "0.8.0"
 
 sys.path.insert(0, str(Path(__file__).parent.absolute()))  # _ext
 extensions = [
