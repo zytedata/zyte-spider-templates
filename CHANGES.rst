@@ -1,6 +1,31 @@
 Changes
 =======
 
+0.8.0 (YYYY-MM-DD)
+------------------
+
+* Added new input parameter ``urls`` which accepts a newline-delimited list of
+  URLs.
+
+* Added new crawling strategies:
+
+  * ``automatic`` - uses heuristics to see if an input URL is a homepage, for
+    which it uses a modified `full` strategy where other links are discovered
+    only in the homepage. Otherwise, it assumes it's a navigation page and uses
+    the existing `navigation` strategy.
+  * ``direct_item`` - input URLs are directly extracted as products.
+
+* Added new parameters classes: ``LocationParam`` and ``PostalAddress``. Note
+  that these are available for use when customizing the templates and are not
+  currently being utilized by any template.
+
+* Backward incompatible changes:
+
+  * ``automatic`` becomes the new default crawling strategy instead of ``full``.
+
+* CI test improvements.
+
+
 0.7.2 (2024-05-07)
 ------------------
 
