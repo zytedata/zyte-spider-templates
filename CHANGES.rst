@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.8.0 (YYYY-MM-DD)
+0.8.0 (2024-08-21)
 ------------------
 
 * Added new input parameter ``urls`` which accepts a newline-delimited list of
