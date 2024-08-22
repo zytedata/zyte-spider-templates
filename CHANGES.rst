@@ -4,15 +4,22 @@ Changes
 0.8.0 (2024-08-21)
 ------------------
 
-* Added new input parameter ``urls`` which accepts a newline-delimited list of
-  URLs.
+* Added new input parameters:
+
+  * ``urls`` accepts a newline-delimited list of URLs.
+
+  * ``urls_file`` accepts a URL that points to a plain-text file with a
+    newline-delimited list of URLs.
+
+  Only one of ``url``, ``urls`` and ``urls_file`` should be used at a time.
 
 * Added new crawling strategies:
 
   * ``automatic`` - uses heuristics to see if an input URL is a homepage, for
-    which it uses a modified `full` strategy where other links are discovered
+    which it uses a modified ``full`` strategy where other links are discovered
     only in the homepage. Otherwise, it assumes it's a navigation page and uses
-    the existing `navigation` strategy.
+    the existing ``navigation`` strategy.
+
   * ``direct_item`` - input URLs are directly extracted as products.
 
 * Added new parameters classes: ``LocationParam`` and ``PostalAddress``. Note
