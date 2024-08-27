@@ -34,6 +34,8 @@ class SerpSpiderParams(
     BaseModel,
 ):
     model_config = ConfigDict(
+        # https://github.com/pydantic/pydantic/discussions/7763#discussioncomment-10338857
+        protected_namespaces=(),
         json_schema_extra={
             "groups": [
                 {
@@ -51,9 +53,9 @@ class SerpSpiderParams(
     @model_validator(mode="after")
     def single_input(self):
         """Fields
-        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.url`
+        :class:`~zyte_spider_templates.spiders.serp.EcommerceSpiderParams.url`
         and
-        :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.urls_file`
+        :class:`~zyte_spider_templates.spiders.serp.EcommerceSpiderParams.urls_file`
         form a mandatory, mutually-exclusive field group: one of them must be
         defined, the rest must not be defined."""
         input_fields = set(
@@ -79,7 +81,7 @@ class SerpSpiderParams(
 class SerpSpider(Args[SerpSpiderParams], BaseSpider):
     """Yield results from search engine result pages (SERP).
 
-    See :class:`~zyte_spider_templates.spiders.ecommerce.SerpSpiderParams`
+    See :class:`~zyte_spider_templates.spiders.serp.SerpSpiderParams`
     for supported parameters.
 
     .. seealso:: :ref:`serp`.

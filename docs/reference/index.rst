@@ -9,6 +9,8 @@ Spiders
 
 .. autoclass:: zyte_spider_templates.EcommerceSpider
 
+.. autoclass:: zyte_spider_templates.SerpSpider
+
 
 Pages
 =====
@@ -41,3 +43,6 @@ Parameter mixins
     :exclude-members: model_computed_fields
 
 .. autoenum:: zyte_spider_templates.spiders.ecommerce.EcommerceCrawlStrategy
+
+.. autopydantic_model:: zyte_spider_templates.spiders.serp.SerpMaxPagesParam
+    :exclude-members: model_computed_fields
