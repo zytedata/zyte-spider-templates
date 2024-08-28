@@ -5,6 +5,7 @@ from logging import getLogger
 from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic.config import JsonDict
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -84,7 +85,7 @@ class MaxRequestsParam(BaseModel):
 
 
 INPUT_GROUP_FIELDS = ("url", "urls", "urls_file")
-INPUT_GROUP = {
+INPUT_GROUP: JsonDict = {
     "id": "inputs",
     "title": "Inputs",
     "description": "Input data that determines the start URLs of the crawl.",
