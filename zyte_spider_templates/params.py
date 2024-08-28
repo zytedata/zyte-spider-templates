@@ -4,7 +4,7 @@ from enum import Enum
 from logging import getLogger
 from typing import Dict, List, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -83,6 +83,34 @@ class MaxRequestsParam(BaseModel):
     )
 
 
+INPUT_FIELDS = ("url", "urls", "urls_file")
+INPUT_GROUP = {
+    "id": "inputs",
+    "title": "Inputs",
+    "description": ("Input data that determines the start URLs of the crawl."),
+    "widget": "exclusive",
+}
+
+
+def single_input_validator(model):
+    input_fields = set(field for field in INPUT_FIELDS if getattr(model, field, None))
+    if not input_fields:
+        input_field_list = ", ".join(INPUT_FIELDS)
+        raise ValueError(
+            f"No input parameter defined. Please, define one of: "
+            f"{input_field_list}."
+        )
+    elif len(input_fields) > 1:
+        input_field_list = ", ".join(
+            f"{field} ({getattr(model, field)!r})" for field in input_fields
+        )
+        raise ValueError(
+            f"Expected a single input parameter, got {len(input_fields)}: "
+            f"{input_field_list}."
+        )
+    return model
+
+
 class UrlsFileParam(BaseModel):
     urls_file: str = Field(
         title="URLs file",
@@ -99,6 +127,10 @@ class UrlsFileParam(BaseModel):
         },
     )
 
+    @model_validator(mode="after")
+    def single_input(self):
+        return single_input_validator(self)
+
 
 class UrlParam(BaseModel):
     url: str = Field(
@@ -112,6 +144,10 @@ class UrlParam(BaseModel):
             "exclusiveRequired": True,
         },
     )
+
+    @model_validator(mode="after")
+    def single_input(self):
+        return single_input_validator(self)
 
 
 class UrlsParam(BaseModel):
@@ -129,6 +165,10 @@ class UrlsParam(BaseModel):
             "widget": "textarea",
         },
     )
+
+    @model_validator(mode="after")
+    def single_input(self):
+        return single_input_validator(self)
 
     @field_validator("urls", mode="before")
     @classmethod
