@@ -755,7 +755,7 @@ def test_urls_file():
     crawler = get_crawler()
     url = "https://example.com"
 
-    with patch("zyte_spider_templates.spiders.ecommerce.requests.get") as mock_get:
+    with patch("zyte_spider_templates.params.requests.get") as mock_get:
         response = requests.Response()
         response._content = (
             b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"

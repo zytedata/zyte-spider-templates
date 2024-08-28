@@ -206,7 +206,7 @@ def test_urls_file():
     crawler = get_crawler()
     url = "https://example.com/input-urls.txt"
 
-    with patch("zyte_spider_templates.spiders.serp.requests.get") as mock_get:
+    with patch("zyte_spider_templates.params.requests.get") as mock_get:
         response = requests.Response()
         response._content = b"https://google.com/search?q=a\n \nhttps://google.com/search?q=b\nhttps://google.com/search?q=c\n\n"
         mock_get.return_value = response
