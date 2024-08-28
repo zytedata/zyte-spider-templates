@@ -5,7 +5,12 @@ from logging import getLogger
 from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from pydantic.config import JsonDict
+
+try:
+    from pydantic.config import JsonDict
+except ImportError:
+    JsonValue = Union[int, float, str, bool, None, List["JsonValue"], "JsonDict"]
+    JsonDict = Dict[str, JsonValue]
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
