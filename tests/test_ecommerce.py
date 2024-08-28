@@ -1,6 +1,4 @@
-import json
 import logging
-import re
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -11,7 +9,6 @@ from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import get_spider_metadata
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation, Request
 
-from zyte_spider_templates import BaseSpiderParams
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS,
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -24,6 +21,7 @@ from zyte_spider_templates.spiders.ecommerce import (
 
 from . import get_crawler
 from .test_utils import URL_TO_DOMAIN
+from .utils import assertEqualJson
 
 
 def test_parameters():
@@ -362,21 +360,6 @@ def test_arguments():
         assert spider.allowed_domains == ["example.com"]
 
 
-def assertEqualJson(actual, expected):
-    """Compare the JSON representation of 2 Python objects.
-
-    This allows to take into account things like the order of key-value pairs
-    in dictionaries, which would not be taken into account when comparing
-    dictionaries directly.
-
-    It also generates a better diff in pytest output when enums are involved,
-    e.g. geolocation values.
-    """
-    actual_json = json.dumps(actual, indent=2)
-    expected_json = json.dumps(expected, indent=2)
-    assert actual_json == expected_json
-
-
 def test_metadata():
     actual_metadata = get_spider_metadata(EcommerceSpider, normalize=True)
     expected_metadata = {
@@ -556,52 +539,6 @@ def test_metadata():
     assert geolocation["enum"][0] == "AF"
     assert geolocation["enumMeta"]["UY"] == {"title": "Uruguay (UY)"}
     assert set(geolocation["enum"]) == set(geolocation["enumMeta"])
-
-
-@pytest.mark.parametrize(
-    "valid,url",
-    [
-        (False, ""),
-        (False, "http://"),
-        (False, "http:/example.com"),
-        (False, "ftp://example.com"),
-        (False, "example.com"),
-        (False, "//example.com"),
-        (False, "http://foo:bar@example.com"),
-        (False, " http://example.com"),
-        (False, "http://example.com "),
-        (False, "http://examp le.com"),
-        (False, "https://example.com:232323"),
-        (True, "http://example.com"),
-        (True, "http://bücher.example"),
-        (True, "http://xn--bcher-kva.example"),
-        (True, "https://i❤.ws"),
-        (True, "https://example.com"),
-        (True, "https://example.com/"),
-        (True, "https://example.com:2323"),
-        (True, "https://example.com:2323/"),
-        (True, "https://example.com:2323/foo"),
-        (True, "https://example.com/f"),
-        (True, "https://example.com/foo"),
-        (True, "https://example.com/foo/"),
-        (True, "https://example.com/foo/bar"),
-        (True, "https://example.com/foo/bar/"),
-        (True, "https://example.com/foo/bar?baz"),
-        (True, "https://example.com/foo/bar/?baz"),
-        (True, "https://example.com?foo"),
-        (True, "https://example.com?foo=bar"),
-        (True, "https://example.com/?foo=bar&baz"),
-        (True, "https://example.com/?foo=bar&baz#"),
-        (True, "https://example.com/?foo=bar&baz#frag"),
-        (True, "https://example.com#"),
-        (True, "https://example.com/#"),
-        (True, "https://example.com/&"),
-        (True, "https://example.com/&#"),
-    ],
-)
-def test_validation_url(url, valid):
-    url_re = BaseSpiderParams.model_fields["url"].metadata[0].pattern
-    assert bool(re.match(url_re, url)) == valid
 
 
 def test_get_parse_product_request():

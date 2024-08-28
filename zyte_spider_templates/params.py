@@ -4,6 +4,7 @@ from enum import Enum
 from logging import getLogger
 from typing import Dict, List, Optional, Union
 
+import requests
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from zyte_spider_templates._geolocations import (
@@ -12,7 +13,7 @@ from zyte_spider_templates._geolocations import (
 )
 from zyte_spider_templates.documentation import document_enum
 
-from .utils import _URL_PATTERN
+from .utils import _URL_PATTERN, get_domain, load_url_list
 
 logger = getLogger(__name__)
 
@@ -100,66 +101,93 @@ class UrlsFileParam(BaseModel):
     )
 
 
+def parse_input_params(spider):
+    urls_file = spider.args.urls_file
+    if urls_file:
+        response = requests.get(urls_file)
+        urls = load_url_list(response.text)
+        spider.logger.info(f"Loaded {len(urls)} initial URLs from {urls_file}.")
+        spider.start_urls = urls
+    elif spider.args.urls:
+        spider.start_urls = spider.args.urls
+    else:
+        spider.start_urls = [spider.args.url]
+    spider.allowed_domains = list(set(get_domain(url) for url in spider.start_urls))
+
+
+URL_FIELD_KWARGS = {
+    "title": "URL",
+    "description": (
+        "Initial URL for the crawl. Enter the full URL including http(s), "
+        "you can copy and paste it from your browser. Example: "
+        "https://toscrape.com/"
+    ),
+    "pattern": _URL_PATTERN,
+    "default": "",
+    "json_schema_extra": {
+        "group": "inputs",
+        "exclusiveRequired": True,
+    },
+}
+
+
 class UrlParam(BaseModel):
-    url: str = Field(
-        title="URL",
-        description="Initial URL for the crawl. Enter the full URL including http(s), "
-        "you can copy and paste it from your browser. Example: https://toscrape.com/",
-        pattern=_URL_PATTERN,
-        default="",
-        json_schema_extra={
-            "group": "inputs",
-            "exclusiveRequired": True,
-        },
-    )
+    url: str = Field(**URL_FIELD_KWARGS)  # type: ignore[misc, arg-type]
+
+
+URLS_FIELD_KWARGS = {
+    "title": "URLs",
+    "description": (
+        "Initial URLs for the crawl, separated by new lines. Enter the "
+        "full URL including http(s), you can copy and paste it from your "
+        "browser. Example: https://toscrape.com/"
+    ),
+    "default": None,
+    "json_schema_extra": {
+        "group": "inputs",
+        "exclusiveRequired": True,
+        "widget": "textarea",
+    },
+}
+
+
+def validate_url_list(value: Union[List[str], str]) -> List[str]:
+    """Validate a list of URLs.
+
+    If a string is received as input, it is split into multiple strings
+    on new lines.
+
+    List items that do not match a URL pattern trigger a warning and are
+    removed from the list. If all URLs are invalid, validation fails.
+    """
+    if isinstance(value, str):
+        value = value.split("\n")
+    if not value:
+        return value
+    result = []
+    for v in value:
+        v = v.strip()
+        if not v:
+            continue
+        if not re.search(_URL_PATTERN, v):
+            logger.warning(
+                f"{v!r}, from the 'urls' spider argument, is not a "
+                f"valid URL and will be ignored."
+            )
+            continue
+        result.append(v)
+    if not result:
+        raise ValueError(f"No valid URL found in {value!r}")
+    return result
 
 
 class UrlsParam(BaseModel):
-    urls: Optional[List[str]] = Field(
-        title="URLs",
-        description=(
-            "Initial URLs for the crawl, separated by new lines. Enter the "
-            "full URL including http(s), you can copy and paste it from your "
-            "browser. Example: https://toscrape.com/"
-        ),
-        default=None,
-        json_schema_extra={
-            "group": "inputs",
-            "exclusiveRequired": True,
-            "widget": "textarea",
-        },
-    )
+    urls: Optional[List[str]] = Field(**URLS_FIELD_KWARGS)  # type: ignore[misc, arg-type]
 
     @field_validator("urls", mode="before")
     @classmethod
     def validate_url_list(cls, value: Union[List[str], str]) -> List[str]:
-        """Validate a list of URLs.
-
-        If a string is received as input, it is split into multiple strings
-        on new lines.
-
-        List items that do not match a URL pattern trigger a warning and are
-        removed from the list. If all URLs are invalid, validation fails.
-        """
-        if isinstance(value, str):
-            value = value.split("\n")
-        if not value:
-            return value
-        result = []
-        for v in value:
-            v = v.strip()
-            if not v:
-                continue
-            if not re.search(_URL_PATTERN, v):
-                logger.warning(
-                    f"{v!r}, from the 'urls' spider argument, is not a "
-                    f"valid URL and will be ignored."
-                )
-                continue
-            result.append(v)
-        if not result:
-            raise ValueError(f"No valid URL found in {value!r}")
-        return result
+        return validate_url_list(value)
 
 
 class PostalAddress(BaseModel):

@@ -1,19 +1,24 @@
-from typing import Any, Dict, Iterable
+from copy import deepcopy
+from typing import Any, Dict, Iterable, List, Optional, Union
 
-import requests
 import scrapy
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_spider_metadata import Args
 from w3lib.url import add_or_replace_parameter
 from zyte_common_items import Serp
 
+from zyte_spider_templates.params import parse_input_params
 from zyte_spider_templates.spiders.base import BaseSpider
-from zyte_spider_templates.utils import get_domain
 
-from ..params import MaxRequestsParam, UrlParam, UrlsFileParam, UrlsParam
-from ..utils import load_url_list
+from ..params import (
+    URL_FIELD_KWARGS,
+    URLS_FIELD_KWARGS,
+    MaxRequestsParam,
+    UrlsFileParam,
+    validate_url_list,
+)
 from .base import _INPUT_FIELDS
 
 
@@ -25,12 +30,39 @@ class SerpMaxPagesParam(BaseModel):
     )
 
 
+SERP_URL_FIELD_KWARGS = deepcopy(URL_FIELD_KWARGS)
+assert isinstance(SERP_URL_FIELD_KWARGS["description"], str)
+SERP_URL_FIELD_KWARGS["description"] = SERP_URL_FIELD_KWARGS["description"].replace(
+    "https://toscrape.com/", "https://google.com/search?q=foo+bar"
+)
+
+
+class SerpUrlParam(BaseModel):
+    url: str = Field(**SERP_URL_FIELD_KWARGS)  # type: ignore[misc, arg-type]
+
+
+SERP_URLS_FIELD_KWARGS = deepcopy(URLS_FIELD_KWARGS)
+assert isinstance(SERP_URLS_FIELD_KWARGS["description"], str)
+SERP_URLS_FIELD_KWARGS["description"] = SERP_URLS_FIELD_KWARGS["description"].replace(
+    "https://toscrape.com/", "https://google.com/search?q=foo+bar"
+)
+
+
+class SerpUrlsParam(BaseModel):
+    urls: Optional[List[str]] = Field(**SERP_URLS_FIELD_KWARGS)  # type: ignore[misc, arg-type]
+
+    @field_validator("urls", mode="before")
+    @classmethod
+    def validate_url_list(cls, value: Union[List[str], str]) -> List[str]:
+        return validate_url_list(value)
+
+
 class SerpSpiderParams(
     MaxRequestsParam,
     SerpMaxPagesParam,
     UrlsFileParam,
-    UrlsParam,
-    UrlParam,
+    SerpUrlsParam,
+    SerpUrlParam,
     BaseModel,
 ):
     model_config = ConfigDict(
@@ -53,9 +85,9 @@ class SerpSpiderParams(
     @model_validator(mode="after")
     def single_input(self):
         """Fields
-        :class:`~zyte_spider_templates.spiders.serp.EcommerceSpiderParams.url`
+        :class:`~zyte_spider_templates.spiders.serp.SerpSpiderParams.url`
         and
-        :class:`~zyte_spider_templates.spiders.serp.EcommerceSpiderParams.urls_file`
+        :class:`~zyte_spider_templates.spiders.serp.SerpSpiderParams.urls_file`
         form a mandatory, mutually-exclusive field group: one of them must be
         defined, the rest must not be defined."""
         input_fields = set(
@@ -92,27 +124,14 @@ class SerpSpider(Args[SerpSpiderParams], BaseSpider):
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
         "title": "SERP",
-        "description": "Template for spiders that extract search engine results.",
+        "description": "Template for spiders that extract Google search results.",
     }
 
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super().from_crawler(crawler, *args, **kwargs)
-        spider._init_input()
+        parse_input_params(spider)
         return spider
-
-    def _init_input(self):
-        urls_file = self.args.urls_file
-        if urls_file:
-            response = requests.get(urls_file)
-            urls = load_url_list(response.text)
-            self.logger.info(f"Loaded {len(urls)} initial URLs from {urls_file}.")
-            self.start_urls = urls
-        elif self.args.urls:
-            self.start_urls = self.args.urls
-        else:
-            self.start_urls = [self.args.url]
-        self.allowed_domains = list(set(get_domain(url) for url in self.start_urls))
 
     def get_start_request(self, url):
         return Request(
