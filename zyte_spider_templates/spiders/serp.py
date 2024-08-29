@@ -5,6 +5,7 @@ import scrapy
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from scrapy import Request
 from scrapy.crawler import Crawler
+from scrapy.settings import SETTINGS_PRIORITIES, BaseSettings
 from scrapy_spider_metadata import Args
 from w3lib.url import add_or_replace_parameter
 from zyte_common_items import Serp
@@ -126,6 +127,20 @@ class SerpSpider(Args[SerpSpiderParams], BaseSpider):
         "title": "SERP",
         "description": "Template for spiders that extract Google search results.",
     }
+
+    @classmethod
+    def update_settings(cls, settings: BaseSettings) -> None:
+        super().update_settings(settings)
+        retry_policy_setting_priority = settings.getpriority("ZYTE_API_RETRY_POLICY")
+        if (
+            retry_policy_setting_priority is None
+            or retry_policy_setting_priority < SETTINGS_PRIORITIES["spider"]
+        ):
+            settings.set(
+                "ZYTE_API_RETRY_POLICY",
+                "zyte_api.aggressive_retrying",
+                priority="spider",
+            )
 
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
