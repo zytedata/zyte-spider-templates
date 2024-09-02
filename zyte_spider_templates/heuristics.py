@@ -8,32 +8,32 @@ COUNTRY_CODES = set([k.lower() for k in GEOLOCATION_OPTIONS])
 LANG_CODES = set(_LANG_CODES)
 
 
-NO_CONTENT_PATHS = (
-    "/authenticate",
-    "/my-account",
-    "/account",
-    "/my-wishlist",
-    "/search",
-    "/archive",
-    "/privacy-policy",
-    "/cookie-policy",
-    "/terms-conditions",
-    "/tos",
-    "/admin",
-    "/rss.xml",
-    "/subscribe",
-    "/newsletter",
-    "/settings",
-    "/cart",
-    "/articles",
-    "/artykuly",  # Polish for articles
-    "/news",
-    "/blog",
-    "/about",
-    "/about-us",
-    "/affiliate",
-    "/press",
-    "/careers",
+NO_CONTENT_KEYWORDS = (
+    "authenticate",
+    "my-account",
+    "account",
+    "my-wishlist",
+    "search",
+    "archive",
+    "privacy-policy",
+    "cookie-policy",
+    "terms-conditions",
+    "tos",
+    "admin",
+    "rss.xml",
+    "subscribe",
+    "newsletter",
+    "settings",
+    "cart",
+    "articles",
+    "artykuly",  # Polish for articles
+    "news",
+    "blog",
+    "about",
+    "about-us",
+    "affiliate",
+    "press",
+    "careers",
 )
 
 SUFFIXES = [".html", ".php", ".cgi", ".asp"]
@@ -51,13 +51,14 @@ def might_be_category(url: str) -> bool:
     """Returns True if the given url might be a category based on its path."""
 
     url = url.lower().rstrip("/")
-    url_path = urlparse(url).path
+    parsed_url = urlparse(url)
 
     for suffix in [""] + SUFFIXES:
-        for path in NO_CONTENT_PATHS:
-            if url_path.endswith(path + suffix):
+        for path in NO_CONTENT_KEYWORDS:
+            if parsed_url.path.endswith(f"/{path}{suffix}"):
                 return False
-    for suffix in [""] + SUFFIXES:
+            if parsed_url.netloc.startswith(f"{path}."):
+                return False
         for rule in NO_CONTENT_RE:
             if re.search(rule + suffix, url):
                 return False
