@@ -46,6 +46,12 @@ from zyte_spider_templates.heuristics import is_homepage, might_be_category
         ("https://example.com/terms_of_use", False),
         ("https://example.com/terms_of_service", False),
         ("https://example.com/terms_of_conditions", False),
+        # subdomains
+        ("https://blog.example.com", False),
+        ("https://admin.example.com", False),
+        ("https://cart.example.com", False),
+        ("https://news.example.com", False),
+        ("https://careers.example.com", False),
     ),
 )
 def test_might_be_category(test_input, expected):
