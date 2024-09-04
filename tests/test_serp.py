@@ -16,20 +16,25 @@ def test_parameters():
     with pytest.raises(ValidationError):
         GoogleSearchSpider()
 
-    GoogleSearchSpider(url="https://google.com/search?q=foo+bar")
-    GoogleSearchSpider(url="https://google.com/search?q=foo+bar", max_pages=10)
+    with pytest.raises(ValidationError):
+        GoogleSearchSpider(url="https://www.google.com/")
+
+    GoogleSearchSpider(search_keywords="foo bar")
+    GoogleSearchSpider(url="https://www.google.cat/", search_keywords="foo bar")
+    GoogleSearchSpider(
+        url="https://www.google.cat/", search_keywords="foo bar", max_pages=10
+    )
 
     with pytest.raises(ValidationError):
-        GoogleSearchSpider(url="https://google.com/search?q=foo+bar", max_pages="all")
+        GoogleSearchSpider(search_keywords="foo bar", max_pages="all")
 
 
 def test_start_requests():
-    url = "https://google.com/search?q=foo+bar"
     crawler = get_crawler()
-    spider = GoogleSearchSpider.from_crawler(crawler, url=url)
+    spider = GoogleSearchSpider.from_crawler(crawler, search_keywords="foo bar")
     requests = list(spider.start_requests())
     assert len(requests) == 1
-    assert requests[0].url == url
+    assert requests[0].url == "https://www.google.com/search?q=foo+bar"
     assert requests[0].callback == spider.parse_serp
 
 
@@ -52,10 +57,9 @@ def test_metadata():
             ],
             "properties": {
                 "url": {
-                    "default": "",
+                    "default": "https://www.google.com/",
                     "description": (
-                        "Initial URL for the crawl. Enter the full URL including http(s), "
-                        "you can copy and paste it from your browser. Example: https://google.com/search?q=foo+bar"
+                        "Target Google URL. Defaults to https://www.google.com/."
                     ),
                     "exclusiveRequired": True,
                     "group": "inputs",
@@ -70,9 +74,7 @@ def test_metadata():
                     ],
                     "default": None,
                     "description": (
-                        "Initial URLs for the crawl, separated by new lines. Enter the "
-                        "full URL including http(s), you can copy and paste it from your "
-                        "browser. Example: https://google.com/search?q=foo+bar"
+                        "Target Google URLs. Defaults to https://www.google.com/."
                     ),
                     "exclusiveRequired": True,
                     "group": "inputs",
@@ -83,15 +85,25 @@ def test_metadata():
                     "default": "",
                     "description": (
                         "URL that point to a plain-text file with a list of "
-                        "URLs to crawl, e.g. "
+                        "target Google URLs, e.g. "
                         "https://example.com/url-list.txt. The linked list "
-                        "must contain 1 URL per line."
+                        "must contain 1 Google URL (e.g. "
+                        "https://www.google.com/) per line."
                     ),
                     "exclusiveRequired": True,
                     "group": "inputs",
                     "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
                     "title": "URLs file",
                     "type": "string",
+                },
+                "search_keywords": {
+                    "anyOf": [
+                        {"items": {"type": "string"}, "type": "array"},
+                        {"type": "null"},
+                    ],
+                    "description": "Search keywords to use on the specified input Google URLs.",
+                    "title": "Search Keywords",
+                    "widget": "textarea",
                 },
                 "max_pages": {
                     "default": 1,
@@ -113,6 +125,7 @@ def test_metadata():
                     "widget": "request-limit",
                 },
             },
+            "required": ["search_keywords"],
             "title": "GoogleSearchSpiderParams",
             "type": "object",
         },
@@ -125,7 +138,9 @@ def test_set_allowed_domains(url, allowed_domain):
     crawler = get_crawler()
 
     kwargs = {"url": url}
-    spider = GoogleSearchSpider.from_crawler(crawler, **kwargs)
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, **kwargs, search_keywords="foo bar"
+    )
     assert spider.allowed_domains == [allowed_domain]
 
 
@@ -140,20 +155,23 @@ def test_input_multiple():
     with pytest.raises(ValueError):
         GoogleSearchSpider.from_crawler(
             crawler,
-            url="https://google.com/search?q=a",
-            urls=["https://google.com/search?q=b"],
+            url="https://www.google.com/search?q=a",
+            urls=["https://www.google.com/search?q=b"],
+            search_keywords="foo bar",
         )
     with pytest.raises(ValueError):
         GoogleSearchSpider.from_crawler(
             crawler,
-            url="https://google.com/search?q=a",
+            url="https://www.google.com/search?q=a",
             urls_file="https://example.com/input-urls.txt",
+            search_keywords="foo bar",
         )
     with pytest.raises(ValueError):
         GoogleSearchSpider.from_crawler(
             crawler,
-            urls=["https://google.com/search?q=b"],
+            urls=["https://www.google.com/search?q=b"],
             urls_file="https://example.com/input-urls.txt",
+            search_keywords="foo bar",
         )
 
 
@@ -165,15 +183,19 @@ def test_url_invalid():
 
 def test_urls(caplog):
     crawler = get_crawler()
-    url = "https://google.com/search?q=foo+bar"
+    url = "https://www.google.com/search?q=foo+bar"
 
-    spider = GoogleSearchSpider.from_crawler(crawler, urls=[url])
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, urls=[url], search_keywords="foo bar"
+    )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].url == url
     assert start_requests[0].callback == spider.parse_serp
 
-    spider = GoogleSearchSpider.from_crawler(crawler, urls=url)
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, urls=url, search_keywords="foo bar"
+    )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].url == url
@@ -182,21 +204,23 @@ def test_urls(caplog):
     caplog.clear()
     spider = GoogleSearchSpider.from_crawler(
         crawler,
-        urls="https://google.com/search?q=a\n \nhttps://google.com/search?q=b\nhttps://google.com/search?q=c\nfoo\n\n",
+        urls="https://www.google.com/\n \nhttps://www.google.cat/\nhttps://www.google.ie/\nfoo\n\n",
+        search_keywords="foo bar",
     )
     assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 3
     assert all(request.callback == spider.parse_serp for request in start_requests)
-    assert start_requests[0].url == "https://google.com/search?q=a"
-    assert start_requests[1].url == "https://google.com/search?q=b"
-    assert start_requests[2].url == "https://google.com/search?q=c"
+    assert start_requests[0].url == "https://www.google.com/search?q=foo+bar"
+    assert start_requests[1].url == "https://www.google.cat/search?q=foo+bar"
+    assert start_requests[2].url == "https://www.google.ie/search?q=foo+bar"
 
     caplog.clear()
     with pytest.raises(ValueError):
         spider = GoogleSearchSpider.from_crawler(
             crawler,
             urls="foo\nbar",
+            search_keywords="foo bar",
         )
     assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
     assert "'bar', from the 'urls' spider argument, is not a valid URL" in caplog.text
@@ -208,13 +232,15 @@ def test_urls_file():
 
     with patch("zyte_spider_templates.params.requests.get") as mock_get:
         response = requests.Response()
-        response._content = b"https://google.com/search?q=a\n \nhttps://google.com/search?q=b\nhttps://google.com/search?q=c\n\n"
+        response._content = b"https://www.google.com/\n \nhttps://www.google.cat/\nhttps://www.google.ie/\n\n"
         mock_get.return_value = response
-        spider = GoogleSearchSpider.from_crawler(crawler, urls_file=url)
+        spider = GoogleSearchSpider.from_crawler(
+            crawler, urls_file=url, search_keywords="foo bar"
+        )
         mock_get.assert_called_with(url)
 
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 3
-    assert start_requests[0].url == "https://google.com/search?q=a"
-    assert start_requests[1].url == "https://google.com/search?q=b"
-    assert start_requests[2].url == "https://google.com/search?q=c"
+    assert start_requests[0].url == "https://www.google.com/search?q=foo+bar"
+    assert start_requests[1].url == "https://www.google.cat/search?q=foo+bar"
+    assert start_requests[2].url == "https://www.google.ie/search?q=foo+bar"

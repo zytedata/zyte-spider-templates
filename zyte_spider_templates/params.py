@@ -120,21 +120,24 @@ def validate_input_group(model):
     return model
 
 
+URLS_FILE_FIELD_KWARGS = {
+    "title": "URLs file",
+    "description": (
+        "URL that point to a plain-text file with a list of URLs to "
+        "crawl, e.g. https://example.com/url-list.txt. The linked list "
+        "must contain 1 URL per line."
+    ),
+    "pattern": _URL_PATTERN,
+    "default": "",
+    "json_schema_extra": {
+        "group": "inputs",
+        "exclusiveRequired": True,
+    },
+}
+
+
 class UrlsFileParam(BaseModel):
-    urls_file: str = Field(
-        title="URLs file",
-        description=(
-            "URL that point to a plain-text file with a list of URLs to "
-            "crawl, e.g. https://example.com/url-list.txt. The linked list "
-            "must contain 1 URL per line."
-        ),
-        pattern=_URL_PATTERN,
-        default="",
-        json_schema_extra={
-            "group": "inputs",
-            "exclusiveRequired": True,
-        },
-    )
+    urls_file: str = Field(**URLS_FILE_FIELD_KWARGS)  # type: ignore[misc, arg-type]
 
     @model_validator(mode="after")
     def input_group(self):

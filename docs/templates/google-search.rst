@@ -9,7 +9,7 @@ Basic use
 
 .. code-block:: shell
 
-    scrapy crawl google_search -a url="https://www.google.com/search?q=foo"
+    scrapy crawl google_search -a search_keywords="foo bar"
 
 Parameters
 ==========
