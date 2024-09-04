@@ -1,5 +1,6 @@
 from copy import deepcopy
 from typing import Any, Dict, Iterable, List, Optional, Union
+from urllib.parse import urlparse, urlunparse
 
 import scrapy
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -22,6 +23,35 @@ from ..params import (
 from .base import INPUT_GROUP, BaseSpider
 
 
+class SearchKeywordsParam(BaseModel):
+    search_keywords: Optional[List[str]] = Field(
+        title="Search Keywords",
+        description=("Search keywords to use on the specified input Google URLs."),
+        default=None,
+        json_schema_extra={
+            "widget": "textarea",
+        },
+    )
+
+    @field_validator("search_keywords", mode="before")
+    @classmethod
+    def validate_search_keywords(cls, value: Union[List[str], str]) -> List[str]:
+        """Validate a list of search keywords.
+        If a string is received as input, it is split into multiple strings
+        on new lines.
+        """
+        if isinstance(value, str):
+            value = value.split("\n")
+        if not value:
+            return value
+        result = []
+        for v in value:
+            if not (v := v.strip()):
+                continue
+            result.append(v)
+        return result
+
+
 class SerpMaxPagesParam(BaseModel):
     max_pages: int = Field(
         title="Pages",
@@ -30,15 +60,16 @@ class SerpMaxPagesParam(BaseModel):
     )
 
 
-SERP_URL_FIELD_KWARGS = deepcopy(URL_FIELD_KWARGS)
-assert isinstance(SERP_URL_FIELD_KWARGS["description"], str)
-SERP_URL_FIELD_KWARGS["description"] = SERP_URL_FIELD_KWARGS["description"].replace(
+GOOGLE_URL_FIELD_KWARGS = deepcopy(URL_FIELD_KWARGS)
+assert isinstance(GOOGLE_URL_FIELD_KWARGS["description"], str)
+GOOGLE_URL_FIELD_KWARGS["default"] = "https://www.google.com/"
+GOOGLE_URL_FIELD_KWARGS["description"] = GOOGLE_URL_FIELD_KWARGS["description"].replace(
     "https://toscrape.com/", "https://google.com/search?q=foo+bar"
 )
 
 
-class SerpUrlParam(BaseModel):
-    url: str = Field(**SERP_URL_FIELD_KWARGS)  # type: ignore[misc, arg-type]
+class GoogleUrlParam(BaseModel):
+    url: str = Field(**GOOGLE_URL_FIELD_KWARGS)  # type: ignore[misc, arg-type]
 
 
 SERP_URLS_FIELD_KWARGS = deepcopy(URLS_FIELD_KWARGS)
@@ -60,9 +91,10 @@ class SerpUrlsParam(BaseModel):
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
     SerpMaxPagesParam,
+    SearchKeywordsParam,
     UrlsFileParam,
     SerpUrlsParam,
-    SerpUrlParam,
+    GoogleUrlParam,
     BaseModel,
 ):
     model_config = ConfigDict(
@@ -126,11 +158,20 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         )
 
     def start_requests(self) -> Iterable[Request]:
+        search_keywords = self.args.search_keywords
+        if not search_keywords:
+            raise ValueError("No search keywords specified.")
+
         for url in self.start_urls:
-            for start in range(0, self.args.max_pages * 10, 10):
-                if start:
-                    url = add_or_replace_parameter(url, "start", str(start))
-                yield self.get_start_request(url)
+            url = urlunparse(urlparse(url)._replace(path="/search"))
+            for search_keyword in search_keywords:
+                search_url = add_or_replace_parameter(url, "q", search_keyword)
+                for start in range(0, self.args.max_pages * 10, 10):
+                    if start:
+                        search_url = add_or_replace_parameter(
+                            search_url, "start", str(start)
+                        )
+                    yield self.get_start_request(search_url)
 
     def parse_serp(self, response) -> Iterable[Serp]:
         yield Serp.from_dict(response.raw_api_response["serp"])
