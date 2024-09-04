@@ -2,7 +2,7 @@ from copy import deepcopy
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import scrapy
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.settings import SETTINGS_PRIORITIES, BaseSettings
@@ -11,7 +11,6 @@ from w3lib.url import add_or_replace_parameter
 from zyte_common_items import Serp
 
 from zyte_spider_templates.params import parse_input_params
-from zyte_spider_templates.spiders.base import BaseSpider
 
 from ..params import (
     URL_FIELD_KWARGS,
@@ -20,7 +19,7 @@ from ..params import (
     UrlsFileParam,
     validate_url_list,
 )
-from .base import _INPUT_FIELDS
+from .base import INPUT_GROUP, BaseSpider
 
 
 class SerpMaxPagesParam(BaseModel):
@@ -71,44 +70,10 @@ class SerpSpiderParams(
         protected_namespaces=(),
         json_schema_extra={
             "groups": [
-                {
-                    "id": "inputs",
-                    "title": "Inputs",
-                    "description": (
-                        "Input data that determines the start URLs of the crawl."
-                    ),
-                    "widget": "exclusive",
-                },
+                INPUT_GROUP,
             ],
         },
     )
-
-    @model_validator(mode="after")
-    def single_input(self):
-        """Fields
-        :class:`~zyte_spider_templates.spiders.serp.SerpSpiderParams.url`
-        and
-        :class:`~zyte_spider_templates.spiders.serp.SerpSpiderParams.urls_file`
-        form a mandatory, mutually-exclusive field group: one of them must be
-        defined, the rest must not be defined."""
-        input_fields = set(
-            field for field in _INPUT_FIELDS if getattr(self, field, None)
-        )
-        if not input_fields:
-            input_field_list = ", ".join(_INPUT_FIELDS)
-            raise ValueError(
-                f"No input parameter defined. Please, define one of: "
-                f"{input_field_list}."
-            )
-        elif len(input_fields) > 1:
-            input_field_list = ", ".join(
-                f"{field} ({getattr(self, field)!r})" for field in input_fields
-            )
-            raise ValueError(
-                f"Expected a single input parameter, got {len(input_fields)}: "
-                f"{input_field_list}."
-            )
-        return self
 
 
 class SerpSpider(Args[SerpSpiderParams], BaseSpider):

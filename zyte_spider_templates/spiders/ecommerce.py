@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import scrapy
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse
@@ -13,12 +13,20 @@ from zyte_spider_templates.heuristics import is_homepage
 from zyte_spider_templates.params import parse_input_params
 from zyte_spider_templates.spiders.base import (
     ARG_SETTING_PRIORITY,
+    INPUT_GROUP,
     BaseSpider,
-    BaseSpiderParams,
 )
 from zyte_spider_templates.utils import get_domain
 
 from ..documentation import document_enum
+from ..params import (
+    ExtractFromParam,
+    GeolocationParam,
+    MaxRequestsParam,
+    UrlParam,
+    UrlsFileParam,
+    UrlsParam,
+)
 
 
 @document_enum
@@ -101,8 +109,23 @@ class EcommerceCrawlStrategyParam(BaseModel):
     )
 
 
-class EcommerceSpiderParams(EcommerceCrawlStrategyParam, BaseSpiderParams):
-    pass
+class EcommerceSpiderParams(
+    ExtractFromParam,
+    MaxRequestsParam,
+    GeolocationParam,
+    EcommerceCrawlStrategyParam,
+    UrlsFileParam,
+    UrlsParam,
+    UrlParam,
+    BaseModel,
+):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "groups": [
+                INPUT_GROUP,
+            ],
+        },
+    )
 
 
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):

@@ -5,7 +5,13 @@ from logging import getLogger
 from typing import Dict, List, Optional, Union
 
 import requests
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+try:
+    from pydantic.config import JsonDict
+except ImportError:
+    JsonValue = Union[int, float, str, bool, None, List["JsonValue"], "JsonDict"]
+    JsonDict = Dict[str, JsonValue]  # type: ignore[misc]
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
@@ -84,6 +90,36 @@ class MaxRequestsParam(BaseModel):
     )
 
 
+INPUT_GROUP_FIELDS = ("url", "urls", "urls_file")
+INPUT_GROUP: JsonDict = {
+    "id": "inputs",
+    "title": "Inputs",
+    "description": "Input data that determines the start URLs of the crawl.",
+    "widget": "exclusive",
+}
+
+
+def validate_input_group(model):
+    input_fields = set(
+        field for field in INPUT_GROUP_FIELDS if getattr(model, field, None)
+    )
+    if not input_fields:
+        input_field_list = ", ".join(INPUT_GROUP_FIELDS)
+        raise ValueError(
+            f"No input parameter defined. Please, define one of: "
+            f"{input_field_list}."
+        )
+    elif len(input_fields) > 1:
+        input_field_list = ", ".join(
+            f"{field} ({getattr(model, field)!r})" for field in input_fields
+        )
+        raise ValueError(
+            f"Expected a single input parameter, got {len(input_fields)}: "
+            f"{input_field_list}."
+        )
+    return model
+
+
 class UrlsFileParam(BaseModel):
     urls_file: str = Field(
         title="URLs file",
@@ -99,6 +135,10 @@ class UrlsFileParam(BaseModel):
             "exclusiveRequired": True,
         },
     )
+
+    @model_validator(mode="after")
+    def input_group(self):
+        return validate_input_group(self)
 
 
 def parse_input_params(spider):
@@ -180,9 +220,17 @@ def validate_url_list(value: Union[List[str], str]) -> List[str]:
         raise ValueError(f"No valid URL found in {value!r}")
     return result
 
+    @model_validator(mode="after")
+    def input_group(self):
+        return validate_input_group(self)
+
 
 class UrlsParam(BaseModel):
     urls: Optional[List[str]] = Field(**URLS_FIELD_KWARGS)  # type: ignore[misc, arg-type]
+
+    @model_validator(mode="after")
+    def input_group(self):
+        return validate_input_group(self)
 
     @field_validator("urls", mode="before")
     @classmethod

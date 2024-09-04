@@ -420,6 +420,59 @@ def test_metadata():
                     "title": "URLs file",
                     "type": "string",
                 },
+                "crawl_strategy": {
+                    "default": "automatic",
+                    "description": "Determines how the start URL and follow-up URLs are crawled.",
+                    "enumMeta": {
+                        "automatic": {
+                            "description": (
+                                "Automatically use the best crawl strategy based on the given "
+                                "URL inputs. If given a homepage URL, it would attempt to crawl "
+                                "as many products it can discover. Otherwise, it attempt to "
+                                "crawl the products on a given page category."
+                            ),
+                            "title": "Automatic",
+                        },
+                        "direct_item": {
+                            "description": (
+                                "Treat input URLs as direct links to product detail pages, and "
+                                "extract a product from each."
+                            ),
+                            "title": "Direct URLs to Product",
+                        },
+                        "full": {
+                            "description": (
+                                "Follow most links within the domain of URL in an attempt "
+                                "to discover and extract as many products as possible."
+                            ),
+                            "title": "Full",
+                        },
+                        "navigation": {
+                            "description": (
+                                "Follow pagination, subcategories, and product detail "
+                                "pages. Pagination Only is a better choice if the target "
+                                "URL does not have subcategories, or if Zyte API is "
+                                "misidentifying some URLs as subcategories."
+                            ),
+                            "title": "Navigation",
+                        },
+                        "pagination_only": {
+                            "description": (
+                                "Follow pagination and product detail pages. Subcategory links are ignored."
+                            ),
+                            "title": "Pagination Only",
+                        },
+                    },
+                    "title": "Crawl strategy",
+                    "enum": [
+                        "automatic",
+                        "full",
+                        "navigation",
+                        "pagination_only",
+                        "direct_item",
+                    ],
+                    "type": "string",
+                },
                 "geolocation": {
                     "anyOf": [
                         {"type": "string"},
@@ -474,59 +527,6 @@ def test_metadata():
                     },
                     "title": "Extraction source",
                     "enum": ["httpResponseBody", "browserHtml"],
-                },
-                "crawl_strategy": {
-                    "default": "automatic",
-                    "description": "Determines how the start URL and follow-up URLs are crawled.",
-                    "enumMeta": {
-                        "automatic": {
-                            "description": (
-                                "Automatically use the best crawl strategy based on the given "
-                                "URL inputs. If given a homepage URL, it would attempt to crawl "
-                                "as many products it can discover. Otherwise, it attempt to "
-                                "crawl the products on a given page category."
-                            ),
-                            "title": "Automatic",
-                        },
-                        "direct_item": {
-                            "description": (
-                                "Treat input URLs as direct links to product detail pages, and "
-                                "extract a product from each."
-                            ),
-                            "title": "Direct URLs to Product",
-                        },
-                        "full": {
-                            "description": (
-                                "Follow most links within the domain of URL in an attempt "
-                                "to discover and extract as many products as possible."
-                            ),
-                            "title": "Full",
-                        },
-                        "navigation": {
-                            "description": (
-                                "Follow pagination, subcategories, and product detail "
-                                "pages. Pagination Only is a better choice if the target "
-                                "URL does not have subcategories, or if Zyte API is "
-                                "misidentifying some URLs as subcategories."
-                            ),
-                            "title": "Navigation",
-                        },
-                        "pagination_only": {
-                            "description": (
-                                "Follow pagination and product detail pages. Subcategory links are ignored."
-                            ),
-                            "title": "Pagination Only",
-                        },
-                    },
-                    "title": "Crawl strategy",
-                    "enum": [
-                        "automatic",
-                        "full",
-                        "navigation",
-                        "pagination_only",
-                        "direct_item",
-                    ],
-                    "type": "string",
                 },
             },
             "title": "EcommerceSpiderParams",
