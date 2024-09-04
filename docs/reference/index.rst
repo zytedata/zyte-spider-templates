@@ -9,7 +9,7 @@ Spiders
 
 .. autoclass:: zyte_spider_templates.EcommerceSpider
 
-.. autoclass:: zyte_spider_templates.SerpSpider
+.. autoclass:: zyte_spider_templates.GoogleSearchSpider
 
 
 Pages

@@ -57,7 +57,7 @@ class SerpUrlsParam(BaseModel):
         return validate_url_list(value)
 
 
-class SerpSpiderParams(
+class GoogleSearchSpiderParams(
     MaxRequestsParam,
     SerpMaxPagesParam,
     UrlsFileParam,
@@ -76,20 +76,20 @@ class SerpSpiderParams(
     )
 
 
-class SerpSpider(Args[SerpSpiderParams], BaseSpider):
-    """Yield results from search engine result pages (SERP).
+class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
+    """Yield results from Google searches.
 
-    See :class:`~zyte_spider_templates.spiders.serp.SerpSpiderParams`
+    See :class:`~zyte_spider_templates.spiders.serp.GoogleSearchSpiderParams`
     for supported parameters.
 
-    .. seealso:: :ref:`serp`.
+    .. seealso:: :ref:`google-search`.
     """
 
-    name = "serp"
+    name = "google_search"
 
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
-        "title": "SERP",
+        "title": "Google Search Results",
         "description": "Template for spiders that extract Google search results.",
     }
 

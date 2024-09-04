@@ -5,7 +5,7 @@ import requests
 from pydantic import ValidationError
 from scrapy_spider_metadata import get_spider_metadata
 
-from zyte_spider_templates.spiders.serp import SerpSpider
+from zyte_spider_templates.spiders.serp import GoogleSearchSpider
 
 from . import get_crawler
 from .test_utils import URL_TO_DOMAIN
@@ -14,19 +14,19 @@ from .utils import assertEqualJson
 
 def test_parameters():
     with pytest.raises(ValidationError):
-        SerpSpider()
+        GoogleSearchSpider()
 
-    SerpSpider(url="https://google.com/search?q=foo+bar")
-    SerpSpider(url="https://google.com/search?q=foo+bar", max_pages=10)
+    GoogleSearchSpider(url="https://google.com/search?q=foo+bar")
+    GoogleSearchSpider(url="https://google.com/search?q=foo+bar", max_pages=10)
 
     with pytest.raises(ValidationError):
-        SerpSpider(url="https://google.com/search?q=foo+bar", max_pages="all")
+        GoogleSearchSpider(url="https://google.com/search?q=foo+bar", max_pages="all")
 
 
 def test_start_requests():
     url = "https://google.com/search?q=foo+bar"
     crawler = get_crawler()
-    spider = SerpSpider.from_crawler(crawler, url=url)
+    spider = GoogleSearchSpider.from_crawler(crawler, url=url)
     requests = list(spider.start_requests())
     assert len(requests) == 1
     assert requests[0].url == url
@@ -34,10 +34,10 @@ def test_start_requests():
 
 
 def test_metadata():
-    actual_metadata = get_spider_metadata(SerpSpider, normalize=True)
+    actual_metadata = get_spider_metadata(GoogleSearchSpider, normalize=True)
     expected_metadata = {
         "template": True,
-        "title": "SERP",
+        "title": "Google Search Results",
         "description": "Template for spiders that extract Google search results.",
         "param_schema": {
             "groups": [
@@ -113,7 +113,7 @@ def test_metadata():
                     "widget": "request-limit",
                 },
             },
-            "title": "SerpSpiderParams",
+            "title": "GoogleSearchSpiderParams",
             "type": "object",
         },
     }
@@ -125,32 +125,32 @@ def test_set_allowed_domains(url, allowed_domain):
     crawler = get_crawler()
 
     kwargs = {"url": url}
-    spider = SerpSpider.from_crawler(crawler, **kwargs)
+    spider = GoogleSearchSpider.from_crawler(crawler, **kwargs)
     assert spider.allowed_domains == [allowed_domain]
 
 
 def test_input_none():
     crawler = get_crawler()
     with pytest.raises(ValueError):
-        SerpSpider.from_crawler(crawler)
+        GoogleSearchSpider.from_crawler(crawler)
 
 
 def test_input_multiple():
     crawler = get_crawler()
     with pytest.raises(ValueError):
-        SerpSpider.from_crawler(
+        GoogleSearchSpider.from_crawler(
             crawler,
             url="https://google.com/search?q=a",
             urls=["https://google.com/search?q=b"],
         )
     with pytest.raises(ValueError):
-        SerpSpider.from_crawler(
+        GoogleSearchSpider.from_crawler(
             crawler,
             url="https://google.com/search?q=a",
             urls_file="https://example.com/input-urls.txt",
         )
     with pytest.raises(ValueError):
-        SerpSpider.from_crawler(
+        GoogleSearchSpider.from_crawler(
             crawler,
             urls=["https://google.com/search?q=b"],
             urls_file="https://example.com/input-urls.txt",
@@ -160,27 +160,27 @@ def test_input_multiple():
 def test_url_invalid():
     crawler = get_crawler()
     with pytest.raises(ValueError):
-        SerpSpider.from_crawler(crawler, url="foo")
+        GoogleSearchSpider.from_crawler(crawler, url="foo")
 
 
 def test_urls(caplog):
     crawler = get_crawler()
     url = "https://google.com/search?q=foo+bar"
 
-    spider = SerpSpider.from_crawler(crawler, urls=[url])
+    spider = GoogleSearchSpider.from_crawler(crawler, urls=[url])
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].url == url
     assert start_requests[0].callback == spider.parse_serp
 
-    spider = SerpSpider.from_crawler(crawler, urls=url)
+    spider = GoogleSearchSpider.from_crawler(crawler, urls=url)
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].url == url
     assert start_requests[0].callback == spider.parse_serp
 
     caplog.clear()
-    spider = SerpSpider.from_crawler(
+    spider = GoogleSearchSpider.from_crawler(
         crawler,
         urls="https://google.com/search?q=a\n \nhttps://google.com/search?q=b\nhttps://google.com/search?q=c\nfoo\n\n",
     )
@@ -194,7 +194,7 @@ def test_urls(caplog):
 
     caplog.clear()
     with pytest.raises(ValueError):
-        spider = SerpSpider.from_crawler(
+        spider = GoogleSearchSpider.from_crawler(
             crawler,
             urls="foo\nbar",
         )
@@ -210,7 +210,7 @@ def test_urls_file():
         response = requests.Response()
         response._content = b"https://google.com/search?q=a\n \nhttps://google.com/search?q=b\nhttps://google.com/search?q=c\n\n"
         mock_get.return_value = response
-        spider = SerpSpider.from_crawler(crawler, urls_file=url)
+        spider = GoogleSearchSpider.from_crawler(crawler, urls_file=url)
         mock_get.assert_called_with(url)
 
     start_requests = list(spider.start_requests())
