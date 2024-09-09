@@ -1,6 +1,12 @@
 Changes
 =======
 
+Unreleased
+----------
+
+* Now requires ``zyte-common-items >= 0.22.0``.
+
+
 0.8.0 (2024-08-21)
 ------------------
 
