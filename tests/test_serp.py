@@ -15,20 +15,20 @@ def test_parameters():
     with pytest.raises(ValidationError):
         GoogleSearchSpider(domain="google.com")
 
-    GoogleSearchSpider(search_keywords="foo bar")
-    GoogleSearchSpider(domain="google.cat", search_keywords="foo bar")
-    GoogleSearchSpider(domain="google.cat", search_keywords="foo bar", max_pages=10)
+    GoogleSearchSpider(search_queries="foo bar")
+    GoogleSearchSpider(domain="google.cat", search_queries="foo bar")
+    GoogleSearchSpider(domain="google.cat", search_queries="foo bar", max_pages=10)
 
     with pytest.raises(ValidationError):
-        GoogleSearchSpider(domain="google.foo", search_keywords="foo bar")
+        GoogleSearchSpider(domain="google.foo", search_queries="foo bar")
 
     with pytest.raises(ValidationError):
-        GoogleSearchSpider(search_keywords="foo bar", max_pages="all")
+        GoogleSearchSpider(search_queries="foo bar", max_pages="all")
 
 
 def test_start_requests():
     crawler = get_crawler()
-    spider = GoogleSearchSpider.from_crawler(crawler, search_keywords="foo bar")
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
     requests = list(spider.start_requests())
     assert len(requests) == 1
     assert requests[0].url == "https://www.google.com/search?q=foo+bar"
@@ -238,17 +238,16 @@ def test_metadata():
                     ],
                     "type": "string",
                 },
-                "search_keywords": {
+                "search_queries": {
                     "anyOf": [
                         {"items": {"type": "string"}, "type": "array"},
                         {"type": "null"},
                     ],
                     "description": (
-                        "Keywords to search for. Use multiple lines to "
-                        "trigger multiple searches for different search "
-                        "keywords."
+                        "Input 1 search query per line. A search query is a "
+                        "string of search keywords (e.g. foo bar)."
                     ),
-                    "title": "Search Keywords",
+                    "title": "Search Queries",
                     "widget": "textarea",
                 },
                 "max_pages": {
@@ -271,7 +270,7 @@ def test_metadata():
                     "widget": "request-limit",
                 },
             },
-            "required": ["search_keywords"],
+            "required": ["search_queries"],
             "title": "GoogleSearchSpiderParams",
             "type": "object",
         },
@@ -299,16 +298,16 @@ def test_domain(input_domain, expected_domain):
     if input_domain:
         kwargs["domain"] = input_domain
     spider = GoogleSearchSpider.from_crawler(
-        crawler, search_keywords="foo bar", **kwargs
+        crawler, search_queries="foo bar", **kwargs
     )
     requests = list(spider.start_requests())
     assert len(requests) == 1
     assert requests[0].url == f"https://www.{expected_domain}/search?q=foo+bar"
 
 
-def test_search_keywords():
+def test_search_queries():
     crawler = get_crawler()
-    spider = GoogleSearchSpider.from_crawler(crawler, search_keywords="foo bar\nbaz")
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar\nbaz")
     requests = list(spider.start_requests())
     assert len(requests) == 2
     assert requests[0].url == "https://www.google.com/search?q=foo+bar"

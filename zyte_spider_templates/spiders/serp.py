@@ -12,29 +12,29 @@ from ._google_domains import GoogleDomain
 from .base import BaseSpider
 
 
-class SearchKeywordsParam(BaseModel):
-    search_keywords: Optional[List[str]] = Field(
-        title="Search Keywords",
+class SearchQueriesParam(BaseModel):
+    search_queries: Optional[List[str]] = Field(
+        title="Search Queries",
         description=(
-            "Keywords to search for. Use multiple lines to trigger multiple "
-            "searches for different search keywords."
+            "Input 1 search query per line. A search query is a string of "
+            "search keywords (e.g. foo bar)."
         ),
         json_schema_extra={
             "widget": "textarea",
         },
     )
 
-    @field_validator("search_keywords", mode="before")
+    @field_validator("search_queries", mode="before")
     @classmethod
-    def validate_search_keywords(cls, value: Union[List[str], str]) -> List[str]:
-        """Validate a list of search keywords.
+    def validate_search_queries(cls, value: Union[List[str], str]) -> List[str]:
+        """Validate a list of search queries.
         If a string is received as input, it is split into multiple strings
         on new lines.
         """
         if isinstance(value, str):
             value = value.split("\n")
         if not value:
-            raise ValueError("The search_keywords parameter value is missing or empty.")
+            raise ValueError("The search_queries parameter value is missing or empty.")
         result = []
         for v in value:
             if not (v := v.strip()):
@@ -62,7 +62,7 @@ class GoogleDomainParam(BaseModel):
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
     SerpMaxPagesParam,
-    SearchKeywordsParam,
+    SearchQueriesParam,
     GoogleDomainParam,
     BaseModel,
 ):
@@ -113,13 +113,13 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         )
 
     def start_requests(self) -> Iterable[Request]:
-        search_keywords = self.args.search_keywords
-        if not search_keywords:
-            raise ValueError("No search keywords specified.")
+        search_queries = self.args.search_queries
+        if not search_queries:
+            raise ValueError("No search queries specified.")
 
         url = f"https://www.{self.args.domain.value}/search"
-        for search_keyword in search_keywords:
-            search_url = add_or_replace_parameter(url, "q", search_keyword)
+        for search_query in search_queries:
+            search_url = add_or_replace_parameter(url, "q", search_query)
             for start in range(0, self.args.max_pages * 10, 10):
                 if start:
                     search_url = add_or_replace_parameter(
