@@ -1,14 +1,10 @@
-from unittest.mock import patch
-
 import pytest
-import requests
 from pydantic import ValidationError
 from scrapy_spider_metadata import get_spider_metadata
 
 from zyte_spider_templates.spiders.serp import GoogleSearchSpider
 
 from . import get_crawler
-from .test_utils import URL_TO_DOMAIN
 from .utils import assertEqualJson
 
 
@@ -17,13 +13,14 @@ def test_parameters():
         GoogleSearchSpider()
 
     with pytest.raises(ValidationError):
-        GoogleSearchSpider(url="https://www.google.com/")
+        GoogleSearchSpider(domain="google.com")
 
     GoogleSearchSpider(search_keywords="foo bar")
-    GoogleSearchSpider(url="https://www.google.cat/", search_keywords="foo bar")
-    GoogleSearchSpider(
-        url="https://www.google.cat/", search_keywords="foo bar", max_pages=10
-    )
+    GoogleSearchSpider(domain="google.cat", search_keywords="foo bar")
+    GoogleSearchSpider(domain="google.cat", search_keywords="foo bar", max_pages=10)
+
+    with pytest.raises(ValidationError):
+        GoogleSearchSpider(domain="google.foo", search_keywords="foo bar")
 
     with pytest.raises(ValidationError):
         GoogleSearchSpider(search_keywords="foo bar", max_pages="all")
@@ -45,55 +42,200 @@ def test_metadata():
         "title": "Google Search Results",
         "description": "Template for spiders that extract Google search results.",
         "param_schema": {
-            "groups": [
-                {
-                    "description": (
-                        "Input data that determines the start URLs of the crawl."
-                    ),
-                    "id": "inputs",
-                    "title": "Inputs",
-                    "widget": "exclusive",
-                },
-            ],
             "properties": {
-                "url": {
-                    "default": "https://www.google.com/",
-                    "description": (
-                        "Target Google URL. Defaults to https://www.google.com/."
-                    ),
-                    "exclusiveRequired": True,
-                    "group": "inputs",
-                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
-                    "title": "URL",
-                    "type": "string",
-                },
-                "urls": {
-                    "anyOf": [
-                        {"items": {"type": "string"}, "type": "array"},
-                        {"type": "null"},
+                "domain": {
+                    "default": "google.com",
+                    "description": "Target Google domain.",
+                    "title": "Domain",
+                    "enum": [
+                        "google.com",
+                        "google.ad",
+                        "google.ae",
+                        "google.al",
+                        "google.am",
+                        "google.as",
+                        "google.at",
+                        "google.az",
+                        "google.ba",
+                        "google.be",
+                        "google.bf",
+                        "google.bg",
+                        "google.bi",
+                        "google.bj",
+                        "google.bs",
+                        "google.bt",
+                        "google.by",
+                        "google.ca",
+                        "google.cat",
+                        "google.cd",
+                        "google.cf",
+                        "google.cg",
+                        "google.ch",
+                        "google.ci",
+                        "google.cl",
+                        "google.cm",
+                        "google.cn",
+                        "google.co.ao",
+                        "google.co.bw",
+                        "google.co.ck",
+                        "google.co.cr",
+                        "google.co.id",
+                        "google.co.il",
+                        "google.co.in",
+                        "google.co.jp",
+                        "google.co.ke",
+                        "google.co.kr",
+                        "google.co.ls",
+                        "google.co.ma",
+                        "google.co.mz",
+                        "google.co.nz",
+                        "google.co.th",
+                        "google.co.tz",
+                        "google.co.ug",
+                        "google.co.uk",
+                        "google.co.uz",
+                        "google.co.ve",
+                        "google.co.vi",
+                        "google.co.za",
+                        "google.co.zm",
+                        "google.co.zw",
+                        "google.com.af",
+                        "google.com.ag",
+                        "google.com.ar",
+                        "google.com.au",
+                        "google.com.bd",
+                        "google.com.bh",
+                        "google.com.bn",
+                        "google.com.bo",
+                        "google.com.br",
+                        "google.com.bz",
+                        "google.com.co",
+                        "google.com.cu",
+                        "google.com.cy",
+                        "google.com.do",
+                        "google.com.ec",
+                        "google.com.eg",
+                        "google.com.et",
+                        "google.com.fj",
+                        "google.com.gh",
+                        "google.com.gi",
+                        "google.com.gt",
+                        "google.com.hk",
+                        "google.com.jm",
+                        "google.com.kh",
+                        "google.com.kw",
+                        "google.com.lb",
+                        "google.com.ly",
+                        "google.com.mm",
+                        "google.com.mt",
+                        "google.com.mx",
+                        "google.com.my",
+                        "google.com.na",
+                        "google.com.ng",
+                        "google.com.ni",
+                        "google.com.np",
+                        "google.com.om",
+                        "google.com.pa",
+                        "google.com.pe",
+                        "google.com.pg",
+                        "google.com.ph",
+                        "google.com.pk",
+                        "google.com.pr",
+                        "google.com.py",
+                        "google.com.qa",
+                        "google.com.sa",
+                        "google.com.sb",
+                        "google.com.sg",
+                        "google.com.sl",
+                        "google.com.sv",
+                        "google.com.tj",
+                        "google.com.tr",
+                        "google.com.tw",
+                        "google.com.ua",
+                        "google.com.uy",
+                        "google.com.vc",
+                        "google.com.vn",
+                        "google.cv",
+                        "google.cz",
+                        "google.de",
+                        "google.dj",
+                        "google.dk",
+                        "google.dm",
+                        "google.dz",
+                        "google.ee",
+                        "google.es",
+                        "google.fi",
+                        "google.fm",
+                        "google.fr",
+                        "google.ga",
+                        "google.ge",
+                        "google.gg",
+                        "google.gl",
+                        "google.gm",
+                        "google.gr",
+                        "google.gy",
+                        "google.hn",
+                        "google.hr",
+                        "google.ht",
+                        "google.hu",
+                        "google.ie",
+                        "google.im",
+                        "google.iq",
+                        "google.is",
+                        "google.it",
+                        "google.je",
+                        "google.jo",
+                        "google.kg",
+                        "google.ki",
+                        "google.kz",
+                        "google.la",
+                        "google.li",
+                        "google.lk",
+                        "google.lt",
+                        "google.lu",
+                        "google.lv",
+                        "google.md",
+                        "google.me",
+                        "google.mg",
+                        "google.mk",
+                        "google.ml",
+                        "google.mn",
+                        "google.mu",
+                        "google.mv",
+                        "google.mw",
+                        "google.ne",
+                        "google.nl",
+                        "google.no",
+                        "google.nr",
+                        "google.nu",
+                        "google.pl",
+                        "google.pn",
+                        "google.ps",
+                        "google.pt",
+                        "google.ro",
+                        "google.rs",
+                        "google.ru",
+                        "google.rw",
+                        "google.sc",
+                        "google.se",
+                        "google.sh",
+                        "google.si",
+                        "google.sk",
+                        "google.sm",
+                        "google.sn",
+                        "google.so",
+                        "google.sr",
+                        "google.st",
+                        "google.td",
+                        "google.tg",
+                        "google.tl",
+                        "google.tm",
+                        "google.tn",
+                        "google.to",
+                        "google.tt",
+                        "google.vu",
+                        "google.ws",
                     ],
-                    "default": None,
-                    "description": (
-                        "Target Google URLs. Defaults to https://www.google.com/."
-                    ),
-                    "exclusiveRequired": True,
-                    "group": "inputs",
-                    "title": "URLs",
-                    "widget": "textarea",
-                },
-                "urls_file": {
-                    "default": "",
-                    "description": (
-                        "URL that point to a plain-text file with a list of "
-                        "target Google URLs, e.g. "
-                        "https://example.com/url-list.txt. The linked list "
-                        "must contain 1 Google URL (e.g. "
-                        "https://www.google.com/) per line."
-                    ),
-                    "exclusiveRequired": True,
-                    "group": "inputs",
-                    "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
-                    "title": "URLs file",
                     "type": "string",
                 },
                 "search_keywords": {
@@ -101,7 +243,11 @@ def test_metadata():
                         {"items": {"type": "string"}, "type": "array"},
                         {"type": "null"},
                     ],
-                    "description": "Search keywords to use on the specified input Google URLs.",
+                    "description": (
+                        "Keywords to search for. Use multiple lines to "
+                        "trigger multiple searches for different search "
+                        "keywords."
+                    ),
                     "title": "Search Keywords",
                     "widget": "textarea",
                 },
@@ -133,114 +279,37 @@ def test_metadata():
     assertEqualJson(actual_metadata, expected_metadata)
 
 
-@pytest.mark.parametrize("url,allowed_domain", URL_TO_DOMAIN)
-def test_set_allowed_domains(url, allowed_domain):
-    crawler = get_crawler()
-
-    kwargs = {"url": url}
-    spider = GoogleSearchSpider.from_crawler(
-        crawler, **kwargs, search_keywords="foo bar"
-    )
-    assert spider.allowed_domains == [allowed_domain]
-
-
 def test_input_none():
     crawler = get_crawler()
     with pytest.raises(ValueError):
         GoogleSearchSpider.from_crawler(crawler)
 
 
-def test_input_multiple():
+@pytest.mark.parametrize(
+    ("input_domain", "expected_domain"),
+    (
+        (None, "google.com"),
+        ("google.com", "google.com"),
+        ("google.cat", "google.cat"),
+    ),
+)
+def test_domain(input_domain, expected_domain):
     crawler = get_crawler()
-    with pytest.raises(ValueError):
-        GoogleSearchSpider.from_crawler(
-            crawler,
-            url="https://www.google.com/search?q=a",
-            urls=["https://www.google.com/search?q=b"],
-            search_keywords="foo bar",
-        )
-    with pytest.raises(ValueError):
-        GoogleSearchSpider.from_crawler(
-            crawler,
-            url="https://www.google.com/search?q=a",
-            urls_file="https://example.com/input-urls.txt",
-            search_keywords="foo bar",
-        )
-    with pytest.raises(ValueError):
-        GoogleSearchSpider.from_crawler(
-            crawler,
-            urls=["https://www.google.com/search?q=b"],
-            urls_file="https://example.com/input-urls.txt",
-            search_keywords="foo bar",
-        )
-
-
-def test_url_invalid():
-    crawler = get_crawler()
-    with pytest.raises(ValueError):
-        GoogleSearchSpider.from_crawler(crawler, url="foo")
-
-
-def test_urls(caplog):
-    crawler = get_crawler()
-    url = "https://www.google.com/search?q=foo+bar"
-
+    kwargs = {}
+    if input_domain:
+        kwargs["domain"] = input_domain
     spider = GoogleSearchSpider.from_crawler(
-        crawler, urls=[url], search_keywords="foo bar"
+        crawler, search_keywords="foo bar", **kwargs
     )
-    start_requests = list(spider.start_requests())
-    assert len(start_requests) == 1
-    assert start_requests[0].url == url
-    assert start_requests[0].callback == spider.parse_serp
-
-    spider = GoogleSearchSpider.from_crawler(
-        crawler, urls=url, search_keywords="foo bar"
-    )
-    start_requests = list(spider.start_requests())
-    assert len(start_requests) == 1
-    assert start_requests[0].url == url
-    assert start_requests[0].callback == spider.parse_serp
-
-    caplog.clear()
-    spider = GoogleSearchSpider.from_crawler(
-        crawler,
-        urls="https://www.google.com/\n \nhttps://www.google.cat/\nhttps://www.google.ie/\nfoo\n\n",
-        search_keywords="foo bar",
-    )
-    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
-    start_requests = list(spider.start_requests())
-    assert len(start_requests) == 3
-    assert all(request.callback == spider.parse_serp for request in start_requests)
-    assert start_requests[0].url == "https://www.google.com/search?q=foo+bar"
-    assert start_requests[1].url == "https://www.google.cat/search?q=foo+bar"
-    assert start_requests[2].url == "https://www.google.ie/search?q=foo+bar"
-
-    caplog.clear()
-    with pytest.raises(ValueError):
-        spider = GoogleSearchSpider.from_crawler(
-            crawler,
-            urls="foo\nbar",
-            search_keywords="foo bar",
-        )
-    assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
-    assert "'bar', from the 'urls' spider argument, is not a valid URL" in caplog.text
+    requests = list(spider.start_requests())
+    assert len(requests) == 1
+    assert requests[0].url == f"https://www.{expected_domain}/search?q=foo+bar"
 
 
-def test_urls_file():
+def test_search_keywords():
     crawler = get_crawler()
-    url = "https://example.com/input-urls.txt"
-
-    with patch("zyte_spider_templates.params.requests.get") as mock_get:
-        response = requests.Response()
-        response._content = b"https://www.google.com/\n \nhttps://www.google.cat/\nhttps://www.google.ie/\n\n"
-        mock_get.return_value = response
-        spider = GoogleSearchSpider.from_crawler(
-            crawler, urls_file=url, search_keywords="foo bar"
-        )
-        mock_get.assert_called_with(url)
-
-    start_requests = list(spider.start_requests())
-    assert len(start_requests) == 3
-    assert start_requests[0].url == "https://www.google.com/search?q=foo+bar"
-    assert start_requests[1].url == "https://www.google.cat/search?q=foo+bar"
-    assert start_requests[2].url == "https://www.google.ie/search?q=foo+bar"
+    spider = GoogleSearchSpider.from_crawler(crawler, search_keywords="foo bar\nbaz")
+    requests = list(spider.start_requests())
+    assert len(requests) == 2
+    assert requests[0].url == "https://www.google.com/search?q=foo+bar"
+    assert requests[1].url == "https://www.google.com/search?q=baz"

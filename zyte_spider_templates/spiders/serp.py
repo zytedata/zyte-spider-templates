@@ -15,7 +15,10 @@ from .base import BaseSpider
 class SearchKeywordsParam(BaseModel):
     search_keywords: Optional[List[str]] = Field(
         title="Search Keywords",
-        description=("Search keywords to use on the specified input Google URLs."),
+        description=(
+            "Keywords to search for. Use multiple lines to trigger multiple "
+            "searches for different search keywords."
+        ),
         json_schema_extra={
             "widget": "textarea",
         },
