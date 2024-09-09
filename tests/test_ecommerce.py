@@ -21,7 +21,7 @@ from zyte_spider_templates.spiders.ecommerce import (
 
 from . import get_crawler
 from .test_utils import URL_TO_DOMAIN
-from .utils import assertEqualJson
+from .utils import assertEqualSpiderMetadata
 
 
 def test_parameters():
@@ -463,7 +463,7 @@ def test_metadata():
                             "title": "Pagination Only",
                         },
                     },
-                    "title": "Crawl strategy",
+                    "title": "Crawl Strategy",
                     "enum": [
                         "automatic",
                         "full",
@@ -533,7 +533,7 @@ def test_metadata():
             "type": "object",
         },
     }
-    assertEqualJson(actual_metadata, expected_metadata)
+    assertEqualSpiderMetadata(actual_metadata, expected_metadata)
 
     geolocation = actual_metadata["param_schema"]["properties"]["geolocation"]
     assert geolocation["enum"][0] == "AF"

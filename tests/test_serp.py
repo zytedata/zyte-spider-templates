@@ -5,7 +5,7 @@ from scrapy_spider_metadata import get_spider_metadata
 from zyte_spider_templates.spiders.serp import GoogleSearchSpider
 
 from . import get_crawler
-from .utils import assertEqualJson
+from .utils import assertEqualSpiderMetadata
 
 
 def test_parameters():
@@ -275,7 +275,7 @@ def test_metadata():
             "type": "object",
         },
     }
-    assertEqualJson(actual_metadata, expected_metadata)
+    assertEqualSpiderMetadata(actual_metadata, expected_metadata)
 
 
 def test_input_none():

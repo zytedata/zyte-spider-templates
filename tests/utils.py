@@ -1,16 +1,19 @@
 import json
 
 
-def assertEqualJson(actual, expected):
-    """Compare the JSON representation of 2 Python objects.
+def assertEqualSpiderMetadata(actual, expected):
+    """Compare 2 JSON schemas of spider metadata.
 
-    This allows to take into account things like the order of key-value pairs
-    in dictionaries, which would not be taken into account when comparing
-    dictionaries directly.
+    The parameter order in the parameter schema is taken into account, given
+    how it affects the UI, while the order of other object keys may be
+    different.
 
     It also generates a better diff in pytest output when enums are involved,
     e.g. geolocation values.
     """
-    actual_json = json.dumps(actual, indent=2)
-    expected_json = json.dumps(expected, indent=2)
+    assert tuple(actual["param_schema"]["properties"]) == tuple(
+        expected["param_schema"]["properties"]
+    )
+    actual_json = json.dumps(actual, indent=2, sort_keys=True)
+    expected_json = json.dumps(expected, indent=2, sort_keys=True)
     assert actual_json == expected_json
