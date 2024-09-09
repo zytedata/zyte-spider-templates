@@ -45,15 +45,11 @@ class EcommerceCrawlStrategy(str, Enum):
     extract as many products as possible."""
 
     navigation: str = "navigation"
-    """Follow pagination, subcategories, and product detail pages.
-
-    Pagination Only is a better choice if the target URL does not have
-    subcategories, or if Zyte API is misidentifying some URLs as subcategories.
-    """
+    """Follow only subcategories, pagination and product detail pages."""
 
     pagination_only: str = "pagination_only"
-    """Follow pagination and product detail pages. Subcategory links are
-    ignored."""
+    """Follow only pagination and product detail pages. Subcategory links
+    are ignored."""
 
     direct_item: str = "direct_item"
     """Treat input URLs as direct links to product detail pages, and extract an
@@ -84,18 +80,15 @@ class EcommerceCrawlStrategyParam(BaseModel):
                     ),
                 },
                 EcommerceCrawlStrategy.navigation: {
-                    "title": "Navigation",
+                    "title": "Category",
                     "description": (
-                        "Follow pagination, subcategories, and product detail pages. "
-                        "Pagination Only is a better choice if the target URL does not "
-                        "have subcategories, or if Zyte API is misidentifying some URLs "
-                        "as subcategories."
+                        "Follow only subcategories, pagination and product detail pages."
                     ),
                 },
                 EcommerceCrawlStrategy.pagination_only: {
                     "title": "Pagination Only",
                     "description": (
-                        "Follow pagination and product detail pages. Subcategory links are ignored."
+                        "Follow only pagination and product detail pages. Subcategory links are ignored."
                     ),
                 },
                 EcommerceCrawlStrategy.direct_item: {

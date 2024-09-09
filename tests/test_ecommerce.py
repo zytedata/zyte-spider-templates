@@ -466,16 +466,13 @@ def test_metadata():
                         },
                         "navigation": {
                             "description": (
-                                "Follow pagination, subcategories, and product detail "
-                                "pages. Pagination Only is a better choice if the target "
-                                "URL does not have subcategories, or if Zyte API is "
-                                "misidentifying some URLs as subcategories."
+                                "Follow only subcategories, pagination and product detail pages."
                             ),
-                            "title": "Navigation",
+                            "title": "Category",
                         },
                         "pagination_only": {
                             "description": (
-                                "Follow pagination and product detail pages. Subcategory links are ignored."
+                                "Follow only pagination and product detail pages. Subcategory links are ignored."
                             ),
                             "title": "Pagination Only",
                         },
@@ -534,11 +531,11 @@ def test_metadata():
                     ),
                     "enumMeta": {
                         "browserHtml": {
-                            "description": "Use browser rendering. Often provides the best quality.",
+                            "description": "Use browser rendering. Better quality, but slower and more expensive.",
                             "title": "browserHtml",
                         },
                         "httpResponseBody": {
-                            "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
+                            "description": "Use raw responses. Fast and cheap.",
                             "title": "httpResponseBody",
                         },
                     },
