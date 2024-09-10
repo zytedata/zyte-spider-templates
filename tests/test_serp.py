@@ -243,10 +243,7 @@ def test_metadata():
                         {"items": {"type": "string"}, "type": "array"},
                         {"type": "null"},
                     ],
-                    "description": (
-                        "Input 1 search query per line. A search query is a "
-                        "string of search keywords (e.g. foo bar)."
-                    ),
+                    "description": "Input 1 search query per line (e.g. foo bar).",
                     "title": "Search Queries",
                     "widget": "textarea",
                 },

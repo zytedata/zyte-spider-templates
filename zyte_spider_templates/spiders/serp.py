@@ -15,10 +15,7 @@ from .base import BaseSpider
 class SearchQueriesParam(BaseModel):
     search_queries: Optional[List[str]] = Field(
         title="Search Queries",
-        description=(
-            "Input 1 search query per line. A search query is a string of "
-            "search keywords (e.g. foo bar)."
-        ),
+        description="Input 1 search query per line (e.g. foo bar).",
         json_schema_extra={
             "widget": "textarea",
         },
