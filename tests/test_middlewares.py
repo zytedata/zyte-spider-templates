@@ -36,13 +36,7 @@ def test_crawling_logs_middleware_no_requests():
     crawl_logs = middleware.crawl_logs(response, results_gen())
     assert crawl_logs == (
         "Crawling Logs for https://example.com (parsed as: None):\n"
-        "Number of Requests per page type:\n"
-        "- product: 0\n"
-        "- nextPage: 0\n"
-        "- subCategories: 0\n"
-        "- productNavigation: 0\n"
-        "- productNavigation-heuristics: 0\n"
-        "- unknown: 0\n"
+        "Nothing to crawl.\n"
         "Structured Logs:\n"
         "{\n"
         '  "time": "2023-10-10 20:09:29",\n'
@@ -53,14 +47,7 @@ def test_crawling_logs_middleware_no_requests():
         '    "page_type": null,\n'
         '    "probability": null\n'
         "  },\n"
-        '  "to_crawl": {\n'
-        '    "product": [],\n'
-        '    "nextPage": [],\n'
-        '    "subCategories": [],\n'
-        '    "productNavigation": [],\n'
-        '    "productNavigation-heuristics": [],\n'
-        '    "unknown": []\n'
-        "  }\n"
+        '  "to_crawl": {}\n'
         "}"
     )
 
@@ -131,14 +118,18 @@ def test_crawling_logs_middleware():
             },
         },
     )
-    unknown_request = Request(
-        "https://example.com/other-unknown",
+    custom_request = Request(
+        "https://example.com/custom-page-type",
         meta={
             "crawling_logs": {
-                "name": "Unknown Page",
+                "name": "Custom Page",
                 "page_type": "some other page_type",
+                "foo": "bar",
             },
         },
+    )
+    unknown_request = Request(
+        "https://example.com/other-unknown",
     )
 
     request_fingerprint = get_fingerprinter(crawler)
@@ -150,6 +141,7 @@ def test_crawling_logs_middleware():
     product_navigation_heuristics_request_fp = request_fingerprint(
         product_navigation_heuristics_request
     )
+    custom_request_fp = request_fingerprint(custom_request)
     unknown_request_fp = request_fingerprint(unknown_request)
 
     def results_gen():
@@ -158,6 +150,7 @@ def test_crawling_logs_middleware():
         yield subcategory_request
         yield product_navigation_request
         yield product_navigation_heuristics_request
+        yield custom_request
         yield unknown_request
 
     crawl_logs = middleware.crawl_logs(response, results_gen())
@@ -169,6 +162,7 @@ def test_crawling_logs_middleware():
         "- subCategories: 1\n"
         "- productNavigation: 1\n"
         "- productNavigation-heuristics: 1\n"
+        "- some other page_type: 1\n"
         "- unknown: 1\n"
         "Structured Logs:\n"
         "{\n"
@@ -231,10 +225,18 @@ def test_crawling_logs_middleware():
         f'        "request_fingerprint": "{product_navigation_heuristics_request_fp}"\n'
         "      }\n"
         "    ],\n"
+        '    "some other page_type": [\n'
+        "      {\n"
+        '        "name": "Custom Page",\n'
+        '        "page_type": "some other page_type",\n'
+        '        "foo": "bar",\n'
+        '        "request_url": "https://example.com/custom-page-type",\n'
+        '        "request_priority": 0,\n'
+        f'        "request_fingerprint": "{custom_request_fp}"\n'
+        "      }\n"
+        "    ],\n"
         '    "unknown": [\n'
         "      {\n"
-        '        "name": "Unknown Page",\n'
-        '        "page_type": "some other page_type",\n'
         '        "request_url": "https://example.com/other-unknown",\n'
         '        "request_priority": 0,\n'
         f'        "request_fingerprint": "{unknown_request_fp}"\n'
