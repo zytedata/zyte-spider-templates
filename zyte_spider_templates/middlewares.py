@@ -1,6 +1,7 @@
 import json
 import logging
 import warnings
+from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict
 from warnings import warn
@@ -28,6 +29,9 @@ class CrawlingLogsMiddleware:
       the fingerprints logged in Scrapy Cloud's request data.
     """
 
+    # Deprecated in practice, but there is no good way to deprecate it, since
+    # class properties that also work for class instances are not a thing.
+    # https://stackoverflow.com/q/128573
     valid_page_types = [
         "product",
         "nextPage",
@@ -35,6 +39,7 @@ class CrawlingLogsMiddleware:
         "productNavigation",
         "productNavigation-heuristics",
     ]
+
     unknown_page_type = "unknown"
 
     @classmethod
@@ -82,11 +87,8 @@ class CrawlingLogsMiddleware:
                     "probability"
                 ),
             },
-            "to_crawl": {},
+            "to_crawl": defaultdict(list),
         }
-
-        for page_type in self.valid_page_types + [self.unknown_page_type]:
-            data["to_crawl"][page_type] = []
 
         if result:
             for entry in result:
@@ -104,14 +106,17 @@ class CrawlingLogsMiddleware:
                 )
 
                 page_type = crawling_logs.get("page_type")
-                if page_type not in self.valid_page_types:
+                if not page_type:
                     page_type = self.unknown_page_type
 
                 data["to_crawl"][page_type].append(crawling_logs)
 
-        summary = ["Number of Requests per page type:"]
-        for page_type, requests in data["to_crawl"].items():
-            summary.append(f"- {page_type}: {len(requests)}")
+        if data["to_crawl"]:
+            summary = ["Number of Requests per page type:"]
+            for page_type, requests in data["to_crawl"].items():
+                summary.append(f"- {page_type}: {len(requests)}")
+        else:
+            summary = ["Nothing to crawl."]
 
         report = [
             f"Crawling Logs for {response.url} (parsed as: {current_page_type}):",
