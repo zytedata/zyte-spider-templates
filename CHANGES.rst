@@ -1,10 +1,26 @@
 Changes
 =======
 
-Unreleased
-----------
+0.9.0 (2024-09-NN)
+------------------
 
 * Now requires ``zyte-common-items >= 0.22.0``.
+
+* New :ref:`Google Search spider template <google-search>`, built on top of
+  Zyte API’s :http:`request:serp`.
+
+* The heuristics of the :ref:`e-commerce spider template <e-commerce>` to
+  ignore certain URLs when following category links now also handles
+  subdomains. For example, before https://example.com/blog was ignored, now
+  https://blog.example.com is also ignored.
+
+* In the :ref:`spider parameters JSON schema <params-schema>`, the
+  :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.crawl_strategy`
+  parameter of the :ref:`e-commerce spider template <e-commerce>` switches
+  position, from being the last parameter to being between
+  :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.urls_file`
+  and
+  :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.geolocation`.
 
 
 0.8.0 (2024-08-21)

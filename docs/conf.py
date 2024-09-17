@@ -34,6 +34,10 @@ intersphinx_mapping = {
         "https://scrapy-poet.readthedocs.io/en/stable",
         None,
     ),
+    "scrapy-spider-metadata": (
+        "https://scrapy-spider-metadata.readthedocs.io/en/latest",
+        None,
+    ),
     "scrapy-zyte-api": (
         "https://scrapy-zyte-api.readthedocs.io/en/stable",
         None,
