@@ -249,8 +249,10 @@ def test_metadata():
                 },
                 "max_pages": {
                     "default": 1,
-                    "description": "Maximum number of result pages to visit per input URL.",
-                    "title": "Pages",
+                    "description": (
+                        "Maximum number of result pages to visit per search query."
+                    ),
+                    "title": "Max Pages",
                     "type": "integer",
                 },
                 "max_requests": {

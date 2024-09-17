@@ -124,7 +124,7 @@ URLS_FILE_FIELD_KWARGS = {
     "title": "URLs file",
     "description": (
         "URL that point to a plain-text file with a list of URLs to "
-        "crawl, e.g. https://example.com/url-list.txt. The linked list "
+        "crawl, e.g. https://example.com/url-list.txt. The linked file "
         "must contain 1 URL per line."
     ),
     "pattern": _URL_PATTERN,

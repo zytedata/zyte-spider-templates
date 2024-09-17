@@ -30,20 +30,19 @@ class SearchQueriesParam(BaseModel):
         """
         if isinstance(value, str):
             value = value.split("\n")
-        if not value:
-            raise ValueError("The search_queries parameter value is missing or empty.")
         result = []
         for v in value:
-            if not (v := v.strip()):
-                continue
-            result.append(v)
+            if v := v.strip():
+                result.append(v)
+        if not result:
+            raise ValueError("The search_queries parameter value is missing or empty.")
         return result
 
 
 class SerpMaxPagesParam(BaseModel):
     max_pages: int = Field(
-        title="Pages",
-        description="Maximum number of result pages to visit per input URL.",
+        title="Max Pages",
+        description="Maximum number of result pages to visit per search query.",
         default=1,
     )
 

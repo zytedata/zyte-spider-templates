@@ -411,7 +411,7 @@ def test_metadata():
                     "description": (
                         "URL that point to a plain-text file with a list of "
                         "URLs to crawl, e.g. "
-                        "https://example.com/url-list.txt. The linked list "
+                        "https://example.com/url-list.txt. The linked file "
                         "must contain 1 URL per line."
                     ),
                     "exclusiveRequired": True,
