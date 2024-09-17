@@ -22,6 +22,9 @@ Changes
   and
   :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.geolocation`.
 
+* Removed the ``valid_page_types`` attribute of
+  :class:`zyte_spider_templates.middlewares.CrawlingLogsMiddleware`.
+
 
 0.8.0 (2024-08-21)
 ------------------

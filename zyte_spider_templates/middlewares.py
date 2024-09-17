@@ -29,17 +29,6 @@ class CrawlingLogsMiddleware:
       the fingerprints logged in Scrapy Cloud's request data.
     """
 
-    # Deprecated in practice, but there is no good way to deprecate it, since
-    # class properties that also work for class instances are not a thing.
-    # https://stackoverflow.com/q/128573
-    valid_page_types = [
-        "product",
-        "nextPage",
-        "subCategories",
-        "productNavigation",
-        "productNavigation-heuristics",
-    ]
-
     unknown_page_type = "unknown"
 
     @classmethod
