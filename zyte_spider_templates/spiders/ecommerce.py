@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
-import requests
 import scrapy
 from pydantic import BaseModel, ConfigDict, Field
 from scrapy import Request
@@ -11,6 +10,7 @@ from scrapy_spider_metadata import Args
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
 from zyte_spider_templates.heuristics import is_homepage
+from zyte_spider_templates.params import parse_input_params
 from zyte_spider_templates.spiders.base import (
     ARG_SETTING_PRIORITY,
     INPUT_GROUP,
@@ -27,7 +27,6 @@ from ..params import (
     UrlsFileParam,
     UrlsParam,
 )
-from ..utils import load_url_list
 
 
 @document_enum
@@ -62,7 +61,7 @@ class EcommerceCrawlStrategy(str, Enum):
 
 class EcommerceCrawlStrategyParam(BaseModel):
     crawl_strategy: EcommerceCrawlStrategy = Field(
-        title="Crawl strategy",
+        title="Crawl Strategy",
         description="Determines how the start URL and follow-up URLs are crawled.",
         default=EcommerceCrawlStrategy.automatic,
         json_schema_extra={
@@ -149,22 +148,9 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
-        spider._init_input()
+        parse_input_params(spider)
         spider._init_extract_from()
         return spider
-
-    def _init_input(self):
-        urls_file = self.args.urls_file
-        if urls_file:
-            response = requests.get(urls_file)
-            urls = load_url_list(response.text)
-            self.logger.info(f"Loaded {len(urls)} initial URLs from {urls_file}.")
-            self.start_urls = urls
-        elif self.args.urls:
-            self.start_urls = self.args.urls
-        else:
-            self.start_urls = [self.args.url]
-        self.allowed_domains = list(set(get_domain(url) for url in self.start_urls))
 
     def _init_extract_from(self):
         if self.args.extract_from is not None:

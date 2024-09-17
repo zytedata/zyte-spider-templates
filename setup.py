@@ -18,7 +18,7 @@ setup(
         "scrapy-poet>=0.21.0",
         "scrapy-spider-metadata>=0.1.2",
         "scrapy-zyte-api[provider]>=0.16.0",
-        "zyte-common-items>=0.13.0",
+        "zyte-common-items>=0.22.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

@@ -67,13 +67,13 @@ class BaseSpider(scrapy.Spider):
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super().from_crawler(crawler, *args, **kwargs)
 
-        if spider.args.geolocation:
+        if geolocation := getattr(spider.args, "geolocation", None):
             # We set the geolocation in ZYTE_API_PROVIDER_PARAMS for injected
             # dependencies, and in ZYTE_API_AUTOMAP_PARAMS for page object
             # additional requests.
             for component in ("AUTOMAP", "PROVIDER"):
                 default_params = spider.settings.getdict(f"ZYTE_API_{component}_PARAMS")
-                default_params["geolocation"] = spider.args.geolocation
+                default_params["geolocation"] = geolocation
                 spider.settings.set(
                     f"ZYTE_API_{component}_PARAMS",
                     default_params,
