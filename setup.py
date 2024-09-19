@@ -15,10 +15,11 @@ setup(
         "pydantic>=2",
         "requests>=0.10.1",
         "scrapy>=2.11.0",
-        "scrapy-poet>=0.21.0",
+        "scrapy-poet>=0.23.0",
         "scrapy-spider-metadata>=0.1.2",
-        "scrapy-zyte-api[provider]>=0.16.0",
-        "zyte-common-items>=0.22.0",
+        # https://github.com/scrapy-plugins/scrapy-zyte-api/pull/213
+        "scrapy-zyte-api[provider] @ git+https://github.com/scrapy-plugins/scrapy-zyte-api.git@custom-attrs",
+        "zyte-common-items>=0.23.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

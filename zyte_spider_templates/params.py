@@ -34,6 +34,18 @@ class ExtractFrom(str, Enum):
     """Use browser rendering. Often provides the best quality."""
 
 
+@document_enum
+class CustomAttrsMethod(str, Enum):
+    generate: str = "generate"
+    """Use a generative model (LLM). The most powerful and versatile, but more
+    expensive, with variable per-request cost."""
+
+    extract: str = "extract"
+    """Use an extractive model (BERT). Supports only a subset of the schema (string,
+    integer and number), suited for extraction of short and clear fields, with a fixed
+    per-request cost."""
+
+
 class ExtractFromParam(BaseModel):
     extract_from: Optional[ExtractFrom] = Field(
         title="Extraction source",
@@ -304,3 +316,39 @@ class LocationParam(BaseModel):
             return PostalAddress(**value)
 
         raise ValueError(f"{value!r} type {type(value)} is not a supported type")
+
+
+class CustomAttrsInputParam(BaseModel):
+    custom_attrs_input: Optional[str] = Field(
+        title="Custom attributes schema",
+        description="Custom attributes to extract.",
+        default=None,
+        json_schema_extra={
+            "widget": "custom-attrs",
+        },
+    )
+
+
+class CustomAttrsMethodParam(BaseModel):
+    custom_attrs_method: CustomAttrsMethod = Field(
+        title="Custom attributes extraction method",
+        description="Which model to use for custom attribute extraction.",
+        default=CustomAttrsMethod.generate,
+        json_schema_extra={
+            "enumMeta": {
+                CustomAttrsMethod.generate: {
+                    "title": "generate",
+                    "description": "Use a generative model (LLM). The most powerful "
+                    "and versatile, but more expensive, with variable "
+                    "per-request cost.",
+                },
+                CustomAttrsMethod.extract: {
+                    "title": "extract",
+                    "description": "Use an extractive model (BERT). Supports only a "
+                    "subset of the schema (string, integer and "
+                    "number), suited for extraction of short and clear "
+                    "fields, with a fixed per-request cost.",
+                },
+            },
+        },
+    )

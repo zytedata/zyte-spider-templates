@@ -1,13 +1,22 @@
+import json
 from enum import Enum
-from typing import Any, Callable, Dict, Iterable, Optional, Union
+from json import JSONDecodeError
+from typing import Annotated, Any, Callable, Dict, Iterable, Optional, Union
 
 import scrapy
+from andi.typeutils import strip_annotated
 from pydantic import BaseModel, ConfigDict, Field
 from scrapy import Request
 from scrapy.crawler import Crawler
-from scrapy_poet import DummyResponse
+from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
-from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
+from scrapy_zyte_api import custom_attrs
+from zyte_common_items import (
+    CustomAttributesValues,
+    ProbabilityRequest,
+    Product,
+    ProductNavigation,
+)
 
 from zyte_spider_templates.heuristics import is_homepage
 from zyte_spider_templates.params import parse_input_params
@@ -20,6 +29,8 @@ from zyte_spider_templates.utils import get_domain
 
 from ..documentation import document_enum
 from ..params import (
+    CustomAttrsInputParam,
+    CustomAttrsMethodParam,
     ExtractFromParam,
     GeolocationParam,
     MaxRequestsParam,
@@ -110,6 +121,8 @@ class EcommerceCrawlStrategyParam(BaseModel):
 
 
 class EcommerceSpiderParams(
+    CustomAttrsMethodParam,
+    CustomAttrsInputParam,
     ExtractFromParam,
     MaxRequestsParam,
     GeolocationParam,
@@ -227,13 +240,19 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 yield self.get_subcategory_request(request, page_params=page_params)
 
     def parse_product(
-        self, response: DummyResponse, product: Product
+        self, response: DummyResponse, product: Product, dynamic: DynamicDeps
     ) -> Iterable[Product]:
         probability = product.get_probability()
 
         # TODO: convert to a configurable parameter later on after the launch
         if probability is None or probability >= 0.1:
-            yield product
+            for cls, value in dynamic.items():
+                cls = strip_annotated(cls)
+                if cls is CustomAttributesValues:
+                    yield {"product": product, "custom_attrs": value}
+                    break
+            else:
+                yield {"product": product}
         else:
             self.crawler.stats.inc_value("drop_item/product/low_probability")
             self.logger.info(
@@ -319,17 +338,36 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         priority = self.get_parse_product_request_priority(request)
 
         probability = request.get_probability()
+        meta = {
+            "crawling_logs": {
+                "name": request.name,
+                "probability": probability,
+                "page_type": "product",
+            },
+        }
+        if self.args.custom_attrs_input:
+            custom_attrs_options = {
+                "method": self.args.custom_attrs_method,
+            }
+            if max_input_tokens := self.settings.getint("ZYTE_API_MAX_INPUT_TOKENS"):
+                custom_attrs_options["maxInputTokens"] = max_input_tokens
+            if max_output_tokens := self.settings.getint("ZYTE_API_MAX_OUTPUT_TOKENS"):
+                custom_attrs_options["maxOutputTokens"] = max_output_tokens
+
+            try:
+                custom_attrs_input = json.loads(self.args.custom_attrs_input)
+            except JSONDecodeError as e:
+                self.logger.error(f"Invalid JSON passed in custom_attrs_input: {e}")
+            else:
+                annotation = custom_attrs(custom_attrs_input, custom_attrs_options)
+                meta["inject"] = [
+                    Annotated[CustomAttributesValues, annotation],  # FIXME Python < 3.9
+                ]
 
         scrapy_request = request.to_scrapy(
             callback=callback,
             priority=priority,
-            meta={
-                "crawling_logs": {
-                    "name": request.name,
-                    "probability": probability,
-                    "page_type": "product",
-                }
-            },
+            meta=meta,
         )
         scrapy_request.meta["allow_offsite"] = True
         return scrapy_request
