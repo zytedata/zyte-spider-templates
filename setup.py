@@ -18,7 +18,7 @@ setup(
         "scrapy-poet>=0.23.0",
         "scrapy-spider-metadata>=0.1.2",
         # https://github.com/scrapy-plugins/scrapy-zyte-api/pull/213
-        "scrapy-zyte-api[provider] @ git+https://github.com/scrapy-plugins/scrapy-zyte-api.git@custom-attrs",
+        "scrapy-zyte-api[provider] @ git+https://github.com/scrapy-plugins/scrapy-zyte-api.git@47d3e1f",
         "zyte-common-items>=0.23.0",
     ],
     classifiers=[

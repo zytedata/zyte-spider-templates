@@ -251,7 +251,7 @@ def test_parse_product(probability, has_item, item_drop, caplog):
 
     if has_item:
         assert len(items) == 1
-        assert items[0] == {"product": product}
+        assert items[0] == product
         assert caplog.text == ""
     else:
         assert len(items) == 0

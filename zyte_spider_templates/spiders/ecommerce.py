@@ -1,7 +1,5 @@
-import json
 from enum import Enum
-from json import JSONDecodeError
-from typing import Annotated, Any, Callable, Dict, Iterable, Optional, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import scrapy
 from andi.typeutils import strip_annotated
@@ -10,7 +8,6 @@ from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
-from scrapy_zyte_api import custom_attrs
 from zyte_common_items import (
     CustomAttributesValues,
     ProbabilityRequest,
@@ -246,13 +243,15 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
         # TODO: convert to a configurable parameter later on after the launch
         if probability is None or probability >= 0.1:
-            for cls, value in dynamic.items():
-                cls = strip_annotated(cls)
-                if cls is CustomAttributesValues:
-                    yield {"product": product, "custom_attrs": value}
-                    break
+            if self.args.custom_attrs_input:
+                custom_attr_values = {}
+                for cls, value in dynamic.items():
+                    if strip_annotated(cls) is CustomAttributesValues:
+                        custom_attr_values = value
+                        break
+                yield {"product": product, "customAttributeValues": custom_attr_values}
             else:
-                yield {"product": product}
+                yield product
         else:
             self.crawler.stats.inc_value("drop_item/product/low_probability")
             self.logger.info(
@@ -345,24 +344,10 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 "page_type": "product",
             },
         }
-        if self.args.custom_attrs_input:
-            custom_attrs_options = {
-                "method": self.args.custom_attrs_method,
-            }
-            if max_input_tokens := self.settings.getint("ZYTE_API_MAX_INPUT_TOKENS"):
-                custom_attrs_options["maxInputTokens"] = max_input_tokens
-            if max_output_tokens := self.settings.getint("ZYTE_API_MAX_OUTPUT_TOKENS"):
-                custom_attrs_options["maxOutputTokens"] = max_output_tokens
-
-            try:
-                custom_attrs_input = json.loads(self.args.custom_attrs_input)
-            except JSONDecodeError as e:
-                self.logger.error(f"Invalid JSON passed in custom_attrs_input: {e}")
-            else:
-                annotation = custom_attrs(custom_attrs_input, custom_attrs_options)
-                meta["inject"] = [
-                    Annotated[CustomAttributesValues, annotation],  # FIXME Python < 3.9
-                ]
+        if self._custom_attrs_dep:
+            meta["inject"] = [
+                self._custom_attrs_dep,
+            ]
 
         scrapy_request = request.to_scrapy(
             callback=callback,
