@@ -8,7 +8,7 @@ import scrapy
 from pydantic import BaseModel, ConfigDict, model_validator
 from scrapy.crawler import Crawler
 from scrapy_zyte_api import custom_attrs
-from zyte_common_items import CustomAttributesValues
+from zyte_common_items import CustomAttributes
 
 from ..params import (
     INPUT_GROUP,
@@ -110,7 +110,7 @@ class BaseSpider(scrapy.Spider):
                 spider.logger.error(f"Invalid JSON passed in custom_attrs_input: {e}")
             else:
                 spider._custom_attrs_dep = Annotated[
-                    CustomAttributesValues,
+                    CustomAttributes,
                     custom_attrs(custom_attrs_input, custom_attrs_options),
                 ]
 

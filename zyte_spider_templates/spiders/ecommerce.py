@@ -9,7 +9,7 @@ from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
 from zyte_common_items import (
-    CustomAttributesValues,
+    CustomAttributes,
     ProbabilityRequest,
     Product,
     ProductNavigation,
@@ -244,12 +244,12 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         # TODO: convert to a configurable parameter later on after the launch
         if probability is None or probability >= 0.1:
             if self.args.custom_attrs_input:
-                custom_attr_values = {}
+                custom_attrs = {}
                 for cls, value in dynamic.items():
-                    if strip_annotated(cls) is CustomAttributesValues:
-                        custom_attr_values = value
+                    if strip_annotated(cls) is CustomAttributes:
+                        custom_attrs = value
                         break
-                yield {"product": product, "customAttributeValues": custom_attr_values}
+                yield {"product": product, "customAttributes": custom_attrs}
             else:
                 yield product
         else:
