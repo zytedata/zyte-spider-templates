@@ -529,7 +529,14 @@ def test_metadata():
                     "enum": ["httpResponseBody", "browserHtml"],
                 },
                 "custom_attrs_input": {
-                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "anyOf": [
+                        {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"type": "object"},
+                            "type": "string",
+                        },
+                        {"type": "null"},
+                    ],
                     "default": None,
                     "description": "Custom attributes to extract.",
                     "title": "Custom attributes schema",

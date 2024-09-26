@@ -1,6 +1,4 @@
-import json
 from importlib.metadata import version
-from json import JSONDecodeError
 from typing import Annotated, Any, Dict
 from warnings import warn
 
@@ -93,7 +91,7 @@ class BaseSpider(scrapy.Spider):
                 priority=ARG_SETTING_PRIORITY,
             )
 
-        if custom_attrs_input_arg := getattr(spider.args, "custom_attrs_input", None):
+        if custom_attrs_input := getattr(spider.args, "custom_attrs_input", None):
             custom_attrs_options = {
                 "method": spider.args.custom_attrs_method,
             }
@@ -104,14 +102,9 @@ class BaseSpider(scrapy.Spider):
             ):
                 custom_attrs_options["maxOutputTokens"] = max_output_tokens
 
-            try:
-                custom_attrs_input = json.loads(custom_attrs_input_arg)
-            except JSONDecodeError as e:
-                spider.logger.error(f"Invalid JSON passed in custom_attrs_input: {e}")
-            else:
-                spider._custom_attrs_dep = Annotated[
-                    CustomAttributes,
-                    custom_attrs(custom_attrs_input, custom_attrs_options),
-                ]
+            spider._custom_attrs_dep = Annotated[
+                CustomAttributes,
+                custom_attrs(custom_attrs_input, custom_attrs_options),
+            ]
 
         return spider

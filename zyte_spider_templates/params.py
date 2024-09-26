@@ -2,10 +2,17 @@ import json
 import re
 from enum import Enum
 from logging import getLogger
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import requests
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    Json,
+    field_validator,
+    model_validator,
+)
 
 try:
     from pydantic.config import JsonDict
@@ -319,7 +326,7 @@ class LocationParam(BaseModel):
 
 
 class CustomAttrsInputParam(BaseModel):
-    custom_attrs_input: Optional[str] = Field(
+    custom_attrs_input: Optional[Json[Dict[str, Any]]] = Field(
         title="Custom attributes schema",
         description="Custom attributes to extract.",
         default=None,
