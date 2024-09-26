@@ -463,7 +463,7 @@ def test_metadata():
                             "title": "Pagination Only",
                         },
                     },
-                    "title": "Crawl Strategy",
+                    "title": "Crawl strategy",
                     "enum": [
                         "automatic",
                         "full",
@@ -554,7 +554,7 @@ def test_metadata():
                             "title": "generate",
                         },
                     },
-                    "title": "Custom Attrs Method",
+                    "title": "Custom attributes extraction method",
                     "type": "string",
                 },
             },

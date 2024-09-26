@@ -69,7 +69,7 @@ class EcommerceCrawlStrategy(str, Enum):
 
 class EcommerceCrawlStrategyParam(BaseModel):
     crawl_strategy: EcommerceCrawlStrategy = Field(
-        title="Crawl Strategy",
+        title="Crawl strategy",
         description="Determines how the start URL and follow-up URLs are crawled.",
         default=EcommerceCrawlStrategy.automatic,
         json_schema_extra={
