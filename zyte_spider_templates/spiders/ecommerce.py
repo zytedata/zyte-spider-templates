@@ -238,13 +238,15 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
     def parse_product(
         self, response: DummyResponse, product: Product, dynamic: DynamicDeps
-    ) -> Iterable[Product]:
+    ) -> Iterable[
+        Union[Product, Dict[str, Union[Product, Optional[CustomAttributes]]]]
+    ]:
         probability = product.get_probability()
 
         # TODO: convert to a configurable parameter later on after the launch
         if probability is None or probability >= 0.1:
             if self.args.custom_attrs_input:
-                custom_attrs = {}
+                custom_attrs = None
                 for cls, value in dynamic.items():
                     if strip_annotated(cls) is CustomAttributes:
                         custom_attrs = value
