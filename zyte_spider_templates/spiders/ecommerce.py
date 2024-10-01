@@ -2,12 +2,18 @@ from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import scrapy
+from andi.typeutils import strip_annotated
 from pydantic import BaseModel, ConfigDict, Field
 from scrapy import Request
 from scrapy.crawler import Crawler
-from scrapy_poet import DummyResponse
+from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
-from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
+from zyte_common_items import (
+    CustomAttributes,
+    ProbabilityRequest,
+    Product,
+    ProductNavigation,
+)
 
 from zyte_spider_templates.heuristics import is_homepage
 from zyte_spider_templates.params import parse_input_params
@@ -20,6 +26,8 @@ from zyte_spider_templates.utils import get_domain
 
 from ..documentation import document_enum
 from ..params import (
+    CustomAttrsInputParam,
+    CustomAttrsMethodParam,
     ExtractFromParam,
     GeolocationParam,
     MaxRequestsParam,
@@ -61,7 +69,7 @@ class EcommerceCrawlStrategy(str, Enum):
 
 class EcommerceCrawlStrategyParam(BaseModel):
     crawl_strategy: EcommerceCrawlStrategy = Field(
-        title="Crawl Strategy",
+        title="Crawl strategy",
         description="Determines how the start URL and follow-up URLs are crawled.",
         default=EcommerceCrawlStrategy.automatic,
         json_schema_extra={
@@ -110,6 +118,8 @@ class EcommerceCrawlStrategyParam(BaseModel):
 
 
 class EcommerceSpiderParams(
+    CustomAttrsMethodParam,
+    CustomAttrsInputParam,
     ExtractFromParam,
     MaxRequestsParam,
     GeolocationParam,
@@ -227,13 +237,23 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 yield self.get_subcategory_request(request, page_params=page_params)
 
     def parse_product(
-        self, response: DummyResponse, product: Product
-    ) -> Iterable[Product]:
+        self, response: DummyResponse, product: Product, dynamic: DynamicDeps
+    ) -> Iterable[
+        Union[Product, Dict[str, Union[Product, Optional[CustomAttributes]]]]
+    ]:
         probability = product.get_probability()
 
         # TODO: convert to a configurable parameter later on after the launch
         if probability is None or probability >= 0.1:
-            yield product
+            if self.args.custom_attrs_input:
+                custom_attrs = None
+                for cls, value in dynamic.items():
+                    if strip_annotated(cls) is CustomAttributes:
+                        custom_attrs = value
+                        break
+                yield {"product": product, "customAttributes": custom_attrs}
+            else:
+                yield product
         else:
             self.crawler.stats.inc_value("drop_item/product/low_probability")
             self.logger.info(
@@ -319,17 +339,22 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         priority = self.get_parse_product_request_priority(request)
 
         probability = request.get_probability()
+        meta = {
+            "crawling_logs": {
+                "name": request.name,
+                "probability": probability,
+                "page_type": "product",
+            },
+        }
+        if self._custom_attrs_dep:
+            meta["inject"] = [
+                self._custom_attrs_dep,
+            ]
 
         scrapy_request = request.to_scrapy(
             callback=callback,
             priority=priority,
-            meta={
-                "crawling_logs": {
-                    "name": request.name,
-                    "probability": probability,
-                    "page_type": "product",
-                }
-            },
+            meta=meta,
         )
         scrapy_request.meta["allow_offsite"] = True
         return scrapy_request

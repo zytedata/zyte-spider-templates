@@ -1,10 +1,12 @@
 from importlib.metadata import version
-from typing import Any, Dict
+from typing import Annotated, Any, Dict
 from warnings import warn
 
 import scrapy
 from pydantic import BaseModel, ConfigDict, model_validator
 from scrapy.crawler import Crawler
+from scrapy_zyte_api import custom_attrs
+from zyte_common_items import CustomAttributes
 
 from ..params import (
     INPUT_GROUP,
@@ -63,6 +65,8 @@ class BaseSpider(scrapy.Spider):
 
     _NEXT_PAGE_PRIORITY: int = 100
 
+    _custom_attrs_dep = None
+
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
         spider = super().from_crawler(crawler, *args, **kwargs)
@@ -86,4 +90,21 @@ class BaseSpider(scrapy.Spider):
                 spider.args.max_requests,
                 priority=ARG_SETTING_PRIORITY,
             )
+
+        if custom_attrs_input := getattr(spider.args, "custom_attrs_input", None):
+            custom_attrs_options = {
+                "method": spider.args.custom_attrs_method,
+            }
+            if max_input_tokens := crawler.settings.getint("ZYTE_API_MAX_INPUT_TOKENS"):
+                custom_attrs_options["maxInputTokens"] = max_input_tokens
+            if max_output_tokens := crawler.settings.getint(
+                "ZYTE_API_MAX_OUTPUT_TOKENS"
+            ):
+                custom_attrs_options["maxOutputTokens"] = max_output_tokens
+
+            spider._custom_attrs_dep = Annotated[
+                CustomAttributes,
+                custom_attrs(custom_attrs_input, custom_attrs_options),
+            ]
+
         return spider

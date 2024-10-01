@@ -5,7 +5,7 @@ import pytest
 import requests
 import scrapy
 from pydantic import ValidationError
-from scrapy_poet import DummyResponse
+from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation, Request
 
@@ -243,7 +243,7 @@ def test_parse_product(probability, has_item, item_drop, caplog):
     mock_crawler = MagicMock()
     spider.crawler = mock_crawler
     logging.getLogger().setLevel(logging.INFO)
-    items = list(spider.parse_product(response, product))
+    items = list(spider.parse_product(response, product, DynamicDeps()))
     if item_drop:
         assert mock_crawler.method_calls == [
             call.stats.inc_value("drop_item/product/low_probability")
@@ -463,7 +463,7 @@ def test_metadata():
                             "title": "Pagination Only",
                         },
                     },
-                    "title": "Crawl Strategy",
+                    "title": "Crawl strategy",
                     "enum": [
                         "automatic",
                         "full",
@@ -527,6 +527,42 @@ def test_metadata():
                     },
                     "title": "Extraction source",
                     "enum": ["httpResponseBody", "browserHtml"],
+                },
+                "custom_attrs_input": {
+                    "anyOf": [
+                        {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"type": "object"},
+                            "type": "string",
+                        },
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": "Custom attributes to extract.",
+                    "title": "Custom attributes schema",
+                    "widget": "custom-attrs",
+                },
+                "custom_attrs_method": {
+                    "default": "generate",
+                    "description": "Which model to use for custom attribute extraction.",
+                    "enum": ["generate", "extract"],
+                    "enumMeta": {
+                        "extract": {
+                            "description": "Use an extractive model (BERT). Supports only a "
+                            "subset of the schema (string, integer and "
+                            "number), suited for extraction of short and clear "
+                            "fields, with a fixed per-request cost.",
+                            "title": "extract",
+                        },
+                        "generate": {
+                            "description": "Use a generative model (LLM). The most powerful "
+                            "and versatile, but more expensive, with variable "
+                            "per-request cost.",
+                            "title": "generate",
+                        },
+                    },
+                    "title": "Custom attributes extraction method",
+                    "type": "string",
                 },
             },
             "title": "EcommerceSpiderParams",

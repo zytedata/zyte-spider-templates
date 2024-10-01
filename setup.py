@@ -12,13 +12,13 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        "pydantic>=2",
+        "pydantic>=2.1",
         "requests>=0.10.1",
         "scrapy>=2.11.0",
-        "scrapy-poet>=0.21.0",
-        "scrapy-spider-metadata>=0.1.2",
-        "scrapy-zyte-api[provider]>=0.16.0",
-        "zyte-common-items>=0.22.0",
+        "scrapy-poet>=0.23.0",
+        "scrapy-spider-metadata>=0.2.0",
+        "scrapy-zyte-api[provider]>=0.23.0",
+        "zyte-common-items>=0.23.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
