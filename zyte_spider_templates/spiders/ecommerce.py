@@ -187,6 +187,14 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 else "productNavigation"
             },
         }
+        if (
+            self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
+            and self._custom_attrs_dep
+        ):
+            meta["inject"] = [
+                self._custom_attrs_dep,
+            ]
+
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
             meta["page_params"] = {"full_domain": get_domain(url)}
         elif self.args.crawl_strategy == EcommerceCrawlStrategy.automatic:
