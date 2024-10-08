@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import scrapy
-from andi.typeutils import strip_annotated
 from pydantic import BaseModel, ConfigDict, Field
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -254,12 +253,10 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         # TODO: convert to a configurable parameter later on after the launch
         if probability is None or probability >= 0.1:
             if self.args.custom_attrs_input:
-                custom_attrs = None
-                for cls, value in dynamic.items():
-                    if strip_annotated(cls) is CustomAttributes:
-                        custom_attrs = value
-                        break
-                yield {"product": product, "customAttributes": custom_attrs}
+                yield {
+                    "product": product,
+                    "customAttributes": dynamic.get(CustomAttributes),
+                }
             else:
                 yield product
         else:
