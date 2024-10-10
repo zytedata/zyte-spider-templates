@@ -15,7 +15,7 @@ setup(
         "pydantic>=2.1",
         "requests>=0.10.1",
         "scrapy>=2.11.0",
-        "scrapy-poet>=0.23.0",  # TODO bump this for https://github.com/scrapinghub/scrapy-poet/pull/208
+        "scrapy-poet>=0.24.0",
         "scrapy-spider-metadata>=0.2.0",
         "scrapy-zyte-api[provider]>=0.23.0",
         "zyte-common-items>=0.23.0",
