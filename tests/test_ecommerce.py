@@ -426,36 +426,52 @@ def test_metadata():
                     "enumMeta": {
                         "automatic": {
                             "description": (
-                                "Automatically use the best crawl strategy based on the given "
-                                "URL inputs. If given a homepage URL, it would attempt to crawl "
-                                "as many products it can discover. Otherwise, it attempt to "
-                                "crawl the products on a given page category."
+                                "Automatically select the best approach. A good "
+                                "default for most use cases. Currently it uses "
+                                "heuristics only on the homepages of websites (similar "
+                                "to Full strategy), and follows product, category and "
+                                "pagination links on other pages (similar to Navigation "
+                                "strategy)."
                             ),
                             "title": "Automatic",
                         },
                         "direct_item": {
                             "description": (
-                                "Treat input URLs as direct links to product detail pages, and "
-                                "extract a product from each."
+                                "Directly extract products from the provided URLs, "
+                                "without any crawling. To use this strategy, pass "
+                                "individual product URLs to the spider, not the "
+                                "website or product category URLs. Common use cases "
+                                "are product monitoring and batch extraction."
                             ),
                             "title": "Direct URLs to Product",
                         },
                         "full": {
                             "description": (
-                                "Follow most links within the domain of URL in an attempt "
-                                "to discover and extract as many products as possible."
+                                "Follow most links on the website to discover and "
+                                "extract as many products as possible. If an input URL "
+                                "is a link to a particular category on a website, the "
+                                "spider may crawl products outside this category. Try "
+                                "this strategy if other strategies miss items."
                             ),
                             "title": "Full",
                         },
                         "navigation": {
                             "description": (
-                                "Follow only subcategories, pagination and product detail pages."
+                                "Follow pagination, subcategories, and product links "
+                                "only. If an input URL is a link to a particular "
+                                "category on a website, the spider will try to stay "
+                                "within this category."
                             ),
-                            "title": "Category",
+                            "title": "Navigation",
                         },
                         "pagination_only": {
                             "description": (
-                                "Follow only pagination and product detail pages. Subcategory links are ignored."
+                                "Follow pagination and product links only. This "
+                                "strategy is similar to Navigation, but it doesn't "
+                                "support subcategories. Use it when you need the "
+                                "spider to stay within a certain category on a "
+                                "website, but Automatic or Navigation strategies fail "
+                                "to do so because of misclassified subcategory links."
                             ),
                             "title": "Pagination Only",
                         },
