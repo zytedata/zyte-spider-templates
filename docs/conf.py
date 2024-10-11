@@ -4,7 +4,7 @@ from pathlib import Path
 project = "zyte-spider-templates"
 copyright = "2023, Zyte Group Ltd"
 author = "Zyte Group Ltd"
-release = "0.8.0"
+release = "0.9.0"
 
 sys.path.insert(0, str(Path(__file__).parent.absolute()))  # _ext
 extensions = [
@@ -34,6 +34,10 @@ intersphinx_mapping = {
         "https://scrapy-poet.readthedocs.io/en/stable",
         None,
     ),
+    "scrapy-spider-metadata": (
+        "https://scrapy-spider-metadata.readthedocs.io/en/latest",
+        None,
+    ),
     "scrapy-zyte-api": (
         "https://scrapy-zyte-api.readthedocs.io/en/stable",
         None,
@@ -48,8 +52,11 @@ intersphinx_mapping = {
     ),
 }
 
+autodoc_pydantic_model_show_config_summary = False
 autodoc_pydantic_model_show_field_summary = False
 autodoc_pydantic_model_show_json = False
+autodoc_pydantic_model_show_validator_members = False
+autodoc_pydantic_model_show_validator_summary = False
 
 # sphinx-reredirects
 redirects = {

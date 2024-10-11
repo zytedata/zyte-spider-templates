@@ -29,3 +29,6 @@ Spider template list
 
 :ref:`E-commerce <e-commerce>`
     Get products from an e-commerce website.
+
+:ref:`Google Search <google-search>`
+    Get Google search results.

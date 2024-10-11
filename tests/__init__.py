@@ -1,6 +1,10 @@
 from typing import Any, Dict, Optional
 
+import pytest
 from scrapy.utils.test import TestSpider
+
+# https://docs.pytest.org/en/stable/how-to/writing_plugins.html#assertion-rewriting
+pytest.register_assert_rewrite("tests.utils")
 
 
 # scrapy.utils.test.get_crawler alternative that does not freeze settings.
