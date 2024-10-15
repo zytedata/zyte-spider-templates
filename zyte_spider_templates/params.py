@@ -27,11 +27,10 @@ logger = getLogger(__name__)
 @document_enum
 class ExtractFrom(str, Enum):
     httpResponseBody: str = "httpResponseBody"
-    """Use HTTP responses. Cost-efficient and fast extraction method, which
-    works well on many websites."""
+    """Use raw responses. Fast and cheap."""
 
     browserHtml: str = "browserHtml"
-    """Use browser rendering. Often provides the best quality."""
+    """Use browser rendering. Better quality, but slower and more expensive."""
 
 
 class ExtractFromParam(BaseModel):
@@ -46,11 +45,11 @@ class ExtractFromParam(BaseModel):
             "enumMeta": {
                 ExtractFrom.browserHtml: {
                     "title": "browserHtml",
-                    "description": "Use browser rendering. Often provides the best quality.",
+                    "description": "Use browser rendering. Better quality, but slower and more expensive.",
                 },
                 ExtractFrom.httpResponseBody: {
                     "title": "httpResponseBody",
-                    "description": "Use HTTP responses. Cost-efficient and fast extraction method, which works well on many websites.",
+                    "description": "Use raw responses. Fast and cheap.",
                 },
             },
         },

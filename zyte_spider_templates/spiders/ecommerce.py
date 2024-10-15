@@ -33,30 +33,42 @@ from ..params import (
 class EcommerceCrawlStrategy(str, Enum):
     automatic: str = "automatic"
     """
-    Automatically use the best crawl strategy based on the given URL inputs.
-
-    If given a homepage URL, it would attempt to crawl as many products it can discover.
-    Otherwise, it attempt to crawl the products on a given page category.
+    Automatically select the best approach. A good default for most use cases.
+    Currently it uses heuristics only on the homepages of websites (similar to
+    Full strategy), and follows product, category and pagination links on other
+    pages (similar to Navigation strategy).
     """
 
     full: str = "full"
-    """Follow most links within the domain of URL in an attempt to discover and
-    extract as many products as possible."""
+    """
+    Follow most links on the website to discover and extract as many products
+    as possible. If an input URL is a link to a particular category on a
+    website, the spider may crawl products outside this category. Try this
+    strategy if other strategies miss items.
+    """
 
     navigation: str = "navigation"
-    """Follow pagination, subcategories, and product detail pages.
-
-    Pagination Only is a better choice if the target URL does not have
-    subcategories, or if Zyte API is misidentifying some URLs as subcategories.
+    """
+    Follow pagination, subcategories, and product links only. If an input URL
+    is a link to a particular category on a website, the spider will try to
+    stay within this category.
     """
 
     pagination_only: str = "pagination_only"
-    """Follow pagination and product detail pages. Subcategory links are
-    ignored."""
+    """
+    Follow pagination and product links only. This strategy is similar to
+    Navigation, but it doesn't support subcategories. Use it when you need the
+    spider to stay within a certain category on a website, but Automatic or
+    Navigation strategies fail to do so because of misclassified subcategory links.
+    """
 
     direct_item: str = "direct_item"
-    """Treat input URLs as direct links to product detail pages, and extract an
-    product from each."""
+    """
+    Directly extract products from the provided URLs, without any crawling. To
+    use this strategy, pass individual product URLs to the spider, not the
+    website or product category URLs. Common use cases are product monitoring
+    and batch extraction.
+    """
 
 
 class EcommerceCrawlStrategyParam(BaseModel):
@@ -68,40 +80,53 @@ class EcommerceCrawlStrategyParam(BaseModel):
             "enumMeta": {
                 EcommerceCrawlStrategy.automatic: {
                     "description": (
-                        "Automatically use the best crawl strategy based on the given "
-                        "URL inputs. If given a homepage URL, it would attempt to crawl "
-                        "as many products it can discover. Otherwise, it attempt to "
-                        "crawl the products on a given page category."
+                        "Automatically select the best approach. A good "
+                        "default for most use cases. Currently it uses "
+                        "heuristics only on the homepages of websites (similar "
+                        "to Full strategy), and follows product, category and "
+                        "pagination links on other pages (similar to Navigation "
+                        "strategy)."
                     ),
                     "title": "Automatic",
                 },
                 EcommerceCrawlStrategy.full: {
                     "title": "Full",
                     "description": (
-                        "Follow most links within the domain of URL in an attempt to "
-                        "discover and extract as many products as possible."
+                        "Follow most links on the website to discover and "
+                        "extract as many products as possible. If an input URL "
+                        "is a link to a particular category on a website, the "
+                        "spider may crawl products outside this category. Try "
+                        "this strategy if other strategies miss items."
                     ),
                 },
                 EcommerceCrawlStrategy.navigation: {
                     "title": "Navigation",
                     "description": (
-                        "Follow pagination, subcategories, and product detail pages. "
-                        "Pagination Only is a better choice if the target URL does not "
-                        "have subcategories, or if Zyte API is misidentifying some URLs "
-                        "as subcategories."
+                        "Follow pagination, subcategories, and product links "
+                        "only. If an input URL is a link to a particular "
+                        "category on a website, the spider will try to stay "
+                        "within this category."
                     ),
                 },
                 EcommerceCrawlStrategy.pagination_only: {
                     "title": "Pagination Only",
                     "description": (
-                        "Follow pagination and product detail pages. Subcategory links are ignored."
+                        "Follow pagination and product links only. This "
+                        "strategy is similar to Navigation, but it doesn't "
+                        "support subcategories. Use it when you need the "
+                        "spider to stay within a certain category on a "
+                        "website, but Automatic or Navigation strategies fail "
+                        "to do so because of misclassified subcategory links."
                     ),
                 },
                 EcommerceCrawlStrategy.direct_item: {
                     "title": "Direct URLs to Product",
                     "description": (
-                        "Treat input URLs as direct links to product detail pages, and "
-                        "extract a product from each."
+                        "Directly extract products from the provided URLs, "
+                        "without any crawling. To use this strategy, pass "
+                        "individual product URLs to the spider, not the "
+                        "website or product category URLs. Common use cases "
+                        "are product monitoring and batch extraction."
                     ),
                 },
             },
