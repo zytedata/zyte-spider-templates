@@ -23,6 +23,7 @@ jobs:
         - python-version: '3.10'
         - python-version: '3.11'
         - python-version: '3.12'
+        - python-version: '3.13'
 
     steps:
     - uses: actions/checkout@v4
@@ -48,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.13"]
         tox-job: ["mypy", "linters", "twine", "docs"]
 
     steps:
