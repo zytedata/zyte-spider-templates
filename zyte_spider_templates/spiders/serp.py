@@ -43,6 +43,7 @@ class SerpMaxPagesParam(BaseModel):
     max_pages: int = Field(
         title="Max Pages",
         description="Maximum number of result pages to visit per search query.",
+        ge=1,
         default=1,
     )
 

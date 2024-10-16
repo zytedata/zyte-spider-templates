@@ -252,6 +252,7 @@ def test_metadata():
                     "description": (
                         "Maximum number of result pages to visit per search query."
                     ),
+                    "minimum": 1,
                     "title": "Max Pages",
                     "type": "integer",
                 },
