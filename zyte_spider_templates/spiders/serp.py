@@ -18,6 +18,7 @@ class SearchQueriesParam(BaseModel):
         description="Input 1 search query per line (e.g. foo bar).",
         json_schema_extra={
             "widget": "textarea",
+            "pattern": r"\S+",
         },
     )
 
