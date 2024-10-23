@@ -244,7 +244,7 @@ def test_metadata():
                         {"type": "null"},
                     ],
                     "description": "Input 1 search query per line (e.g. foo bar).",
-                    "pattern": ".*\\S+.*",
+                    "pattern": r"(.|\r?\n)*\S+(.|\r?\n)*",
                     "title": "Search Queries",
                     "widget": "textarea",
                 },
