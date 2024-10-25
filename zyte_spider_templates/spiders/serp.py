@@ -77,6 +77,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
     """
 
     name = "google_search"
+    _results_per_page = 10
 
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
@@ -134,18 +135,9 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
     def parse_serp(self, response) -> Iterable[Serp]:
         serp = Serp.from_dict(response.raw_api_response["serp"])
 
-        if serp.organicResults:
-            # NOTE: We could skip the next page as long as there are fewer than
-            # 10 results in the current page, but it seems Google can be
-            # unreliable when it comes to the number of organic results it
-            # returns, so this approach is safer, at the risk of 1 extra
-            # request.
-            #
-            # In the future, Serp should indicate the next page URL, and this
-            # should become a non-issue.
-            next_url = add_or_replace_parameter(
-                serp.url, "start", str(serp.pageNumber * 10)
-            )
+        next_start = serp.pageNumber * self._results_per_page
+        if serp.organicResults and serp.metadata.totalOrganicResults <= next_start:
+            next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
             yield self.get_serp_request(next_url)
 
         yield serp
