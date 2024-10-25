@@ -1,4 +1,5 @@
 from typing import Any, Dict, Iterable, List, Optional, Union
+from warnings import warn
 
 from pydantic import BaseModel, Field, field_validator
 from scrapy import Request
@@ -98,6 +99,17 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             )
 
     def get_start_request(self, url):
+        warn(
+            (
+                "zyte_spider_templates.spiders.serp.GoogleSearchSpider.get_start_request "
+                "is deprecated, use get_serp_request instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_serp_request(url)
+
+    def get_serp_request(self, url):
         return Request(
             url=url,
             callback=self.parse_serp,
@@ -117,12 +129,23 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         url = f"https://www.{self.args.domain.value}/search"
         for search_query in search_queries:
             search_url = add_or_replace_parameter(url, "q", search_query)
-            for start in range(0, self.args.max_pages * 10, 10):
-                if start:
-                    search_url = add_or_replace_parameter(
-                        search_url, "start", str(start)
-                    )
-                yield self.get_start_request(search_url)
+            yield self.get_serp_request(search_url)
 
     def parse_serp(self, response) -> Iterable[Serp]:
-        yield Serp.from_dict(response.raw_api_response["serp"])
+        serp = Serp.from_dict(response.raw_api_response["serp"])
+
+        if serp.organicResults is not None:
+            # NOTE: We could skip the next page as long as there are fewer than
+            # 10 results in the current page, but it seems Google can be
+            # unreliable when it comes to the number of organic results it
+            # returns, so this approach is safer, at the risk of 1 extra
+            # request.
+            #
+            # In the future, Serp should indicate the next page URL, and this
+            # should become a non-issue.
+            next_url = add_or_replace_parameter(
+                serp.url, "start", str(serp.pageNumber * 10)
+            )
+            yield self.get_serp_request(next_url)
+
+        yield serp
