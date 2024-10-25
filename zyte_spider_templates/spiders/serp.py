@@ -134,7 +134,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
     def parse_serp(self, response) -> Iterable[Serp]:
         serp = Serp.from_dict(response.raw_api_response["serp"])
 
-        if serp.organicResults is not None:
+        if serp.organicResults:
             # NOTE: We could skip the next page as long as there are fewer than
             # 10 results in the current page, but it seems Google can be
             # unreliable when it comes to the number of organic results it
