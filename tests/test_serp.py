@@ -389,26 +389,6 @@ def test_pagination():
     assert requests[0].cb_kwargs["page_number"] == 3
 
 
-@pytest.mark.parametrize(
-    ("start", "page_number"),
-    (
-        (None, 1),
-        (0, 1),
-        (10, 2),
-        (20, 3),
-    ),
-)
-def test_get_start_request(start, page_number):
-    crawler = get_crawler()
-    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
-    url = "https://www.google.com/search?q=foo+bar"
-    if start is not None:
-        url = add_or_replace_parameter(url, "start", str(start))
-    with pytest.deprecated_call():
-        request = spider.get_start_request(url)
-    assert request.cb_kwargs["page_number"] == page_number
-
-
 def test_get_serp_request():
     crawler = get_crawler()
     spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
@@ -462,15 +442,6 @@ def test_parse_serp():
     assert requests[0].url == add_or_replace_parameter(url, "start", "420")
     assert requests[0].cb_kwargs["page_number"] == 43
 
-    # If the page_number parameter is missing, a deprecation warning is logged,
-    # and no follow-up request is yielded.
-    requests = []
-    items = []
-    with pytest.deprecated_call():
-        for item_or_request in spider.parse_serp(response):
-            if isinstance(item_or_request, Request):
-                requests.append(item_or_request)
-            else:
-                items.append(item_or_request)
-    assert len(items) == 1
-    assert len(requests) == 0
+    # The page_number parameter is required.
+    with pytest.raises(TypeError):
+        spider.parse_serp(response)

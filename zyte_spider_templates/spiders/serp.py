@@ -1,18 +1,15 @@
 from typing import Any, Dict, Iterable, List, Optional, Union
-from warnings import warn
 
 from pydantic import BaseModel, Field, field_validator
 from scrapy import Request
 from scrapy.settings import SETTINGS_PRIORITIES, BaseSettings
 from scrapy_spider_metadata import Args
-from w3lib.url import add_or_replace_parameter, url_query_parameter
+from w3lib.url import add_or_replace_parameter
 from zyte_common_items import Serp
 
 from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
 from .base import BaseSpider
-
-_UNSET = object()
 
 
 class SearchQueriesParam(BaseModel):
@@ -101,18 +98,6 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
                 priority="spider",
             )
 
-    def get_start_request(self, url: str):
-        warn(
-            (
-                "zyte_spider_templates.spiders.serp.GoogleSearchSpider.get_start_request "
-                "is deprecated, use get_serp_request instead."
-            ),
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        page_number = int(int(url_query_parameter(url, "start", "0")) / 10 + 1)
-        return self.get_serp_request(url, page_number=page_number)
-
     def get_serp_request(self, url: str, *, page_number: int):
         return Request(
             url=url,
@@ -138,28 +123,12 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             search_url = add_or_replace_parameter(url, "q", search_query)
             yield self.get_serp_request(search_url, page_number=1)
 
-    def parse_serp(self, response, page_number=_UNSET) -> Iterable[Serp]:
+    def parse_serp(self, response, page_number) -> Iterable[Serp]:
         serp = Serp.from_dict(response.raw_api_response["serp"])
 
-        if page_number is not _UNSET:
-            next_start = page_number * self._results_per_page
-            if serp.organicResults and serp.metadata.totalOrganicResults > next_start:
-                next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
-                yield self.get_serp_request(next_url, page_number=page_number + 1)
-        else:
-            warn(
-                (
-                    "zyte_spider_templates.spiders.serp.GoogleSearchSpider.parse_serp "
-                    "now expects a page_number callback keyword argument "
-                    "(cb_kwargs) indicating the page being parsed (e.g. 1 for "
-                    "the 1st page), and will yield a request for the next "
-                    "page if the next page could have additional results, "
-                    "instead of expecting the source callback to take care of "
-                    "pagination by yielding requests for multiple pages in "
-                    "parallel."
-                ),
-                DeprecationWarning,
-                stacklevel=2,
-            )
+        next_start = page_number * self._results_per_page
+        if serp.organicResults and serp.metadata.totalOrganicResults > next_start:
+            next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
+            yield self.get_serp_request(next_url, page_number=page_number + 1)
 
         yield serp
