@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 from scrapy import Request
 from scrapy.settings import SETTINGS_PRIORITIES, BaseSettings
 from scrapy_spider_metadata import Args
-from w3lib.url import add_or_replace_parameter
+from w3lib.url import add_or_replace_parameter, url_query_parameter
 from zyte_common_items import Serp
 
 from ..params import MaxRequestsParam
@@ -110,9 +110,10 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.get_serp_request(url)
+        page_number = int(url_query_parameter(url, "start", 0)) / 10 + 1
+        return self.get_serp_request(url, page_number=page_number)
 
-    def get_serp_request(self, url, *, page_number=1):
+    def get_serp_request(self, url, *, page_number):
         return Request(
             url=url,
             callback=self.parse_serp,
@@ -135,7 +136,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         url = f"https://www.{self.args.domain.value}/search"
         for search_query in search_queries:
             search_url = add_or_replace_parameter(url, "q", search_query)
-            yield self.get_serp_request(search_url)
+            yield self.get_serp_request(search_url, page_number=1)
 
     def parse_serp(self, response, page_number=_UNSET) -> Iterable[Serp]:
         serp = Serp.from_dict(response.raw_api_response["serp"])
