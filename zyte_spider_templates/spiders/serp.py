@@ -101,7 +101,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
                 priority="spider",
             )
 
-    def get_start_request(self, url):
+    def get_start_request(self, url: str):
         warn(
             (
                 "zyte_spider_templates.spiders.serp.GoogleSearchSpider.get_start_request "
@@ -110,10 +110,10 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             DeprecationWarning,
             stacklevel=2,
         )
-        page_number = int(url_query_parameter(url, "start", 0)) / 10 + 1
+        page_number = int(int(url_query_parameter(url, "start", "0")) / 10 + 1)
         return self.get_serp_request(url, page_number=page_number)
 
-    def get_serp_request(self, url, *, page_number):
+    def get_serp_request(self, url: str, *, page_number: int):
         return Request(
             url=url,
             callback=self.parse_serp,
