@@ -351,7 +351,7 @@ def test_pagination():
         )
         items = []
         requests = []
-        for item_or_request in spider.parse_serp(response):
+        for item_or_request in spider.parse_serp(response, page_number=page):
             if isinstance(item_or_request, Request):
                 requests.append(item_or_request)
             else:
