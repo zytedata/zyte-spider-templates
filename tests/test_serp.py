@@ -370,6 +370,7 @@ def test_pagination():
     assert len(items) == 1
     assert len(requests) == 1
     assert requests[0].url == "https://www.google.com/search?q=foo+bar&start=10"
+    assert requests[0].cb_kwargs["page_number"] == 2
 
     items, requests = run_parse_serp(
         total_results=20,
@@ -385,3 +386,91 @@ def test_pagination():
     assert len(items) == 1
     assert len(requests) == 1
     assert requests[0].url == "https://www.google.com/search?q=foo+bar&start=20"
+    assert requests[0].cb_kwargs["page_number"] == 3
+
+
+@pytest.mark.parametrize(
+    ("start", "page_number"),
+    (
+        (None, 1),
+        (0, 1),
+        (10, 2),
+        (20, 3),
+    ),
+)
+def test_get_start_request(start, page_number):
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    url = "https://www.google.com/search?q=foo+bar"
+    if start is not None:
+        url = add_or_replace_parameter(url, "start", str(start))
+    with pytest.deprecated_call():
+        request = spider.get_start_request(url)
+    assert request.cb_kwargs["page_number"] == page_number
+
+
+def test_get_serp_request():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    url = "https://www.google.com/search?q=foo+bar"
+
+    request = spider.get_serp_request(url, page_number=42)
+    assert request.cb_kwargs["page_number"] == 42
+
+    # The page_number parameter is required.
+    with pytest.raises(TypeError):
+        spider.get_serp_request(url)
+
+
+def test_parse_serp():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    url = "https://www.google.com/search?q=foo+bar"
+    response = ZyteAPITextResponse.from_api_response(
+        api_response={
+            "serp": {
+                "organicResults": [
+                    {
+                        "description": "…",
+                        "name": "…",
+                        "url": f"https://example.com/{rank}",
+                        "rank": rank,
+                    }
+                    for rank in range(1, 11)
+                ],
+                "metadata": {
+                    "dateDownloaded": "2024-10-25T08:59:45Z",
+                    "displayedQuery": "foo bar",
+                    "searchedQuery": "foo bar",
+                    "totalOrganicResults": 99999,
+                },
+                "pageNumber": 1,
+                "url": url,
+            },
+            "url": url,
+        },
+    )
+    items = []
+    requests = []
+    for item_or_request in spider.parse_serp(response, page_number=42):
+        if isinstance(item_or_request, Request):
+            requests.append(item_or_request)
+        else:
+            items.append(item_or_request)
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == add_or_replace_parameter(url, "start", "420")
+    assert requests[0].cb_kwargs["page_number"] == 43
+
+    # If the page_number parameter is missing, a deprecation warning is logged,
+    # and no follow-up request is yielded.
+    requests = []
+    items = []
+    with pytest.deprecated_call():
+        for item_or_request in spider.parse_serp(response):
+            if isinstance(item_or_request, Request):
+                requests.append(item_or_request)
+            else:
+                items.append(item_or_request)
+    assert len(items) == 1
+    assert len(requests) == 0
