@@ -113,7 +113,10 @@ class SearchQueriesParam(BaseModel):
         title="Search Queries",
         description=(
             "Turn the input URLs into search requests for these queries. You "
-            "may specify a separate search query per line."
+            "may specify a separate search query per line. If search request "
+            "building fails, you can instead pass search URLs as input start "
+            "URLs, or customize the AI spider project with a search request "
+            "template page object (check the docs)."
         ),
         default_factory=list,
         json_schema_extra={
