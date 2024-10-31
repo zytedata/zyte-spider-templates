@@ -421,17 +421,15 @@ def test_metadata():
                     "type": "string",
                 },
                 "search_queries": {
-                    "anyOf": [
-                        {"items": {"type": "string"}, "type": "array"},
-                        {"type": "null"},
-                    ],
-                    "default": None,
+                    "default": [],
                     "description": (
                         "Turn the input URLs into search requests for these "
                         "queries. You may specify a separate search query "
                         "per line."
                     ),
+                    "items": {"type": "string"},
                     "title": "Search Queries",
+                    "type": "array",
                     "widget": "textarea",
                 },
                 "crawl_strategy": {

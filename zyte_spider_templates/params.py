@@ -109,14 +109,15 @@ class MaxRequestsParam(BaseModel):
 
 
 class SearchQueriesParam(BaseModel):
-    search_queries: Optional[List[str]] = Field(
+    search_queries: List[str] = Field(
         title="Search Queries",
         description=(
             "Turn the input URLs into search requests for these queries. You "
             "may specify a separate search query per line."
         ),
-        default=None,
+        default_factory=list,
         json_schema_extra={
+            "default": [],
             "widget": "textarea",
         },
     )

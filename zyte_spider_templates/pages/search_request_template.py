@@ -181,7 +181,7 @@ class DefaultSearchRequestTemplatePage(
             url=url,
             method="GET",
             headers=[],
-            body=b"",
+            body="",
         )
 
     def _item_from_link_heuristics(self):
@@ -226,7 +226,7 @@ class DefaultSearchRequestTemplatePage(
                 url=url,
                 method="GET",
                 headers=[],
-                body=b"",
+                body="",
             )
         raise ValueError(f"No valid search links found on {self.response.url}")
 
