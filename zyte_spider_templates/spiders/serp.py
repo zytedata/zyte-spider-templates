@@ -123,7 +123,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             search_url = add_or_replace_parameter(url, "q", search_query)
             yield self.get_serp_request(search_url, page_number=1)
 
-    def parse_serp(self, response, page_number) -> Iterable[Serp]:
+    def parse_serp(self, response, page_number) -> Iterable[Union[Request, Serp]]:
         serp = Serp.from_dict(response.raw_api_response["serp"])
 
         next_start = page_number * self._results_per_page
