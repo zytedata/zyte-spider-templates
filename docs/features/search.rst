@@ -26,7 +26,7 @@ And the following list of search queries:
 By default, the spider would send 2 initial requests to those 2 input URLs,
 to try and find out how to build a search request for them, and if it succeeds,
 it will then send 4 search requests, 1 per combination of input URL and search
-queries line. For example:
+query. For example:
 
 .. code-block:: none
 

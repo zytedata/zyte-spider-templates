@@ -192,8 +192,9 @@ request from a given web page using a different approach:
     form, and builds a request out of it with the :doc:`form2request
     <form2request:index>` library.
 
-By default, the first builder from the list above is used, but if multiple
-builders yield the same search request, that search request is preferred.
+By default, the first builder from the list above that yields a search request
+is used, but if multiple builders yield the same search request, that search
+request is preferred.
 
 This is implemented in the
 :class:`zyte_spider_templates.pages.search_request_template.DefaultSearchRequestTemplatePage`
@@ -209,12 +210,12 @@ which builders are used, in which order, and with which strategy:
     these:
 
     -   ``"first"``: Builders are executed in order of precedence, and the
-        first solution is used. Builders that do not yield a solution at all
-        are ignored.
+        first search request yielded is used. Builders that do not yield a
+        search request at all are ignored.
 
     -   ``"popular"`` (default): Runs every builder and picks the most common
-        solution. If there is not a single most common solution, then the order
-        of precedence of builders is taken into account.
+        search request. If there is not a single most common search request,
+        then the order of precedence of builders is taken into account.
 
 If the default implementation does not work for a given website, but a specific
 builder does work, you could implement a search request template page object
