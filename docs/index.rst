@@ -24,7 +24,7 @@ zyte-spider-templates documentation
    :caption: Features
    :hidden:
 
-   Search keywords <features/search>
+   Search queries <features/search>
 
 .. toctree::
    :caption: Customization

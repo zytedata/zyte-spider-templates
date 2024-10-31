@@ -108,12 +108,12 @@ class MaxRequestsParam(BaseModel):
     )
 
 
-class SearchKeywordsParam(BaseModel):
-    search_keywords: Optional[List[str]] = Field(
-        title="Search Keywords",
+class SearchQueriesParam(BaseModel):
+    search_queries: Optional[List[str]] = Field(
+        title="Search Queries",
         description=(
-            "Turn the input URLs into search requests for these keywords. You "
-            "may specify a separate set of keywords per line."
+            "Turn the input URLs into search requests for these queries. You "
+            "may specify a separate search query per line."
         ),
         default=None,
         json_schema_extra={
@@ -121,10 +121,10 @@ class SearchKeywordsParam(BaseModel):
         },
     )
 
-    @field_validator("search_keywords", mode="before")
+    @field_validator("search_queries", mode="before")
     @classmethod
-    def validate_search_keywords(cls, value: Union[List[str], str]) -> List[str]:
-        """Validate a list of search keywords.
+    def validate_search_queries(cls, value: Union[List[str], str]) -> List[str]:
+        """Validate a list of search queries.
 
         If a string is received as input, it is split into multiple strings
         on new lines.

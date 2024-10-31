@@ -117,7 +117,7 @@ class DefaultSearchRequestTemplatePage(
             base_url=str(self.response.url),
             syntaxes=["json-ld", "microdata"],
         )
-        keyword_field = None
+        query_field = None
         for entry in metadata["microdata"]:
             if not (actions := entry.get("properties", {}).get("potentialAction", {})):
                 continue
@@ -132,11 +132,11 @@ class DefaultSearchRequestTemplatePage(
                 if not url_template:
                     continue
                 query_input = action.get("properties", {}).get("query-input", {})
-                keyword_field = query_input.get("valueName", "search_term_string")
+                query_field = query_input.get("valueName", "search_term_string")
                 break
-            if keyword_field:
+            if query_field:
                 break
-        if not keyword_field:
+        if not query_field:
             for entry in metadata["json-ld"]:
                 action = jmespath.search(
                     '"@graph"[].potentialAction || isPartOf.potentialAction || potentialAction',
@@ -156,23 +156,23 @@ class DefaultSearchRequestTemplatePage(
                 query_input = action.get(
                     "query-input", "required name=search_term_string"
                 )
-                keyword_field_match = re.search(r"\bname=(\S+)", query_input)
-                if keyword_field_match:
-                    keyword_field = keyword_field_match[1]
+                query_field_match = re.search(r"\bname=(\S+)", query_input)
+                if query_field_match:
+                    query_field = query_field_match[1]
                 else:
-                    keyword_field = "search_term_string"
+                    query_field = "search_term_string"
                 break
-                if keyword_field:
+                if query_field:
                     break
-        if not keyword_field:
+        if not query_field:
             raise ValueError(
                 "Could not find HTML metadata to compose a search request template."
             )
         parts = url_template.split("?", maxsplit=1)
-        parts[0] = parts[0].replace(f"{{{keyword_field}}}", "{{ keyword|urlencode }}")
+        parts[0] = parts[0].replace(f"{{{query_field}}}", "{{ keyword|urlencode }}")
         if len(parts) > 1:
             parts[1] = parts[1].replace(
-                f"{{{keyword_field}}}", "{{ keyword|quote_plus }}"
+                f"{{{query_field}}}", "{{ keyword|quote_plus }}"
             )
         url = "?".join(parts)
         url = str(self.response.urljoin(url))
@@ -314,7 +314,7 @@ class DefaultSearchRequestTemplatePage(
             f"Cannot build a search request template for "
             f"{self.response.url}. A quick workaround would be to use a "
             f"search URL as input URL instead of using the search "
-            f"keywords input field. You can also manually implement "
+            f"queries input field. You can also manually implement "
             f"search support for a given website "
             f"(https://zyte-common-items.readthedocs.io/en/latest/usage/request-templates.html#writing-a-request-template-page-object). "
             f"You can also submit a request to add support for a specific "

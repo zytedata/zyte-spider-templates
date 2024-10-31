@@ -420,7 +420,7 @@ def test_metadata():
                     "title": "URLs file",
                     "type": "string",
                 },
-                "search_keywords": {
+                "search_queries": {
                     "anyOf": [
                         {"items": {"type": "string"}, "type": "array"},
                         {"type": "null"},
@@ -428,10 +428,10 @@ def test_metadata():
                     "default": None,
                     "description": (
                         "Turn the input URLs into search requests for these "
-                        "keywords. You may specify a separate set of keywords "
+                        "queries. You may specify a separate search query "
                         "per line."
                     ),
-                    "title": "Search Keywords",
+                    "title": "Search Queries",
                     "widget": "textarea",
                 },
                 "crawl_strategy": {
@@ -834,32 +834,32 @@ def test_urls_file():
     assert start_requests[2].url == "https://c.example"
 
 
-def test_search_keywords():
+def test_search_queries():
     crawler = get_crawler()
     url = "https://example.com"
 
-    spider = EcommerceSpider.from_crawler(crawler, url=url, search_keywords="foo bar")
+    spider = EcommerceSpider.from_crawler(crawler, url=url, search_queries="foo bar")
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].url == url
     assert start_requests[0].callback == spider.parse_search_request_template
-    assert spider.args.search_keywords == ["foo bar"]
+    assert spider.args.search_queries == ["foo bar"]
 
-    spider = EcommerceSpider.from_crawler(crawler, url=url, search_keywords="foo\nbar")
+    spider = EcommerceSpider.from_crawler(crawler, url=url, search_queries="foo\nbar")
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].url == url
     assert start_requests[0].callback == spider.parse_search_request_template
-    assert spider.args.search_keywords == ["foo", "bar"]
+    assert spider.args.search_queries == ["foo", "bar"]
 
     spider = EcommerceSpider.from_crawler(
-        crawler, url=url, search_keywords=["foo", "bar"]
+        crawler, url=url, search_queries=["foo", "bar"]
     )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].url == url
     assert start_requests[0].callback == spider.parse_search_request_template
-    assert spider.args.search_keywords == ["foo", "bar"]
+    assert spider.args.search_queries == ["foo", "bar"]
 
 
 @pytest.mark.parametrize(

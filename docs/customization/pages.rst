@@ -7,7 +7,7 @@ Customizing page objects
 All parsing is implemented using :ref:`web-poet page objects <page-objects>`
 that use `Zyte API automatic extraction`_ to extract :ref:`standard items
 <item-api>`: for navigation, for item details, and even for :ref:`search
-request generation <search-keywords>`.
+request generation <search-queries>`.
 
 .. _Zyte API automatic extraction: https://docs.zyte.com/zyte-api/usage/extract.html
 
@@ -148,8 +148,8 @@ To extract a new field for one or more websites:
 Fixing search support
 =====================
 
-If the default implementation to build a request out of :ref:`search keywords
-<search-keywords>` does not work on a given website, you can implement your
+If the default implementation to build a request out of :ref:`search queries
+<search-queries>` does not work on a given website, you can implement your
 own search request page object to fix that. See
 :ref:`custom-request-template-page`.
 

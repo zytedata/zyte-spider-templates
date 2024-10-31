@@ -31,7 +31,7 @@ from ..params import (
     ExtractFromParam,
     GeolocationParam,
     MaxRequestsParam,
-    SearchKeywordsParam,
+    SearchQueriesParam,
     UrlParam,
     UrlsFileParam,
     UrlsParam,
@@ -150,7 +150,7 @@ class EcommerceSpiderParams(
     MaxRequestsParam,
     GeolocationParam,
     EcommerceCrawlStrategyParam,
-    SearchKeywordsParam,
+    SearchQueriesParam,
     UrlsFileParam,
     UrlsParam,
     UrlParam,
@@ -244,7 +244,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         )
 
     def start_requests(self) -> Iterable[Request]:
-        if self.args.search_keywords:
+        if self.args.search_queries:
             for url in self.start_urls:
                 meta = {
                     "crawling_logs": {"page_type": "searchRequestTemplate"},
@@ -263,8 +263,8 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     def parse_search_request_template(
         self, response: DummyResponse, search_request_template: SearchRequestTemplate
     ) -> Iterable[Request]:
-        for keyword in self.args.search_keywords:
-            yield search_request_template.request(keyword=keyword).to_scrapy(
+        for query in self.args.search_queries:
+            yield search_request_template.request(keyword=query).to_scrapy(
                 callback=self.parse_navigation,
                 meta={
                     "crawling_logs": {"page_type": "productNavigation"},

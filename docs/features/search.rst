@@ -1,13 +1,13 @@
-.. _search-keywords:
+.. _search-queries:
 
-===============
-Search keywords
-===============
+==============
+Search queries
+==============
 
 The :ref:`e-commerce spider template <e-commerce>` supports a spider argument,
-:data:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.search_keywords`,
-that allows you to define a different set of search keywords per line, and
-turns the input URLs into search requests for those keywords.
+:data:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.search_queries`,
+that allows you to define a different search query per line, and
+turns the input URLs into search requests for those queries.
 
 For example, given the following input URLs:
 
@@ -16,7 +16,7 @@ For example, given the following input URLs:
     https://a.example
     https://b.example
 
-And the following list of search keywords:
+And the following list of search queries:
 
 .. code-block:: none
 
@@ -26,7 +26,7 @@ And the following list of search keywords:
 By default, the spider would send 2 initial requests to those 2 input URLs,
 to try and find out how to build a search request for them, and if it succeeds,
 it will then send 4 search requests, 1 per combination of input URL and search
-keywords line. For example:
+queries line. For example:
 
 .. code-block:: none
 
