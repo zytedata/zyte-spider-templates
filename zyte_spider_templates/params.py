@@ -108,6 +108,39 @@ class MaxRequestsParam(BaseModel):
     )
 
 
+class SearchKeywordsParam(BaseModel):
+    search_keywords: Optional[List[str]] = Field(
+        title="Search Keywords",
+        description=(
+            "Turn the input URLs into search requests for these keywords. You "
+            "may specify a separate set of keywords per line."
+        ),
+        default=None,
+        json_schema_extra={
+            "widget": "textarea",
+        },
+    )
+
+    @field_validator("search_keywords", mode="before")
+    @classmethod
+    def validate_search_keywords(cls, value: Union[List[str], str]) -> List[str]:
+        """Validate a list of search keywords.
+
+        If a string is received as input, it is split into multiple strings
+        on new lines.
+        """
+        if isinstance(value, str):
+            value = value.split("\n")
+        if not value:
+            return value
+        result = []
+        for v in value:
+            if not (v := v.strip()):
+                continue
+            result.append(v)
+        return result
+
+
 INPUT_GROUP_FIELDS = ("url", "urls", "urls_file")
 INPUT_GROUP: JsonDict = {
     "id": "inputs",

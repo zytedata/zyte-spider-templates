@@ -12,6 +12,7 @@ from zyte_common_items import (
     ProbabilityRequest,
     Product,
     ProductNavigation,
+    SearchRequestTemplate,
 )
 
 from zyte_spider_templates.heuristics import is_homepage
@@ -30,6 +31,7 @@ from ..params import (
     ExtractFromParam,
     GeolocationParam,
     MaxRequestsParam,
+    SearchKeywordsParam,
     UrlParam,
     UrlsFileParam,
     UrlsParam,
@@ -148,6 +150,7 @@ class EcommerceSpiderParams(
     MaxRequestsParam,
     GeolocationParam,
     EcommerceCrawlStrategyParam,
+    SearchKeywordsParam,
     UrlsFileParam,
     UrlsParam,
     UrlParam,
@@ -241,8 +244,32 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         )
 
     def start_requests(self) -> Iterable[Request]:
-        for url in self.start_urls:
-            yield self.get_start_request(url)
+        if self.args.search_keywords:
+            for url in self.start_urls:
+                meta = {
+                    "crawling_logs": {"page_type": "searchRequestTemplate"},
+                }
+                if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
+                    meta["page_params"] = {"full_domain": get_domain(url)}
+                yield Request(
+                    url=url,
+                    callback=self.parse_search_request_template,
+                    meta=meta,
+                )
+        else:
+            for url in self.start_urls:
+                yield self.get_start_request(url)
+
+    def parse_search_request_template(
+        self, response: DummyResponse, search_request_template: SearchRequestTemplate
+    ) -> Iterable[Request]:
+        for keyword in self.args.search_keywords:
+            yield search_request_template.request(keyword=keyword).to_scrapy(
+                callback=self.parse_navigation,
+                meta={
+                    "crawling_logs": {"page_type": "productNavigation"},
+                },
+            )
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation

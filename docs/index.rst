@@ -21,6 +21,12 @@ zyte-spider-templates documentation
    Google search <templates/google-search>
 
 .. toctree::
+   :caption: Features
+   :hidden:
+
+   Search keywords <features/search>
+
+.. toctree::
    :caption: Customization
    :hidden:
 
