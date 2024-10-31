@@ -1,6 +1,9 @@
 import pytest
 from pydantic import ValidationError
+from scrapy import Request
 from scrapy_spider_metadata import get_spider_metadata
+from scrapy_zyte_api.responses import ZyteAPITextResponse
+from w3lib.url import add_or_replace_parameter
 
 from zyte_spider_templates.spiders.serp import GoogleSearchSpider
 
@@ -312,3 +315,133 @@ def test_search_queries():
     assert len(requests) == 2
     assert requests[0].url == "https://www.google.com/search?q=foo+bar"
     assert requests[1].url == "https://www.google.com/search?q=baz"
+
+
+def test_pagination():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+
+    def run_parse_serp(total_results, page=1):
+        url = "https://www.google.com/search?q=foo+bar"
+        if page > 1:
+            url = add_or_replace_parameter(url, "start", (page - 1) * 10)
+        response = ZyteAPITextResponse.from_api_response(
+            api_response={
+                "serp": {
+                    "organicResults": [
+                        {
+                            "description": "…",
+                            "name": "…",
+                            "url": f"https://example.com/{rank}",
+                            "rank": rank,
+                        }
+                        for rank in range(1, 11)
+                    ],
+                    "metadata": {
+                        "dateDownloaded": "2024-10-25T08:59:45Z",
+                        "displayedQuery": "foo bar",
+                        "searchedQuery": "foo bar",
+                        "totalOrganicResults": total_results,
+                    },
+                    "pageNumber": page,
+                    "url": url,
+                },
+                "url": url,
+            },
+        )
+        items = []
+        requests = []
+        for item_or_request in spider.parse_serp(response, page_number=page):
+            if isinstance(item_or_request, Request):
+                requests.append(item_or_request)
+            else:
+                items.append(item_or_request)
+        return items, requests
+
+    items, requests = run_parse_serp(
+        total_results=10,
+    )
+    assert len(items) == 1
+    assert len(requests) == 0
+
+    items, requests = run_parse_serp(
+        total_results=11,
+    )
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo+bar&start=10"
+    assert requests[0].cb_kwargs["page_number"] == 2
+
+    items, requests = run_parse_serp(
+        total_results=20,
+        page=2,
+    )
+    assert len(items) == 1
+    assert len(requests) == 0
+
+    items, requests = run_parse_serp(
+        total_results=21,
+        page=2,
+    )
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo+bar&start=20"
+    assert requests[0].cb_kwargs["page_number"] == 3
+
+
+def test_get_serp_request():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    url = "https://www.google.com/search?q=foo+bar"
+
+    request = spider.get_serp_request(url, page_number=42)
+    assert request.cb_kwargs["page_number"] == 42
+
+    # The page_number parameter is required.
+    with pytest.raises(TypeError):
+        spider.get_serp_request(url)
+
+
+def test_parse_serp():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    url = "https://www.google.com/search?q=foo+bar"
+    response = ZyteAPITextResponse.from_api_response(
+        api_response={
+            "serp": {
+                "organicResults": [
+                    {
+                        "description": "…",
+                        "name": "…",
+                        "url": f"https://example.com/{rank}",
+                        "rank": rank,
+                    }
+                    for rank in range(1, 11)
+                ],
+                "metadata": {
+                    "dateDownloaded": "2024-10-25T08:59:45Z",
+                    "displayedQuery": "foo bar",
+                    "searchedQuery": "foo bar",
+                    "totalOrganicResults": 99999,
+                },
+                "pageNumber": 1,
+                "url": url,
+            },
+            "url": url,
+        },
+    )
+    items = []
+    requests = []
+    for item_or_request in spider.parse_serp(response, page_number=42):
+        if isinstance(item_or_request, Request):
+            requests.append(item_or_request)
+        else:
+            items.append(item_or_request)
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == add_or_replace_parameter(url, "start", "420")
+    assert requests[0].cb_kwargs["page_number"] == 43
+
+    # The page_number parameter is required.
+    with pytest.raises(TypeError):
+        spider.parse_serp(response)
