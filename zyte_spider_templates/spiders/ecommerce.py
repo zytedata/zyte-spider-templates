@@ -142,18 +142,6 @@ class EcommerceCrawlStrategyParam(BaseModel):
         },
     )
 
-    @model_validator(mode="after")
-    def validate_direct_item_and_search_queries(self):
-        if (
-            self.search_queries
-            and self.crawl_strategy == EcommerceCrawlStrategy.direct_item
-        ):
-            raise ValueError(
-                "Cannot combine the direct_item value of the crawl_strategy "
-                "spider parameter with the search_queries spider parameter."
-            )
-        return self
-
 
 class EcommerceSpiderParams(
     CustomAttrsMethodParam,
@@ -175,6 +163,18 @@ class EcommerceSpiderParams(
             ],
         },
     )
+
+    @model_validator(mode="after")
+    def validate_direct_item_and_search_queries(self):
+        if (
+            self.search_queries
+            and self.crawl_strategy == EcommerceCrawlStrategy.direct_item
+        ):
+            raise ValueError(
+                "Cannot combine the direct_item value of the crawl_strategy "
+                "spider parameter with the search_queries spider parameter."
+            )
+        return self
 
 
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
