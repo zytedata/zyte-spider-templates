@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import scrapy
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse, DynamicDeps
@@ -141,6 +141,18 @@ class EcommerceCrawlStrategyParam(BaseModel):
             },
         },
     )
+
+    @model_validator(mode="after")
+    def validate_direct_item_and_search_queries(self):
+        if (
+            self.search_queries
+            and self.crawl_strategy == EcommerceCrawlStrategy.direct_item
+        ):
+            raise ValueError(
+                "Cannot combine the direct_item value of the crawl_strategy "
+                "spider parameter with the search_queries spider parameter."
+            )
+        return self
 
 
 class EcommerceSpiderParams(

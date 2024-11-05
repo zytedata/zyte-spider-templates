@@ -37,6 +37,19 @@ def test_parameters():
     with pytest.raises(ValidationError):
         EcommerceSpider(url="https://example.com", crawl_strategy="unknown")
 
+    EcommerceSpider(
+        url="https://example.com", crawl_strategy="direct_item", search_queries=""
+    )
+    EcommerceSpider(
+        url="https://example.com", crawl_strategy="automatic", search_queries="foo"
+    )
+    with pytest.raises(ValidationError):
+        EcommerceSpider(
+            url="https://example.com",
+            crawl_strategy="direct_item",
+            search_queries="foo",
+        )
+
 
 def test_start_requests():
     url = "https://example.com"
