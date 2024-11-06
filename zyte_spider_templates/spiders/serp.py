@@ -1,12 +1,15 @@
+from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 from scrapy import Request
 from scrapy.settings import SETTINGS_PRIORITIES, BaseSettings
+from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
 from w3lib.url import add_or_replace_parameter
-from zyte_common_items import Serp
+from zyte_common_items import Product, Serp
 
+from ..documentation import document_enum
 from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
 from .base import BaseSpider
@@ -45,6 +48,55 @@ class SerpMaxPagesParam(BaseModel):
         description="Maximum number of result pages to visit per search query.",
         ge=1,
         default=1,
+    )
+
+
+@document_enum
+class SerpItemType(str, Enum):
+    serp: str = "serp"
+    """
+    Yield the data of result pages, do not follow result links.
+    """
+
+    product: str = "product"
+    """
+    Follow result links and yield product details data from them.
+    """
+
+    # TODO: extend with additional item types.
+
+
+# NOTE: serp is excluded on purposed, since it is not used below.
+# TODO: Add a test to make sure that this is in sync with the enum class above.
+ITEM_TYPE_CLASSES = {
+    SerpItemType.product: Product,
+}
+
+
+class SerpItemTypeParam(BaseModel):
+    item_type: SerpItemType = Field(
+        title="Item type",
+        description="Data type of the output items.",
+        default=SerpItemType.serp,
+        json_schema_extra={
+            "enumMeta": {
+                # TODO: Add a test to make sure this is in sync with the enum class above.
+                # TODO: Try automating the generation of this metadata from the enum type above.
+                SerpItemType.serp: {
+                    "title": "serp",
+                    "description": (
+                        "Yield the data of result pages, do not follow result " "links."
+                    ),
+                },
+                SerpItemType.product: {
+                    "title": "product",
+                    "description": (
+                        "Follow result links and yield product details data "
+                        "from them."
+                    ),
+                },
+            },
+        },
     )
 
 
@@ -131,4 +183,21 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
             yield self.get_serp_request(next_url, page_number=page_number + 1)
 
-        yield serp
+        if self.args.item_type == SerpItemType.serp:
+            yield serp
+            return
+
+        for result in serp.organicResults:
+            yield response.follow(
+                result.url,
+                callback=self.parse_result,
+                meta={
+                    "crawling_logs": {"page_type": self.args.item_type.value},
+                    "inject": [ITEM_TYPE_CLASSES[self.args.item_type]],
+                },
+            )
+
+    def parse_result(
+        self, response: DummyResponse, dynamic: DynamicDeps
+    ) -> Iterable[Any]:
+        yield next(iter(dynamic.values()))
