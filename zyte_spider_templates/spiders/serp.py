@@ -110,6 +110,7 @@ class GoogleDomainParam(BaseModel):
 
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
+    SerpItemTypeParam,
     SerpMaxPagesParam,
     SearchQueriesParam,
     GoogleDomainParam,
