@@ -5,7 +5,11 @@ from scrapy_spider_metadata import get_spider_metadata
 from scrapy_zyte_api.responses import ZyteAPITextResponse
 from w3lib.url import add_or_replace_parameter
 
-from zyte_spider_templates.spiders.serp import GoogleSearchSpider
+from zyte_spider_templates.spiders.serp import (
+    ITEM_TYPE_CLASSES,
+    GoogleSearchSpider,
+    SerpItemType,
+)
 
 from . import get_crawler
 from .utils import assertEqualSpiderMetadata
@@ -445,3 +449,20 @@ def test_parse_serp():
     # The page_number parameter is required.
     with pytest.raises(TypeError):
         spider.parse_serp(response)
+
+
+def test_item_type_mappings():
+    # Ensure that all SerpItemType keys and values match.
+    for entry in SerpItemType:
+        assert entry.name == entry.value
+
+    # Ensure that the ITEM_TYPE_CLASSES dict maps all values from the
+    # corresponding enum except for serp.
+    actual_keys = set(ITEM_TYPE_CLASSES)
+    expected_keys = set(
+        entry.value for entry in SerpItemType if entry != SerpItemType.serp
+    )
+    assert actual_keys == expected_keys
+
+    # Also ensure that no dict value is repeated.
+    assert len(actual_keys) == len(set(ITEM_TYPE_CLASSES.values()))

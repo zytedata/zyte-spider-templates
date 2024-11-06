@@ -7,7 +7,14 @@ from scrapy.settings import SETTINGS_PRIORITIES, BaseSettings
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
 from w3lib.url import add_or_replace_parameter
-from zyte_common_items import Product, Serp
+from zyte_common_items import (  # TODO: Add ForumThread to zyte-common-items; ForumThread,
+    Article,
+    ArticleList,
+    JobPosting,
+    Product,
+    ProductList,
+    Serp,
+)
 
 from ..documentation import document_enum
 from ..params import MaxRequestsParam
@@ -51,27 +58,53 @@ class SerpMaxPagesParam(BaseModel):
     )
 
 
-# TODO: Make sure this is covered in the docs the same way as the e-commerce
-# crawl strategy.
 @document_enum
 class SerpItemType(str, Enum):
-    serp: str = "serp"
+    article: str = "article"
     """
-    Yield the data of result pages, do not follow result links.
+    Article data from result URLs.
+    """
+
+    articleList: str = "articleList"
+    """
+    Article list data from result URLs.
+    """
+
+    # forumThread: str = "forumThread"
+    """
+    Thread data from result URLs.
+    """
+
+    jobPosting: str = "jobPosting"
+    """
+    Job posting data from result URLs.
     """
 
     product: str = "product"
     """
-    Follow result links and yield product details data from them.
+    Product data from result URLs.
     """
 
-    # TODO: extend with additional item types.
+    productList: str = "productList"
+    """
+    Product list data from result URLs.
+    """
+
+    serp: str = "serp"
+    """
+    Search engine results page data.
+    """
 
 
 # NOTE: serp is excluded on purposed, since it is not used below.
 # TODO: Add a test to make sure that this is in sync with the enum class above.
 ITEM_TYPE_CLASSES = {
+    SerpItemType.article: Article,
+    SerpItemType.articleList: ArticleList,
+    # SerpItemType.forumThread: ForumThread,
+    SerpItemType.jobPosting: JobPosting,
     SerpItemType.product: Product,
+    SerpItemType.productList: ProductList,
 }
 
 
@@ -112,7 +145,7 @@ class GoogleDomainParam(BaseModel):
 
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
-    SerpItemTypeParam,
+    SerpItemTypeParam,  # TODO: Update the test_metadata expectations
     SerpMaxPagesParam,
     SearchQueriesParam,
     GoogleDomainParam,
