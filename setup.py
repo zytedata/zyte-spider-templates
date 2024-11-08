@@ -14,7 +14,7 @@ setup(
     install_requires=[
         "extruct @ git+https://github.com/Gallaecio/extruct.git@query-input",
         "form2request>=0.2.0",
-        "formasaurus @ git+https://github.com/Gallaecio/Formasaurus.git@form2request",
+        "formasaurus>=0.10.0",
         "jmespath>=0.9.5",
         "pydantic>=2.1",
         "requests>=0.10.1",
@@ -23,7 +23,7 @@ setup(
         "scrapy-spider-metadata>=0.2.0",
         "scrapy-zyte-api[provider]>=0.23.0",
         "web-poet>=0.17.1",
-        "zyte-common-items>=0.23.0",
+        "zyte-common-items @ git+https://github.com/Gallaecio/zyte-common-items.git@search-request-template-ancestry",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

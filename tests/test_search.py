@@ -1,7 +1,6 @@
 import pytest
 from pytest_twisted import ensureDeferred
 from web_poet import AnyResponse, BrowserResponse, HttpResponse, PageParams
-from web_poet.exceptions import UseFallback
 
 from zyte_spider_templates.pages.search_request_template import (
     DefaultSearchRequestTemplatePage,
@@ -315,7 +314,9 @@ from zyte_spider_templates.pages.search_request_template import (
             </html>
             """,
             {"search_request_builders": ["extruct"]},
-            UseFallback("Try enabling browser rendering"),
+            {
+                "error": "Try enabling browser rendering",
+            },
         ),
         # No potentialAction, Microdata
         (
@@ -330,7 +331,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </div>
             """,
             {"search_request_builders": ["extruct"]},
-            UseFallback("Try enabling browser rendering"),
+            {"error": "Try enabling browser rendering"},
         ),
         # No SearchAction type, JSON-LD
         (
@@ -357,7 +358,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </html>
             """,
             {"search_request_builders": ["extruct"]},
-            UseFallback("Try enabling browser rendering"),
+            {"error": "Try enabling browser rendering"},
         ),
         # No SearchAction type, Microdata
         (
@@ -372,7 +373,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </div>
             """,
             {"search_request_builders": ["extruct"]},
-            UseFallback("Try enabling browser rendering"),
+            {"error": "Try enabling browser rendering"},
         ),
         # No target, JSON-LD
         (
@@ -397,7 +398,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </html>
             """,
             {"search_request_builders": ["extruct"]},
-            UseFallback("Try enabling browser rendering"),
+            {"error": "Try enabling browser rendering"},
         ),
         # No target, Microdata
         (
@@ -412,7 +413,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </div>
             """,
             {"search_request_builders": ["extruct"]},
-            UseFallback("Try enabling browser rendering"),
+            {"error": "Try enabling browser rendering"},
         ),
         # No keyword name, JSON-LD
         (
@@ -481,7 +482,7 @@ from zyte_spider_templates.pages.search_request_template import (
                 # No form
                 (
                     b"<div></div>",
-                    UseFallback("Try enabling browser rendering"),
+                    {"error": "Try enabling browser rendering"},
                 ),
                 # No named input field
                 (
@@ -490,7 +491,7 @@ from zyte_spider_templates.pages.search_request_template import (
                         <input type="submit"/>
                     </form>
                     """,
-                    UseFallback("Try enabling browser rendering"),
+                    {"error": "Try enabling browser rendering"},
                 ),
                 # Multi-part form
                 (
@@ -500,12 +501,12 @@ from zyte_spider_templates.pages.search_request_template import (
                         <input type="submit"/>
                     </form>
                     """,
-                    UseFallback("Try enabling browser rendering"),
+                    {"error": "Try enabling browser rendering"},
                 ),
                 # Non-HTML response (JSON)
                 (
                     b"""{"a": "b"}""",
-                    UseFallback("Try enabling browser rendering"),
+                    {"error": "Try enabling browser rendering"},
                 ),
             )
         ),
@@ -540,19 +541,19 @@ from zyte_spider_templates.pages.search_request_template import (
         (
             b"""<div></div>""",
             {"search_request_builders": ["link_heuristics"]},
-            UseFallback("Try enabling browser rendering"),
+            {"error": "Try enabling browser rendering"},
         ),
         # No HTML (JSON)
         (
             b"""{"a": "b"}""",
             {"search_request_builders": ["link_heuristics"]},
-            UseFallback("Try enabling browser rendering"),
+            {"error": "Try enabling browser rendering"},
         ),
         # Parameter false positive (?q != q)
         (
             b"""<a href="https://example.com?a=b&?q=c"></a>""",
             {"search_request_builders": ["link_heuristics"]},
-            UseFallback("Try enabling browser rendering"),
+            {"error": "Try enabling browser rendering"},
         ),
         # Builder parameters #------------------------------------------------#
         *(
@@ -617,7 +618,10 @@ from zyte_spider_templates.pages.search_request_template import (
     ),
 )
 @ensureDeferred
-async def test_search_request_template(html, page_params, expected):
+async def test_search_request_template(html, page_params, expected, caplog):
+    caplog.clear()
+    caplog.at_level("ERROR")
+
     http_response = HttpResponse(url="https://example.com", status=200, body=html)
     response = AnyResponse(response=http_response)
     search_request_page = DefaultSearchRequestTemplatePage(
@@ -631,14 +635,21 @@ async def test_search_request_template(html, page_params, expected):
         assert exception.__class__ == expected.__class__
         assert str(expected) in str(exception)
     else:
-        assert isinstance(expected, dict)
-        assert expected["url"] == search_request.url
-        assert expected.get("body", b"") == (search_request.body or b"")
+        if "error" in expected:
+            assert search_request.get_probability() <= 0.0
+            assert expected["error"] in caplog.text
+        else:
+            assert isinstance(expected, dict)
+            assert expected["url"] == search_request.url
+            assert expected.get("body", b"") == (search_request.body or b"")
 
 
 @ensureDeferred
-async def test_search_request_template_browser():
+async def test_search_request_template_browser(caplog):
     """Do not suggest using a browser request if that is already the case."""
+    caplog.clear()
+    caplog.at_level("ERROR")
+
     browser_response = BrowserResponse(
         url="https://example.com", status=200, html="<div></div>"
     )
@@ -646,10 +657,6 @@ async def test_search_request_template_browser():
     search_request_page = DefaultSearchRequestTemplatePage(
         response=response, page_params=PageParams()
     )
-    try:
-        await search_request_page.to_item()
-    except Exception as exception:
-        assert exception.__class__ == UseFallback
-        assert "A quick workaround would be to use" in str(exception)
-    else:
-        assert False
+    item = await search_request_page.to_item()
+    assert item.get_probability() <= 0.0
+    assert "A quick workaround would be to use" in caplog.text

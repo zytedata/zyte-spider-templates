@@ -275,6 +275,8 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     def parse_search_request_template(
         self, response: DummyResponse, search_request_template: SearchRequestTemplate
     ) -> Iterable[Request]:
+        if search_request_template.get_probability() <= 0:
+            return
         for query in self.args.search_queries:
             yield search_request_template.request(keyword=query).to_scrapy(
                 callback=self.parse_navigation,
