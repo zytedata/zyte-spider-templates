@@ -17,7 +17,7 @@ setup(
         "formasaurus>=0.10.0",
         "jmespath>=0.9.5",
         "pydantic>=2.1",
-        "requests>=0.10.1",
+        "requests>=1.0.0",
         "scrapy>=2.11.0",
         "scrapy-poet>=0.24.0",
         "scrapy-spider-metadata>=0.2.0",

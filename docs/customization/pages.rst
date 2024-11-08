@@ -158,11 +158,11 @@ For example:
 .. code-block:: python
 
     from web_poet import handle_urls
-    from zyte_common_items import SearchRequestTemplatePage
+    from zyte_common_items import BaseSearchRequestTemplatePage
 
 
     @handle_urls("example.com")
-    class ExampleComSearchRequestTemplatePage(SearchRequestTemplatePage):
+    class ExampleComSearchRequestTemplatePage(BaseSearchRequestTemplatePage):
         @field
         def url(self):
             return "https://example.com/search?q={{ keyword|quote_plus }}"

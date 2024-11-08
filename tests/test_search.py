@@ -636,7 +636,9 @@ async def test_search_request_template(html, page_params, expected, caplog):
         assert str(expected) in str(exception)
     else:
         if "error" in expected:
-            assert search_request.get_probability() <= 0.0
+            probability = search_request.get_probability()
+            assert probability is not None
+            assert probability <= 0.0
             assert expected["error"] in caplog.text
         else:
             assert isinstance(expected, dict)
@@ -658,5 +660,7 @@ async def test_search_request_template_browser(caplog):
         response=response, page_params=PageParams()
     )
     item = await search_request_page.to_item()
-    assert item.get_probability() <= 0.0
+    probability = item.get_probability()
+    assert probability is not None
+    assert probability <= 0.0
     assert "A quick workaround would be to use" in caplog.text
