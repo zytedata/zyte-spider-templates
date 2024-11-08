@@ -12,7 +12,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        "extruct @ git+https://github.com/Gallaecio/extruct.git@query-input",
+        "extruct>=0.18.0",
         "form2request>=0.2.0",
         "formasaurus>=0.10.0",
         "jmespath>=0.9.5",
