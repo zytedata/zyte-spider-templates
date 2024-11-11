@@ -100,11 +100,11 @@ class DefaultSearchRequestTemplatePage(BaseSearchRequestTemplatePage):
         except NotImplementedError:
             raise ValueError("form2request does not support the target search form")
         return SearchRequestTemplate(
-            url=request_data.url.replace(_PLACEHOLDER, "{{ keyword|quote_plus }}"),
+            url=request_data.url.replace(_PLACEHOLDER, "{{ query|quote_plus }}"),
             method=request_data.method,
             headers=request_data.headers,
             body=request_data.body.decode().replace(
-                _PLACEHOLDER, "{{ keyword|quote_plus }}"
+                _PLACEHOLDER, "{{ query|quote_plus }}"
             ),
         )
 
@@ -166,11 +166,9 @@ class DefaultSearchRequestTemplatePage(BaseSearchRequestTemplatePage):
                 "Could not find HTML metadata to compose a search request template."
             )
         parts = url_template.split("?", maxsplit=1)
-        parts[0] = parts[0].replace(f"{{{query_field}}}", "{{ keyword|urlencode }}")
+        parts[0] = parts[0].replace(f"{{{query_field}}}", "{{ query|urlencode }}")
         if len(parts) > 1:
-            parts[1] = parts[1].replace(
-                f"{{{query_field}}}", "{{ keyword|quote_plus }}"
-            )
+            parts[1] = parts[1].replace(f"{{{query_field}}}", "{{ query|quote_plus }}")
         url = "?".join(parts)
         url = str(self.response.urljoin(url))
         url = html.unescape(url)
@@ -218,7 +216,7 @@ class DefaultSearchRequestTemplatePage(BaseSearchRequestTemplatePage):
             url = add_or_replace_parameters(
                 search_link.url, {k: _PLACEHOLDER for k in search_params}
             )
-            url = url.replace(_PLACEHOLDER, "{{ keyword|quote_plus }}")
+            url = url.replace(_PLACEHOLDER, "{{ query|quote_plus }}")
             return SearchRequestTemplate(
                 url=url,
                 method="GET",
@@ -250,11 +248,11 @@ class DefaultSearchRequestTemplatePage(BaseSearchRequestTemplatePage):
         except NotImplementedError:
             raise ValueError("form2request does not support the target search form")
         return SearchRequestTemplate(
-            url=request_data.url.replace(_PLACEHOLDER, "{{ keyword|quote_plus }}"),
+            url=request_data.url.replace(_PLACEHOLDER, "{{ query|quote_plus }}"),
             method=request_data.method,
             headers=request_data.headers,
             body=request_data.body.decode().replace(
-                _PLACEHOLDER, "{{ keyword|quote_plus }}"
+                _PLACEHOLDER, "{{ query|quote_plus }}"
             ),
         )
 

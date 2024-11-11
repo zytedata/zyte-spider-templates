@@ -39,7 +39,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://query.example.com/search?q={{ keyword|quote_plus }}",
+                "url": "https://query.example.com/search?q={{ query|quote_plus }}",
             },
         ),
         # Microdata example from Google
@@ -57,7 +57,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://query.example.com/search?q={{ keyword|quote_plus }}",
+                "url": "https://query.example.com/search?q={{ query|quote_plus }}",
             },
         ),
         # Non-compliant JSON-LD that uses a JSON array for potentialAction
@@ -89,7 +89,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://query.example.com/search?q={{ keyword|quote_plus }}",
+                "url": "https://query.example.com/search?q={{ query|quote_plus }}",
             },
         ),
         # Non-default placeholder, JSON-LD
@@ -119,7 +119,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://query.example.com/search?q={{ keyword|quote_plus }}&dont_replace={search_term_string}",
+                "url": "https://query.example.com/search?q={{ query|quote_plus }}&dont_replace={search_term_string}",
             },
         ),
         # Non-default placeholder, Microdata
@@ -136,7 +136,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://query.example.com/search?q={{ keyword|quote_plus }}&dont_replace={search_term_string}",
+                "url": "https://query.example.com/search?q={{ query|quote_plus }}&dont_replace={search_term_string}",
             },
         ),
         # JSON-LD, WebSite isPartOf WebPage
@@ -170,7 +170,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://query.example.com/search?q={{ keyword|quote_plus }}",
+                "url": "https://query.example.com/search?q={{ query|quote_plus }}",
             },
         ),
         # Relative URL, JSON-LD
@@ -200,7 +200,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://example.com/search?q={{ keyword|quote_plus }}",
+                "url": "https://example.com/search?q={{ query|quote_plus }}",
             },
         ),
         # Relative URL, Microdata
@@ -217,7 +217,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://example.com/search?q={{ keyword|quote_plus }}",
+                "url": "https://example.com/search?q={{ query|quote_plus }}",
             },
         ),
         # Wrong escaping in JSON-LD
@@ -245,7 +245,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://example.com/search?a=b&q={{ keyword|quote_plus }}",
+                "url": "https://example.com/search?a=b&q={{ query|quote_plus }}",
             },
         ),
         # Query in path, JSON-LD
@@ -275,7 +275,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://example.com/s/{{ keyword|urlencode }}",
+                "url": "https://example.com/s/{{ query|urlencode }}",
             },
         ),
         # Relative URL, Microdata
@@ -292,7 +292,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://example.com/s/{{ keyword|urlencode }}",
+                "url": "https://example.com/s/{{ query|urlencode }}",
             },
         ),
         # No potentialAction, JSON-LD
@@ -415,7 +415,7 @@ from zyte_spider_templates.pages.search_request_template import (
             {"search_request_builders": ["extruct"]},
             {"error": "Try enabling browser rendering"},
         ),
-        # No keyword name, JSON-LD
+        # No query variable name, JSON-LD
         (
             b"""
             <html>
@@ -442,10 +442,10 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://query.example.com/search?q={{ keyword|quote_plus }}",
+                "url": "https://query.example.com/search?q={{ query|quote_plus }}",
             },
         ),
-        # No keyword name, Microdata
+        # No query variable name, Microdata
         (
             b"""
             <div itemscope itemtype="https://schema.org/WebSite">
@@ -459,7 +459,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "url": "https://query.example.com/search?q={{ keyword|quote_plus }}",
+                "url": "https://query.example.com/search?q={{ query|quote_plus }}",
             },
         ),
         # Formasaurus and form heuristics #-----------------------------------#
@@ -476,7 +476,7 @@ from zyte_spider_templates.pages.search_request_template import (
                     </form>
                     """,
                     {
-                        "url": "https://example.com?q={{ keyword|quote_plus }}",
+                        "url": "https://example.com?q={{ query|quote_plus }}",
                     },
                 ),
                 # No form
@@ -517,7 +517,7 @@ from zyte_spider_templates.pages.search_request_template import (
                 f"""<a href="https://example.com/search?{prefix}{q}=example{suffix}""".encode(),
                 {"search_request_builders": ["link_heuristics"]},
                 {
-                    "url": f"https://example.com/search?{prefix}{q}={{{{ keyword|quote_plus }}}}{suffix}"
+                    "url": f"https://example.com/search?{prefix}{q}={{{{ query|quote_plus }}}}{suffix}"
                 },
             )
             for q in (
@@ -577,14 +577,14 @@ from zyte_spider_templates.pages.search_request_template import (
                 # priority, if both the Formasaurus builder and the form
                 # heuristics builder output the same URL, that one is used
                 # instead.
-                ({}, {"url": "https://example.com/form?q={{ keyword|quote_plus }}"}),
+                ({}, {"url": "https://example.com/form?q={{ query|quote_plus }}"}),
                 (
                     {"search_request_builder_strategy": "popular"},
-                    {"url": "https://example.com/form?q={{ keyword|quote_plus }}"},
+                    {"url": "https://example.com/form?q={{ query|quote_plus }}"},
                 ),
                 (
                     {"search_request_builder_strategy": "first"},
-                    {"url": "https://example.com/metadata?q={{ keyword|quote_plus }}"},
+                    {"url": "https://example.com/metadata?q={{ query|quote_plus }}"},
                 ),
                 # Strategies only take into account the specified builders, and
                 # in the supplied order.
@@ -593,7 +593,7 @@ from zyte_spider_templates.pages.search_request_template import (
                         "search_request_builder_strategy": "first",
                         "search_request_builders": ["formasaurus", "extruct"],
                     },
-                    {"url": "https://example.com/form?q={{ keyword|quote_plus }}"},
+                    {"url": "https://example.com/form?q={{ query|quote_plus }}"},
                 ),
                 (
                     {
@@ -604,7 +604,7 @@ from zyte_spider_templates.pages.search_request_template import (
                             "link_heuristics",
                         ],
                     },
-                    {"url": "https://example.com/metadata?q={{ keyword|quote_plus }}"},
+                    {"url": "https://example.com/metadata?q={{ query|quote_plus }}"},
                 ),
                 # Unsupported strategies trigger a ValueError
                 (

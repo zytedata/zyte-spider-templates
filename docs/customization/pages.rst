@@ -165,4 +165,4 @@ For example:
     class ExampleComSearchRequestTemplatePage(BaseSearchRequestTemplatePage):
         @field
         def url(self):
-            return "https://example.com/search?q={{ keyword|quote_plus }}"
+            return "https://example.com/search?q={{ query|quote_plus }}"

@@ -279,7 +279,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         if probability is None or probability <= 0:
             return
         for query in self.args.search_queries:
-            yield search_request_template.request(keyword=query).to_scrapy(
+            yield search_request_template.request(query=query).to_scrapy(
                 callback=self.parse_navigation,
                 meta={
                     "crawling_logs": {"page_type": "productNavigation"},
