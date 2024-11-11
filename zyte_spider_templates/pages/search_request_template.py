@@ -17,7 +17,7 @@ from scrapy.linkextractors.lxmlhtml import LxmlLinkExtractor
 from w3lib.url import add_or_replace_parameters
 from web_poet import AnyResponse, BrowserResponse, PageParams, handle_urls
 from web_poet.pages import validates_input
-from zyte_common_items import BaseSearchRequestTemplatePage, SearchRequestTemplate
+from zyte_common_items import SearchRequestTemplate, SearchRequestTemplatePage
 
 logger = getLogger(__name__)
 
@@ -44,7 +44,7 @@ def _any_http_response_to_scrapy_response(response: AnyResponse) -> HtmlResponse
 
 @handle_urls("", priority=250)
 @attrs.define
-class DefaultSearchRequestTemplatePage(BaseSearchRequestTemplatePage):
+class DefaultSearchRequestTemplatePage(SearchRequestTemplatePage):
     response: AnyResponse  # type: ignore[assignment]
     page_params: PageParams
 
