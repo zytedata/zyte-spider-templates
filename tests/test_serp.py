@@ -263,6 +263,25 @@ def test_metadata():
                     "title": "Max Pages",
                     "type": "integer",
                 },
+                "item_type": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": None,
+                    "description": (
+                        "If specified, result URLs are followed to extract "
+                        "the specified item type. Spider output items will be "
+                        "of the specified item type, not search engine "
+                        "results page items."
+                    ),
+                    "enum": [
+                        "article",
+                        "articleList",
+                        "forumThread",
+                        "jobPosting",
+                        "product",
+                        "productList",
+                    ],
+                    "title": "Item type",
+                },
                 "max_requests": {
                     "anyOf": [{"type": "integer"}, {"type": "null"}],
                     "default": 100,
@@ -459,9 +478,7 @@ def test_item_type_mappings():
     # Ensure that the ITEM_TYPE_CLASSES dict maps all values from the
     # corresponding enum except for serp.
     actual_keys = set(ITEM_TYPE_CLASSES)
-    expected_keys = set(
-        entry.value for entry in SerpItemType if entry != SerpItemType.serp
-    )
+    expected_keys = set(entry.value for entry in SerpItemType)
     assert actual_keys == expected_keys
 
     # Also ensure that no dict value is repeated.

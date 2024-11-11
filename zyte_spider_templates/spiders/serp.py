@@ -7,9 +7,10 @@ from scrapy.settings import SETTINGS_PRIORITIES, BaseSettings
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
 from w3lib.url import add_or_replace_parameter
-from zyte_common_items import (  # TODO: Add ForumThread to zyte-common-items; ForumThread,
+from zyte_common_items import (
     Article,
     ArticleList,
+    ForumThread,
     JobPosting,
     Product,
     ProductList,
@@ -62,46 +63,39 @@ class SerpMaxPagesParam(BaseModel):
 class SerpItemType(str, Enum):
     article: str = "article"
     """
-    Article data from result URLs.
+    Article data.
     """
 
     articleList: str = "articleList"
     """
-    Article list data from result URLs.
+    Article list data.
     """
 
-    # forumThread: str = "forumThread"
+    forumThread: str = "forumThread"
     """
-    Thread data from result URLs.
+    Forum thread data.
     """
 
     jobPosting: str = "jobPosting"
     """
-    Job posting data from result URLs.
+    Job posting data.
     """
 
     product: str = "product"
     """
-    Product data from result URLs.
+    Product data.
     """
 
     productList: str = "productList"
     """
-    Product list data from result URLs.
-    """
-
-    serp: str = "serp"
-    """
-    Search engine results page data.
+    Product list data.
     """
 
 
-# NOTE: serp is excluded on purposed, since it is not used below.
-# TODO: Add a test to make sure that this is in sync with the enum class above.
 ITEM_TYPE_CLASSES = {
     SerpItemType.article: Article,
     SerpItemType.articleList: ArticleList,
-    # SerpItemType.forumThread: ForumThread,
+    SerpItemType.forumThread: ForumThread,
     SerpItemType.jobPosting: JobPosting,
     SerpItemType.product: Product,
     SerpItemType.productList: ProductList,
@@ -109,29 +103,14 @@ ITEM_TYPE_CLASSES = {
 
 
 class SerpItemTypeParam(BaseModel):
-    item_type: SerpItemType = Field(
+    item_type: Optional[SerpItemType] = Field(
         title="Item type",
-        description="Data type of the output items.",
-        default=SerpItemType.serp,
-        json_schema_extra={
-            "enumMeta": {
-                # TODO: Add a test to make sure this is in sync with the enum class above.
-                # TODO: Try automating the generation of this metadata from the enum type above.
-                SerpItemType.serp: {
-                    "title": "serp",
-                    "description": (
-                        "Yield the data of result pages, do not follow result " "links."
-                    ),
-                },
-                SerpItemType.product: {
-                    "title": "product",
-                    "description": (
-                        "Follow result links and yield product details data "
-                        "from them."
-                    ),
-                },
-            },
-        },
+        description=(
+            "If specified, result URLs are followed to extract the specified "
+            "item type. Spider output items will be of the specified item "
+            "type, not search engine results page items."
+        ),
+        default=None,
     )
 
 
@@ -145,7 +124,7 @@ class GoogleDomainParam(BaseModel):
 
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
-    SerpItemTypeParam,  # TODO: Update the test_metadata expectations
+    SerpItemTypeParam,
     SerpMaxPagesParam,
     SearchQueriesParam,
     GoogleDomainParam,
@@ -220,7 +199,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
                 next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
                 yield self.get_serp_request(next_url, page_number=page_number + 1)
 
-        if self.args.item_type == SerpItemType.serp:
+        if self.args.item_type is None:
             yield serp
             return
 
