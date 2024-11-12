@@ -7,6 +7,7 @@ from scrapy_spider_metadata import Args
 from w3lib.url import add_or_replace_parameter
 from zyte_common_items import Serp
 
+from .._geolocations import GEOLOCATION_OPTIONS_WITH_CODE, Geolocation
 from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
 from .base import BaseSpider
@@ -39,6 +40,41 @@ class SearchQueriesParam(BaseModel):
         return result
 
 
+class SerpIPGeolocationParam(BaseModel):
+    # We use “geolocation” as parameter name (instead of e.g. “ip_geolocation”)
+    # to reuse the implementation in BaseSpider.
+    geolocation: Optional[Geolocation] = Field(
+        # The title, worded like this for contrast with gl, is the reason why
+        # ..params.GeolocationParam is not used.
+        title="Geolocation (IP address)",
+        description="ISO 3166-1 alpha-2 2-character string specified in "
+        "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
+                }
+                for code in Geolocation
+            }
+        },
+    )
+
+
+# TODO: Make it a list of options like Geolocation out of
+# https://developers.google.com/custom-search/docs/json_api_reference#countryCodes
+class SerpURLGeolocationParam(BaseModel):
+    gl: str = Field(
+        title="Geolocation (Google)",
+        description=(
+            "Google will boost results relevant to the country with the "
+            "specified code. For valid country codes, see "
+            "https://developers.google.com/custom-search/docs/json_api_reference#countryCodes"
+        ),
+        default="",
+    )
+
+
 class SerpMaxPagesParam(BaseModel):
     max_pages: int = Field(
         title="Max Pages",
@@ -58,6 +94,8 @@ class GoogleDomainParam(BaseModel):
 
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
+    SerpIPGeolocationParam,
+    SerpURLGeolocationParam,
     SerpMaxPagesParam,
     SearchQueriesParam,
     GoogleDomainParam,
@@ -99,6 +137,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             )
 
     def get_serp_request(self, url: str, *, page_number: int):
+        if self.args.gl:
+            url = add_or_replace_parameter(url, "gl", self.args.gl)
         return Request(
             url=url,
             callback=self.parse_serp,

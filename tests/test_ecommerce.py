@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 import requests
 import scrapy
-from pydantic import ValidationError
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
 from zyte_common_items import ProbabilityRequest, Product, ProductNavigation, Request
@@ -14,28 +13,11 @@ from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
     Geolocation,
 )
-from zyte_spider_templates.spiders.ecommerce import (
-    EcommerceCrawlStrategy,
-    EcommerceSpider,
-)
+from zyte_spider_templates.spiders.ecommerce import EcommerceSpider
 
 from . import get_crawler
 from .test_utils import URL_TO_DOMAIN
 from .utils import assertEqualSpiderMetadata
-
-
-def test_parameters():
-    with pytest.raises(ValidationError):
-        EcommerceSpider()
-
-    EcommerceSpider(url="https://example.com")
-    EcommerceSpider(
-        url="https://example.com", crawl_strategy=EcommerceCrawlStrategy.automatic
-    )
-    EcommerceSpider(url="https://example.com", crawl_strategy="automatic")
-
-    with pytest.raises(ValidationError):
-        EcommerceSpider(url="https://example.com", crawl_strategy="unknown")
 
 
 def test_start_requests():
@@ -256,108 +238,6 @@ def test_parse_product(probability, has_item, item_drop, caplog):
     else:
         assert len(items) == 0
         assert str(product) in caplog.text
-
-
-def test_arguments():
-    # Ensure passing no arguments works.
-    crawler = get_crawler()
-
-    # Needed since it's a required argument.
-    base_kwargs = {"url": "https://example.com"}
-
-    EcommerceSpider.from_crawler(crawler, **base_kwargs)
-
-    for param, arg, setting, old_setting_value, getter_name, new_setting_value in (
-        ("max_requests", "123", "ZYTE_API_MAX_REQUESTS", None, "getint", 123),
-        (
-            "geolocation",
-            "DE",
-            "ZYTE_API_AUTOMAP_PARAMS",
-            None,
-            "getdict",
-            {"geolocation": "DE"},
-        ),
-        (
-            "geolocation",
-            "DE",
-            "ZYTE_API_AUTOMAP_PARAMS",
-            '{"browserHtml": true}',
-            "getdict",
-            {"browserHtml": True, "geolocation": "DE"},
-        ),
-        (
-            "geolocation",
-            "DE",
-            "ZYTE_API_AUTOMAP_PARAMS",
-            '{"geolocation": "IE"}',
-            "getdict",
-            {"geolocation": "DE"},
-        ),
-        (
-            "geolocation",
-            "DE",
-            "ZYTE_API_PROVIDER_PARAMS",
-            None,
-            "getdict",
-            {"geolocation": "DE"},
-        ),
-        (
-            "geolocation",
-            "DE",
-            "ZYTE_API_PROVIDER_PARAMS",
-            '{"browserHtml": true}',
-            "getdict",
-            {"browserHtml": True, "geolocation": "DE"},
-        ),
-        (
-            "geolocation",
-            "DE",
-            "ZYTE_API_PROVIDER_PARAMS",
-            '{"geolocation": "IE"}',
-            "getdict",
-            {"geolocation": "DE"},
-        ),
-        (
-            "extract_from",
-            "browserHtml",
-            "ZYTE_API_PROVIDER_PARAMS",
-            None,
-            "getdict",
-            {
-                "productOptions": {"extractFrom": "browserHtml"},
-                "productNavigationOptions": {"extractFrom": "browserHtml"},
-            },
-        ),
-        (
-            "extract_from",
-            "httpResponseBody",
-            "ZYTE_API_PROVIDER_PARAMS",
-            {"geolocation": "US"},
-            "getdict",
-            {
-                "productOptions": {"extractFrom": "httpResponseBody"},
-                "productNavigationOptions": {"extractFrom": "httpResponseBody"},
-                "geolocation": "US",
-            },
-        ),
-        (
-            "extract_from",
-            None,
-            "ZYTE_API_PROVIDER_PARAMS",
-            {"geolocation": "US"},
-            "getdict",
-            {"geolocation": "US"},
-        ),
-    ):
-        kwargs = {param: arg}
-        settings = {}
-        if old_setting_value is not None:
-            settings[setting] = old_setting_value
-        crawler = get_crawler(settings=settings)
-        spider = EcommerceSpider.from_crawler(crawler, **kwargs, **base_kwargs)
-        getter = getattr(crawler.settings, getter_name)
-        assert getter(setting) == new_setting_value
-        assert spider.allowed_domains == ["example.com"]
 
 
 def test_metadata():

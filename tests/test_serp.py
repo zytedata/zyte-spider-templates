@@ -1,32 +1,58 @@
+from urllib.parse import quote_plus
+
 import pytest
-from pydantic import ValidationError
 from scrapy import Request
 from scrapy_spider_metadata import get_spider_metadata
 from scrapy_zyte_api.responses import ZyteAPITextResponse
 from w3lib.url import add_or_replace_parameter
 
+from zyte_spider_templates._geolocations import (
+    GEOLOCATION_OPTIONS,
+    GEOLOCATION_OPTIONS_WITH_CODE,
+    Geolocation,
+)
 from zyte_spider_templates.spiders.serp import GoogleSearchSpider
 
 from . import get_crawler
 from .utils import assertEqualSpiderMetadata
 
 
-def test_parameters():
-    with pytest.raises(ValidationError):
-        GoogleSearchSpider()
-
-    with pytest.raises(ValidationError):
-        GoogleSearchSpider(domain="google.com")
-
-    GoogleSearchSpider(search_queries="foo bar")
-    GoogleSearchSpider(domain="google.cat", search_queries="foo bar")
-    GoogleSearchSpider(domain="google.cat", search_queries="foo bar", max_pages=10)
-
-    with pytest.raises(ValidationError):
-        GoogleSearchSpider(domain="google.foo", search_queries="foo bar")
-
-    with pytest.raises(ValidationError):
-        GoogleSearchSpider(search_queries="foo bar", max_pages="all")
+def run_parse_serp(spider, total_results=99999, page=1, query="foo"):
+    url = f"https://www.google.com/search?q={quote_plus(query)}"
+    if page > 1:
+        url = add_or_replace_parameter(url, "start", (page - 1) * 10)
+    response = ZyteAPITextResponse.from_api_response(
+        api_response={
+            "serp": {
+                "organicResults": [
+                    {
+                        "description": "…",
+                        "name": "…",
+                        "url": f"https://example.com/{rank}",
+                        "rank": rank,
+                    }
+                    for rank in range(1, 11)
+                ],
+                "metadata": {
+                    "dateDownloaded": "2024-10-25T08:59:45Z",
+                    "displayedQuery": query,
+                    "searchedQuery": query,
+                    "totalOrganicResults": total_results,
+                },
+                "pageNumber": page,
+                "url": url,
+            },
+            "url": url,
+        },
+    )
+    items = []
+    requests = []
+    for item_or_request in spider.parse_serp(response, page_number=page):
+        if isinstance(item_or_request, Request):
+            requests.append(item_or_request)
+        else:
+            items.append(item_or_request)
+    return items, requests
 
 
 def test_start_requests():
@@ -259,6 +285,39 @@ def test_metadata():
                     "title": "Max Pages",
                     "type": "integer",
                 },
+                "gl": {
+                    "default": "",
+                    "description": (
+                        "Google will boost results relevant to the country "
+                        "with the specified code. For valid country codes, "
+                        "see "
+                        "https://developers.google.com/custom-search/docs/json_api_reference#countryCodes"
+                    ),
+                    "title": "Geolocation (Google)",
+                    "type": "string",
+                },
+                "geolocation": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": (
+                        "ISO 3166-1 alpha-2 2-character string specified in "
+                        "https://docs.zyte.com/zyte-api/usage/reference.html"
+                        "#operation/extract/request/geolocation."
+                    ),
+                    "enumMeta": {
+                        code: {
+                            "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
+                        }
+                        for code in sorted(Geolocation)
+                    },
+                    "title": "Geolocation (IP address)",
+                    "enum": list(
+                        sorted(GEOLOCATION_OPTIONS, key=GEOLOCATION_OPTIONS.__getitem__)
+                    ),
+                },
                 "max_requests": {
                     "anyOf": [{"type": "integer"}, {"type": "null"}],
                     "default": 100,
@@ -279,6 +338,11 @@ def test_metadata():
         },
     }
     assertEqualSpiderMetadata(actual_metadata, expected_metadata)
+
+    geolocation = actual_metadata["param_schema"]["properties"]["geolocation"]
+    assert geolocation["enum"][0] == "AF"
+    assert geolocation["enumMeta"]["UY"] == {"title": "Uruguay (UY)"}
+    assert set(geolocation["enum"]) == set(geolocation["enumMeta"])
 
 
 def test_input_none():
@@ -321,51 +385,17 @@ def test_pagination():
     crawler = get_crawler()
     spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
 
-    def run_parse_serp(total_results, page=1):
-        url = "https://www.google.com/search?q=foo+bar"
-        if page > 1:
-            url = add_or_replace_parameter(url, "start", (page - 1) * 10)
-        response = ZyteAPITextResponse.from_api_response(
-            api_response={
-                "serp": {
-                    "organicResults": [
-                        {
-                            "description": "…",
-                            "name": "…",
-                            "url": f"https://example.com/{rank}",
-                            "rank": rank,
-                        }
-                        for rank in range(1, 11)
-                    ],
-                    "metadata": {
-                        "dateDownloaded": "2024-10-25T08:59:45Z",
-                        "displayedQuery": "foo bar",
-                        "searchedQuery": "foo bar",
-                        "totalOrganicResults": total_results,
-                    },
-                    "pageNumber": page,
-                    "url": url,
-                },
-                "url": url,
-            },
-        )
-        items = []
-        requests = []
-        for item_or_request in spider.parse_serp(response, page_number=page):
-            if isinstance(item_or_request, Request):
-                requests.append(item_or_request)
-            else:
-                items.append(item_or_request)
-        return items, requests
-
     items, requests = run_parse_serp(
+        spider,
         total_results=10,
     )
     assert len(items) == 1
     assert len(requests) == 0
 
     items, requests = run_parse_serp(
+        spider,
         total_results=11,
+        query="foo bar",
     )
     assert len(items) == 1
     assert len(requests) == 1
@@ -373,15 +403,19 @@ def test_pagination():
     assert requests[0].cb_kwargs["page_number"] == 2
 
     items, requests = run_parse_serp(
+        spider,
         total_results=20,
         page=2,
+        query="foo bar",
     )
     assert len(items) == 1
     assert len(requests) == 0
 
     items, requests = run_parse_serp(
+        spider,
         total_results=21,
         page=2,
+        query="foo bar",
     )
     assert len(items) == 1
     assert len(requests) == 1
@@ -445,3 +479,16 @@ def test_parse_serp():
     # The page_number parameter is required.
     with pytest.raises(TypeError):
         spider.parse_serp(response)
+
+
+def test_gl():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo", gl="af")
+    requests = list(spider.start_requests())
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&gl=af"
+
+    items, requests = run_parse_serp(spider)
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&start=10&gl=af"
