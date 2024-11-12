@@ -342,7 +342,9 @@ def test_search_queries():
 
 def test_pagination():
     crawler = get_crawler()
-    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo bar", max_pages=3
+    )
 
     def run_parse_serp(total_results, page=1):
         url = "https://www.google.com/search?q=foo+bar"
@@ -411,6 +413,14 @@ def test_pagination():
     assert requests[0].url == "https://www.google.com/search?q=foo+bar&start=20"
     assert requests[0].cb_kwargs["page_number"] == 3
 
+    # Do not go over max_pages
+    items, requests = run_parse_serp(
+        total_results=31,
+        page=3,
+    )
+    assert len(items) == 1
+    assert len(requests) == 0
+
 
 def test_get_serp_request():
     crawler = get_crawler()
@@ -427,7 +437,9 @@ def test_get_serp_request():
 
 def test_parse_serp():
     crawler = get_crawler()
-    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo bar", max_pages=43
+    )
     url = "https://www.google.com/search?q=foo+bar"
     response = ZyteAPITextResponse.from_api_response(
         api_response={
