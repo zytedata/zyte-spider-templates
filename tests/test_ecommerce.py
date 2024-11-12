@@ -7,13 +7,14 @@ import scrapy
 from pydantic import ValidationError
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
+from web_poet.page_inputs.browser import BrowserResponse
 from zyte_common_items import (
-    Metadata,
     ProbabilityRequest,
     Product,
     ProductNavigation,
     Request,
     SearchRequestTemplate,
+    SearchRequestTemplateMetadata,
 )
 
 from zyte_spider_templates._geolocations import (
@@ -287,17 +288,19 @@ def test_parse_product(probability, has_item, item_drop, caplog):
         (1.0, True),
     ),
 )
-def test_parse_search_request_template_drop(probability, yields_items):
+def test_parse_search_request_template_probability(probability, yields_items):
     crawler = get_crawler()
     spider = EcommerceSpider.from_crawler(
         crawler, url="https://example.com", search_queries="foo"
     )
     search_request_template = SearchRequestTemplate(url="https://example.com")
     if probability is not None:
-        search_request_template.metadata = Metadata(probability=probability)
+        search_request_template.metadata = SearchRequestTemplateMetadata(
+            probability=probability
+        )
     items = list(
         spider.parse_search_request_template(
-            DummyResponse("https://example.com"), search_request_template
+            DummyResponse("https://example.com"), search_request_template, DynamicDeps()
         )
     )
     assert items if yields_items else not items
@@ -915,24 +918,21 @@ def test_search_queries_extract_from():
     spider = EcommerceSpider.from_crawler(crawler, url=url, search_queries="foo")
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
-    assert not {key for key in start_requests[0].meta if key.startswith("zyte_api_")}
+    assert "inject" not in start_requests[0].meta
 
     spider = EcommerceSpider.from_crawler(
         crawler, url=url, search_queries="foo", extract_from="httpResponseBody"
     )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
-    assert not {key for key in start_requests[0].meta if key.startswith("zyte_api_")}
+    assert "inject" not in start_requests[0].meta
 
     spider = EcommerceSpider.from_crawler(
         crawler, url=url, search_queries="foo", extract_from="browserHtml"
     )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
-    assert {key for key in start_requests[0].meta if key.startswith("zyte_api_")} == {
-        "zyte_api_provider"
-    }
-    start_requests[0].meta["zyte_api_provider"] == {"browserHtml": True}
+    assert start_requests[0].meta["inject"] == [BrowserResponse]
 
 
 @pytest.mark.parametrize(

@@ -7,6 +7,7 @@ from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
+from web_poet.page_inputs.browser import BrowserResponse
 from zyte_common_items import (
     CustomAttributes,
     ProbabilityRequest,
@@ -264,7 +265,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
                     meta["page_params"] = {"full_domain": get_domain(url)}
                 if self.args.extract_from == ExtractFrom.browserHtml:
-                    meta["zyte_api_provider"] = {"browserHtml": True}
+                    meta["inject"] = [BrowserResponse]
                 yield Request(
                     url=url,
                     callback=self.parse_search_request_template,
@@ -275,7 +276,10 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 yield self.get_start_request(url)
 
     def parse_search_request_template(
-        self, response: DummyResponse, search_request_template: SearchRequestTemplate
+        self,
+        response: DummyResponse,
+        search_request_template: SearchRequestTemplate,
+        dynamic: DynamicDeps,
     ) -> Iterable[Request]:
         probability = search_request_template.get_probability()
         if probability is not None and probability <= 0:
