@@ -203,12 +203,9 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             yield serp
             return
 
-        # TODO: Add a test for this
         for result in serp.organicResults:
             yield response.follow(
-                result[
-                    "url"
-                ],  # TODO: Why does result.url not work? Bug in zyte-common-items?
+                result.url,
                 callback=self.parse_result,
                 meta={
                     "crawling_logs": {"page_type": self.args.item_type.value},

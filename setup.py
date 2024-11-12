@@ -18,7 +18,7 @@ setup(
         "scrapy-poet>=0.24.0",
         "scrapy-spider-metadata>=0.2.0",
         "scrapy-zyte-api[provider]>=0.23.0",
-        "zyte-common-items>=0.26.0",
+        "zyte-common-items @ git+https://github.com/Gallaecio/zyte-common-items.git@fix-result-inheritance",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
