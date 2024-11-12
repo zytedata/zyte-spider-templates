@@ -258,7 +258,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     def start_requests(self) -> Iterable[Request]:
         if self.args.search_queries:
             for url in self.start_urls:
-                meta = {
+                meta: Dict[str, Any] = {
                     "crawling_logs": {"page_type": "searchRequestTemplate"},
                 }
                 if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
