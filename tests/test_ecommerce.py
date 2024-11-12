@@ -7,7 +7,14 @@ import scrapy
 from pydantic import ValidationError
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
-from zyte_common_items import ProbabilityRequest, Product, ProductNavigation, Request
+from zyte_common_items import (
+    Metadata,
+    ProbabilityRequest,
+    Product,
+    ProductNavigation,
+    Request,
+    SearchRequestTemplate,
+)
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS,
@@ -269,6 +276,31 @@ def test_parse_product(probability, has_item, item_drop, caplog):
     else:
         assert len(items) == 0
         assert str(product) in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("probability", "yields_items"),
+    (
+        (None, True),  # Default
+        (-1.0, False),
+        (0.0, False),  # page.no_item_found()
+        (1.0, True),
+    ),
+)
+def test_parse_search_request_template_drop(probability, yields_items):
+    crawler = get_crawler()
+    spider = EcommerceSpider.from_crawler(
+        crawler, url="https://example.com", search_queries="foo"
+    )
+    search_request_template = SearchRequestTemplate(url="https://example.com")
+    if probability is not None:
+        search_request_template.metadata = Metadata(probability=probability)
+    items = list(
+        spider.parse_search_request_template(
+            DummyResponse("https://example.com"), search_request_template
+        )
+    )
+    assert items if yields_items else not items
 
 
 def test_arguments():
@@ -898,9 +930,9 @@ def test_search_queries_extract_from():
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert {key for key in start_requests[0].meta if key.startswith("zyte_api_")} == {
-        "zyte_api_automap"
+        "zyte_api_provider"
     }
-    start_requests[0].meta["zyte_api_automap"] == {"browserHtml": True}
+    start_requests[0].meta["zyte_api_provider"] == {"browserHtml": True}
 
 
 @pytest.mark.parametrize(

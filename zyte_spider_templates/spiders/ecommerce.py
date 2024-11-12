@@ -264,7 +264,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
                     meta["page_params"] = {"full_domain": get_domain(url)}
                 if self.args.extract_from == ExtractFrom.browserHtml:
-                    meta["zyte_api_automap"] = {"browserHtml": True}
+                    meta["zyte_api_provider"] = {"browserHtml": True}
                 yield Request(
                     url=url,
                     callback=self.parse_search_request_template,
@@ -278,7 +278,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         self, response: DummyResponse, search_request_template: SearchRequestTemplate
     ) -> Iterable[Request]:
         probability = search_request_template.get_probability()
-        if probability is None or probability <= 0:
+        if probability is not None and probability <= 0:
             return
         for query in self.args.search_queries:
             yield search_request_template.request(query=query).to_scrapy(
