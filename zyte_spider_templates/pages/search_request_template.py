@@ -15,7 +15,7 @@ from lxml import etree
 from scrapy.http.response.html import HtmlResponse
 from scrapy.linkextractors.lxmlhtml import LxmlLinkExtractor
 from w3lib.url import add_or_replace_parameters
-from web_poet import AnyResponse, BrowserResponse, PageParams, handle_urls
+from web_poet import AnyResponse, PageParams, handle_urls
 from web_poet.pages import validates_input
 from zyte_common_items import SearchRequestTemplate, SearchRequestTemplatePage
 
@@ -297,22 +297,14 @@ class DefaultSearchRequestTemplatePage(SearchRequestTemplatePage):
                     continue
                 return top_results[builder_id]
 
-        if not isinstance(self.response.response, BrowserResponse):
-            logger.error(
-                f"Cannot build a search request template for "
-                f"{self.response.url}. Try enabling browser rendering by "
-                f'setting "browserHtml" to True in the '
-                f"ZYTE_API_PROVIDER_PARAMS setting dict."
-            )
-        else:
-            logger.error(
-                f"Cannot build a search request template for "
-                f"{self.response.url}. A quick workaround would be to use a "
-                f"search URL as input URL instead of using the search "
-                f"queries input field. You can also manually implement "
-                f"search support for a given website "
-                f"(https://zyte-common-items.readthedocs.io/en/latest/usage/re"
-                f"quest-templates.html#writing-a-request-template-page-object)"
-                f"."
-            )
+        logger.error(
+            f"Cannot build a search request template for "
+            f"{self.response.url}. A quick workaround would be to use a "
+            f"search URL as input URL instead of using the search "
+            f"queries input field. You can also manually implement "
+            f"search support for a given website "
+            f"(https://zyte-common-items.readthedocs.io/en/latest/usage/re"
+            f"quest-templates.html#writing-a-request-template-page-object)"
+            f"."
+        )
         return self.no_item_found()

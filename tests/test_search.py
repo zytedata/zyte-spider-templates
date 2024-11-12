@@ -315,7 +315,7 @@ from zyte_spider_templates.pages.search_request_template import (
             """,
             {"search_request_builders": ["extruct"]},
             {
-                "error": "Try enabling browser rendering",
+                "error": "Cannot build a search request template",
             },
         ),
         # No potentialAction, Microdata
@@ -331,7 +331,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </div>
             """,
             {"search_request_builders": ["extruct"]},
-            {"error": "Try enabling browser rendering"},
+            {"error": "Cannot build a search request template"},
         ),
         # No SearchAction type, JSON-LD
         (
@@ -358,7 +358,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </html>
             """,
             {"search_request_builders": ["extruct"]},
-            {"error": "Try enabling browser rendering"},
+            {"error": "Cannot build a search request template"},
         ),
         # No SearchAction type, Microdata
         (
@@ -373,7 +373,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </div>
             """,
             {"search_request_builders": ["extruct"]},
-            {"error": "Try enabling browser rendering"},
+            {"error": "Cannot build a search request template"},
         ),
         # No target, JSON-LD
         (
@@ -398,7 +398,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </html>
             """,
             {"search_request_builders": ["extruct"]},
-            {"error": "Try enabling browser rendering"},
+            {"error": "Cannot build a search request template"},
         ),
         # No target, Microdata
         (
@@ -413,7 +413,7 @@ from zyte_spider_templates.pages.search_request_template import (
             </div>
             """,
             {"search_request_builders": ["extruct"]},
-            {"error": "Try enabling browser rendering"},
+            {"error": "Cannot build a search request template"},
         ),
         # No query variable name, JSON-LD
         (
@@ -482,7 +482,7 @@ from zyte_spider_templates.pages.search_request_template import (
                 # No form
                 (
                     b"<div></div>",
-                    {"error": "Try enabling browser rendering"},
+                    {"error": "Cannot build a search request template"},
                 ),
                 # No named input field
                 (
@@ -491,7 +491,7 @@ from zyte_spider_templates.pages.search_request_template import (
                         <input type="submit"/>
                     </form>
                     """,
-                    {"error": "Try enabling browser rendering"},
+                    {"error": "Cannot build a search request template"},
                 ),
                 # Multi-part form
                 (
@@ -501,12 +501,12 @@ from zyte_spider_templates.pages.search_request_template import (
                         <input type="submit"/>
                     </form>
                     """,
-                    {"error": "Try enabling browser rendering"},
+                    {"error": "Cannot build a search request template"},
                 ),
                 # Non-HTML response (JSON)
                 (
                     b"""{"a": "b"}""",
-                    {"error": "Try enabling browser rendering"},
+                    {"error": "Cannot build a search request template"},
                 ),
             )
         ),
@@ -541,19 +541,19 @@ from zyte_spider_templates.pages.search_request_template import (
         (
             b"""<div></div>""",
             {"search_request_builders": ["link_heuristics"]},
-            {"error": "Try enabling browser rendering"},
+            {"error": "Cannot build a search request template"},
         ),
         # No HTML (JSON)
         (
             b"""{"a": "b"}""",
             {"search_request_builders": ["link_heuristics"]},
-            {"error": "Try enabling browser rendering"},
+            {"error": "Cannot build a search request template"},
         ),
         # Parameter false positive (?q != q)
         (
             b"""<a href="https://example.com?a=b&?q=c"></a>""",
             {"search_request_builders": ["link_heuristics"]},
-            {"error": "Try enabling browser rendering"},
+            {"error": "Cannot build a search request template"},
         ),
         # Builder parameters #------------------------------------------------#
         *(
