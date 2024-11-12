@@ -16,7 +16,7 @@ from zyte_common_items import (
 )
 
 from zyte_spider_templates.heuristics import is_homepage
-from zyte_spider_templates.params import parse_input_params
+from zyte_spider_templates.params import ExtractFrom, parse_input_params
 from zyte_spider_templates.spiders.base import (
     ARG_SETTING_PRIORITY,
     INPUT_GROUP,
@@ -263,6 +263,8 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 }
                 if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
                     meta["page_params"] = {"full_domain": get_domain(url)}
+                if self.args.extract_from == ExtractFrom.browserHtml:
+                    meta["zyte_api_automap"] = {"browserHtml": True}
                 yield Request(
                     url=url,
                     callback=self.parse_search_request_template,

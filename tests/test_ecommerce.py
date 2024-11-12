@@ -876,6 +876,33 @@ def test_search_queries():
     assert spider.args.search_queries == ["foo", "bar"]
 
 
+def test_search_queries_extract_from():
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = EcommerceSpider.from_crawler(crawler, url=url, search_queries="foo")
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert not {key for key in start_requests[0].meta if key.startswith("zyte_api_")}
+
+    spider = EcommerceSpider.from_crawler(
+        crawler, url=url, search_queries="foo", extract_from="httpResponseBody"
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert not {key for key in start_requests[0].meta if key.startswith("zyte_api_")}
+
+    spider = EcommerceSpider.from_crawler(
+        crawler, url=url, search_queries="foo", extract_from="browserHtml"
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert {key for key in start_requests[0].meta if key.startswith("zyte_api_")} == {
+        "zyte_api_automap"
+    }
+    start_requests[0].meta["zyte_api_automap"] == {"browserHtml": True}
+
+
 @pytest.mark.parametrize(
     "url,has_full_domain",
     (
