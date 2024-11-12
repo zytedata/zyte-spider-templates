@@ -193,7 +193,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
     def parse_serp(self, response, page_number) -> Iterable[Union[Request, Serp]]:
         serp = Serp.from_dict(response.raw_api_response["serp"])
 
-        if page_number < self.args.max_pages:  # TODO: Add a test for this
+        if page_number < self.args.max_pages:
             next_start = page_number * self._results_per_page
             if serp.organicResults and serp.metadata.totalOrganicResults > next_start:
                 next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
