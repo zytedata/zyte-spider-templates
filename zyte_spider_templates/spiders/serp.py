@@ -10,6 +10,7 @@ from zyte_common_items import Serp
 from .._geolocations import GEOLOCATION_OPTIONS_WITH_CODE, Geolocation
 from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
+from ._google_gl import GOOGLE_GL_OPTIONS_WITH_CODE, GoogleGl
 from .base import BaseSpider
 
 
@@ -40,7 +41,7 @@ class SearchQueriesParam(BaseModel):
         return result
 
 
-class SerpIPGeolocationParam(BaseModel):
+class SerpGeolocationParam(BaseModel):
     # We use “geolocation” as parameter name (instead of e.g. “ip_geolocation”)
     # to reuse the implementation in BaseSpider.
     geolocation: Optional[Geolocation] = Field(
@@ -61,17 +62,19 @@ class SerpIPGeolocationParam(BaseModel):
     )
 
 
-# TODO: Make it a list of options like Geolocation out of
-# https://developers.google.com/custom-search/docs/json_api_reference#countryCodes
-class SerpURLGeolocationParam(BaseModel):
-    gl: str = Field(
+class GoogleGlParam(BaseModel):
+    gl: Optional[GoogleGl] = Field(
         title="Geolocation (Google)",
-        description=(
-            "Google will boost results relevant to the country with the "
-            "specified code. For valid country codes, see "
-            "https://developers.google.com/custom-search/docs/json_api_reference#countryCodes"
-        ),
-        default="",
+        description="Ask Google to boost results relevant to this country.",
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GOOGLE_GL_OPTIONS_WITH_CODE[code],
+                }
+                for code in GoogleGl
+            }
+        },
     )
 
 
@@ -94,8 +97,8 @@ class GoogleDomainParam(BaseModel):
 
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
-    SerpIPGeolocationParam,
-    SerpURLGeolocationParam,
+    SerpGeolocationParam,
+    GoogleGlParam,
     SerpMaxPagesParam,
     SearchQueriesParam,
     GoogleDomainParam,
@@ -138,7 +141,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
 
     def get_serp_request(self, url: str, *, page_number: int):
         if self.args.gl:
-            url = add_or_replace_parameter(url, "gl", self.args.gl)
+            url = add_or_replace_parameter(url, "gl", self.args.gl.value)
         return Request(
             url=url,
             callback=self.parse_serp,

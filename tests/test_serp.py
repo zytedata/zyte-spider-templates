@@ -11,6 +11,11 @@ from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS_WITH_CODE,
     Geolocation,
 )
+from zyte_spider_templates.spiders._google_gl import (
+    GOOGLE_GL_OPTIONS,
+    GOOGLE_GL_OPTIONS_WITH_CODE,
+    GoogleGl,
+)
 from zyte_spider_templates.spiders.serp import GoogleSearchSpider
 
 from . import get_crawler
@@ -286,15 +291,24 @@ def test_metadata():
                     "type": "integer",
                 },
                 "gl": {
-                    "default": "",
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
                     "description": (
-                        "Google will boost results relevant to the country "
-                        "with the specified code. For valid country codes, "
-                        "see "
-                        "https://developers.google.com/custom-search/docs/json_api_reference#countryCodes"
+                        "Ask Google to boost results relevant to this country."
                     ),
+                    "enumMeta": {
+                        code: {
+                            "title": GOOGLE_GL_OPTIONS_WITH_CODE[code],
+                        }
+                        for code in sorted(GoogleGl)
+                    },
                     "title": "Geolocation (Google)",
-                    "type": "string",
+                    "enum": list(
+                        sorted(GOOGLE_GL_OPTIONS, key=GOOGLE_GL_OPTIONS.__getitem__)
+                    ),
                 },
                 "geolocation": {
                     "anyOf": [
