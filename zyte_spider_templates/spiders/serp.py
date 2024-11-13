@@ -106,9 +106,10 @@ class SerpItemTypeParam(BaseModel):
     item_type: Optional[SerpItemType] = Field(
         title="Follow and Extract",
         description=(
-            "If specified, result URLs are followed to extract the specified "
-            "item type. Spider output items will be of the specified item "
-            "type, not search engine results page items."
+            "If specified, follow organic search result links, and extract "
+            "the selected data type from the target pages. Spider output "
+            "items will be of the specified data type, not search engine "
+            "results page items."
         ),
         default=None,
     )
