@@ -432,6 +432,15 @@ def test_pagination():
     assert requests[0].url == "https://www.google.com/search?q=foo+bar&start=20"
     assert requests[0].cb_kwargs["page_number"] == 3
 
+    items, requests = run_parse_serp(
+        spider,
+        total_results=None,
+    )
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&start=10"
+    assert requests[0].cb_kwargs["page_number"] == 2
+
 
 def test_get_serp_request():
     crawler = get_crawler()
