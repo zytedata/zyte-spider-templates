@@ -372,11 +372,7 @@ def test_metadata():
                         {"type": "null"},
                     ],
                     "default": None,
-                    "description": (
-                        "ISO 3166-1 alpha-2 2-character string specified in "
-                        "https://docs.zyte.com/zyte-api/usage/reference.html"
-                        "#operation/extract/request/geolocation."
-                    ),
+                    "description": ("Country of the IP addresses to use."),
                     "enumMeta": {
                         code: {
                             "title": GEOLOCATION_OPTIONS_WITH_CODE[code],

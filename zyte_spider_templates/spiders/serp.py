@@ -47,9 +47,8 @@ class SerpGeolocationParam(BaseModel):
     geolocation: Optional[Geolocation] = Field(
         # The title, worded like this for contrast with gl, is the reason why
         # ..params.GeolocationParam is not used.
-        title="Geolocation (IP address)",
-        description="ISO 3166-1 alpha-2 2-character string specified in "
-        "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
+        title="Geolocation (IP addresses)",
+        description="Country of the IP addresses to use.",
         default=None,
         json_schema_extra={
             "enumMeta": {

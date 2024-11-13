@@ -78,8 +78,7 @@ class ExtractFromParam(BaseModel):
 class GeolocationParam(BaseModel):
     geolocation: Optional[Geolocation] = Field(
         title="Geolocation",
-        description="ISO 3166-1 alpha-2 2-character string specified in "
-        "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
+        description="Country of the IP addresses to use.",
         default=None,
         json_schema_extra={
             "enumMeta": {
