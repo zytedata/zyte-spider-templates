@@ -281,7 +281,7 @@ def test_metadata():
                         "product",
                         "productList",
                     ],
-                    "title": "Item type",
+                    "title": "Follow and Extract",
                 },
                 "max_requests": {
                     "anyOf": [{"type": "integer"}, {"type": "null"}],

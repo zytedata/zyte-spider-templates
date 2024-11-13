@@ -104,7 +104,7 @@ ITEM_TYPE_CLASSES = {
 
 class SerpItemTypeParam(BaseModel):
     item_type: Optional[SerpItemType] = Field(
-        title="Item type",
+        title="Follow and Extract",
         description=(
             "If specified, result URLs are followed to extract the specified "
             "item type. Spider output items will be of the specified item "
