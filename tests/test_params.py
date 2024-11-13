@@ -128,8 +128,7 @@ def test_arg_combinations(spider_cls, args, valid):
     (
         # extract_from
         *(
-            (spider_cls, *scenario)
-            for spider_cls in (EcommerceSpider,)
+            (EcommerceSpider, *scenario)
             for scenario in (
                 (
                     "extract_from",
