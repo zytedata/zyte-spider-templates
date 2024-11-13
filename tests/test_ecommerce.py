@@ -471,12 +471,8 @@ def test_metadata():
                 "search_queries": {
                     "default": [],
                     "description": (
-                        "Turn the input URLs into search requests for these "
-                        "queries. You may specify a separate search query per "
-                        "line. If search request building fails, you can "
-                        "instead pass search URLs as input start URLs, or "
-                        "customize the AI spider project with a search "
-                        "request template page object (check the docs)."
+                        "A list of search queries, one per line, to submit "
+                        "using the search form found on each input URL."
                     ),
                     "items": {"type": "string"},
                     "title": "Search Queries",
