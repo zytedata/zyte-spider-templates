@@ -300,11 +300,18 @@ def test_metadata():
                     "type": "integer",
                 },
                 "results_per_page": {
-                    "default": 10,
+                    "anyOf": [
+                        {
+                            "minimum": 1,
+                            "type": "integer",
+                        },
+                        {
+                            "type": "null",
+                        },
+                    ],
+                    "default": None,
                     "description": "Maximum number of results per page.",
-                    "minimum": 1,
                     "title": "Results Per Page",
-                    "type": "integer",
                 },
                 "max_requests": {
                     "anyOf": [{"type": "integer"}, {"type": "null"}],
