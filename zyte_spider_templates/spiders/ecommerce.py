@@ -170,6 +170,7 @@ class EcommerceSpiderParams(
         if self.search_queries and self.crawl_strategy in {
             EcommerceCrawlStrategy.direct_item,
             EcommerceCrawlStrategy.full,
+            EcommerceCrawlStrategy.navigation,
         }:
             raise ValueError(
                 f"Cannot combine the {self.crawl_strategy.value!r} value of "
@@ -311,7 +312,10 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             else:
                 yield self.get_nextpage_request(navigation.nextPage)
 
-        if self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only:
+        if (
+            self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only
+            and not self.args.search_queries
+        ):
             for request in navigation.subCategories or []:
                 yield self.get_subcategory_request(request, page_params=page_params)
 
