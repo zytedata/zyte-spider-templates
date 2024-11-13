@@ -9,6 +9,7 @@ from zyte_common_items import Serp
 
 from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
+from ._google_hl import GOOGLE_HL_OPTIONS_WITH_CODE, GoogleHl
 from .base import BaseSpider
 
 
@@ -39,6 +40,25 @@ class SearchQueriesParam(BaseModel):
         return result
 
 
+class GoogleHlParam(BaseModel):
+    hl: Optional[GoogleHl] = Field(
+        title="UI Language",
+        description=(
+            "Set the Google user interface language, which can affect search "
+            "results."
+        ),
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GOOGLE_HL_OPTIONS_WITH_CODE[code],
+                }
+                for code in GoogleHl
+            }
+        },
+    )
+
+
 class SerpMaxPagesParam(BaseModel):
     max_pages: int = Field(
         title="Max Pages",
@@ -58,6 +78,7 @@ class GoogleDomainParam(BaseModel):
 
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
+    GoogleHlParam,
     SerpMaxPagesParam,
     SearchQueriesParam,
     GoogleDomainParam,
@@ -99,6 +120,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             )
 
     def get_serp_request(self, url: str, *, page_number: int):
+        if self.args.hl:
+            url = add_or_replace_parameter(url, "hl", self.args.hl.value)
         return Request(
             url=url,
             callback=self.parse_serp,
