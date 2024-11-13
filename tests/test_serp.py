@@ -316,7 +316,7 @@ def test_metadata():
                         {"type": "null"},
                     ],
                     "default": None,
-                    "description": ("Country of the IP addresses to use."),
+                    "description": "Country of the IP addresses to use.",
                     "enumMeta": {
                         code: {
                             "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
