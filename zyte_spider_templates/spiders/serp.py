@@ -13,6 +13,37 @@ from ._google_hl import GOOGLE_HL_OPTIONS_WITH_CODE, GoogleHl
 from .base import BaseSpider
 
 
+class GoogleHlParam(BaseModel):
+    hl: Optional[GoogleHl] = Field(
+        title="UI Language",
+        description=(
+            "User interface language, which can affect search results. See "
+            "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.hl"
+        ),
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GOOGLE_HL_OPTIONS_WITH_CODE[code],
+                }
+                for code in GoogleHl
+            }
+        },
+    )
+
+
+class GoogleLrParam(BaseModel):
+    lr: Optional[str] = Field(
+        title="Content Languages",
+        description=(
+            "Restricts search results to documents written in the specified "
+            "languages. See "
+            "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.lr"
+        ),
+        default=None,
+    )
+
+
 class SearchQueriesParam(BaseModel):
     search_queries: Optional[List[str]] = Field(
         title="Search Queries",
@@ -40,25 +71,6 @@ class SearchQueriesParam(BaseModel):
         return result
 
 
-class GoogleHlParam(BaseModel):
-    hl: Optional[GoogleHl] = Field(
-        title="UI Language",
-        description=(
-            "Set the Google user interface language, which can affect search "
-            "results."
-        ),
-        default=None,
-        json_schema_extra={
-            "enumMeta": {
-                code: {
-                    "title": GOOGLE_HL_OPTIONS_WITH_CODE[code],
-                }
-                for code in GoogleHl
-            }
-        },
-    )
-
-
 class SerpMaxPagesParam(BaseModel):
     max_pages: int = Field(
         title="Max Pages",
@@ -78,6 +90,7 @@ class GoogleDomainParam(BaseModel):
 
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
+    GoogleLrParam,
     GoogleHlParam,
     SerpMaxPagesParam,
     SearchQueriesParam,
@@ -122,6 +135,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
     def get_serp_request(self, url: str, *, page_number: int):
         if self.args.hl:
             url = add_or_replace_parameter(url, "hl", self.args.hl.value)
+        if self.args.lr:
+            url = add_or_replace_parameter(url, "lr", self.args.lr)
         return Request(
             url=url,
             callback=self.parse_serp,
