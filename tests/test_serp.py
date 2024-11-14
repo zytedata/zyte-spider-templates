@@ -22,7 +22,7 @@ from . import get_crawler
 from .utils import assertEqualSpiderMetadata
 
 
-def run_parse_serp(spider, total_results=99999, page=1, query="foo"):
+def run_parse_serp(spider, total_results=99999, page=1, query="foo", results=10):
     url = f"https://www.google.com/search?q={quote_plus(query)}"
     if page > 1:
         url = add_or_replace_parameter(url, "start", (page - 1) * 10)
@@ -36,7 +36,7 @@ def run_parse_serp(spider, total_results=99999, page=1, query="foo"):
                         "url": f"https://example.com/{rank}",
                         "rank": rank,
                     }
-                    for rank in range(1, 11)
+                    for rank in range(1, results + 1)
                 ],
                 "metadata": {
                     "dateDownloaded": "2024-10-25T08:59:45Z",
@@ -440,6 +440,17 @@ def test_pagination():
     assert len(requests) == 1
     assert requests[0].url == "https://www.google.com/search?q=foo&start=10"
     assert requests[0].cb_kwargs["page_number"] == 2
+
+    # Ensure a lack of results stops pagination even if total_results reports
+    # additional results.
+    # https://github.com/zytedata/zyte-spider-templates/pull/80/files/359c342008e2e4d5a913d450ddd2dda6c887747c#r1840897802
+    items, requests = run_parse_serp(
+        spider,
+        total_results=None,
+        results=0,
+    )
+    assert len(items) == 1
+    assert len(requests) == 0
 
 
 def test_get_serp_request():

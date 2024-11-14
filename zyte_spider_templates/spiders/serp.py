@@ -169,9 +169,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         serp = Serp.from_dict(response.raw_api_response["serp"])
 
         next_start = page_number * self._results_per_page
-        if (
-            serp.organicResults
-            and serp.metadata.totalOrganicResults is None
+        if serp.organicResults and (
+            serp.metadata.totalOrganicResults is None
             or serp.metadata.totalOrganicResults > next_start
         ):
             next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
