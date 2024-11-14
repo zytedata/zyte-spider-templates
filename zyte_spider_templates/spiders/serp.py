@@ -14,6 +14,37 @@ from ._google_gl import GOOGLE_GL_OPTIONS_WITH_CODE, GoogleGl
 from .base import BaseSpider
 
 
+class GoogleCrParam(BaseModel):
+    cr: Optional[str] = Field(
+        title="Content Countries",
+        description=(
+            "Restricts search results to documents originating in "
+            "particular countries. See "
+            "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.cr"
+        ),
+        default=None,
+    )
+
+
+class GoogleGlParam(BaseModel):
+    gl: Optional[GoogleGl] = Field(
+        title="User Country",
+        description=(
+            "Boosts results relevant to this country. See "
+            "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.gl"
+        ),
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GOOGLE_GL_OPTIONS_WITH_CODE[code],
+                }
+                for code in GoogleGl
+            }
+        },
+    )
+
+
 class SearchQueriesParam(BaseModel):
     search_queries: Optional[List[str]] = Field(
         title="Search Queries",
@@ -47,7 +78,7 @@ class SerpGeolocationParam(BaseModel):
     geolocation: Optional[Geolocation] = Field(
         # The title, worded like this for contrast with gl, is the reason why
         # ..params.GeolocationParam is not used.
-        title="Geolocation (IP addresses)",
+        title="IP Country",
         description="Country of the IP addresses to use.",
         default=None,
         json_schema_extra={
@@ -56,22 +87,6 @@ class SerpGeolocationParam(BaseModel):
                     "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
                 }
                 for code in Geolocation
-            }
-        },
-    )
-
-
-class GoogleGlParam(BaseModel):
-    gl: Optional[GoogleGl] = Field(
-        title="Geolocation (Google)",
-        description="Ask Google to boost results relevant to this country.",
-        default=None,
-        json_schema_extra={
-            "enumMeta": {
-                code: {
-                    "title": GOOGLE_GL_OPTIONS_WITH_CODE[code],
-                }
-                for code in GoogleGl
             }
         },
     )
@@ -97,6 +112,7 @@ class GoogleDomainParam(BaseModel):
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
     SerpGeolocationParam,
+    GoogleCrParam,
     GoogleGlParam,
     SerpMaxPagesParam,
     SearchQueriesParam,
@@ -139,6 +155,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             )
 
     def get_serp_request(self, url: str, *, page_number: int):
+        if self.args.cr:
+            url = add_or_replace_parameter(url, "cr", self.args.cr)
         if self.args.gl:
             url = add_or_replace_parameter(url, "gl", self.args.gl.value)
         return Request(

@@ -297,7 +297,8 @@ def test_metadata():
                     ],
                     "default": None,
                     "description": (
-                        "Ask Google to boost results relevant to this country."
+                        "Boosts results relevant to this country. See "
+                        "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.gl"
                     ),
                     "enumMeta": {
                         code: {
@@ -305,10 +306,23 @@ def test_metadata():
                         }
                         for code in sorted(GoogleGl)
                     },
-                    "title": "Geolocation (Google)",
+                    "title": "User Country",
                     "enum": list(
                         sorted(GOOGLE_GL_OPTIONS, key=GOOGLE_GL_OPTIONS.__getitem__)
                     ),
+                },
+                "cr": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": (
+                        "Restricts search results to documents originating in "
+                        "particular countries. See "
+                        "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.cr"
+                    ),
+                    "title": "Content Countries",
                 },
                 "geolocation": {
                     "anyOf": [
@@ -323,7 +337,7 @@ def test_metadata():
                         }
                         for code in sorted(Geolocation)
                     },
-                    "title": "Geolocation (IP addresses)",
+                    "title": "IP Country",
                     "enum": list(
                         sorted(GEOLOCATION_OPTIONS, key=GEOLOCATION_OPTIONS.__getitem__)
                     ),
@@ -509,6 +523,27 @@ def test_parse_serp():
     # The page_number parameter is required.
     with pytest.raises(TypeError):
         spider.parse_serp(response)
+
+
+def test_cr():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo", cr="(-countryFR).(-countryIT)"
+    )
+    requests = list(spider.start_requests())
+    assert len(requests) == 1
+    assert (
+        requests[0].url
+        == "https://www.google.com/search?q=foo&cr=%28-countryFR%29.%28-countryIT%29"
+    )
+
+    items, requests = run_parse_serp(spider)
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert (
+        requests[0].url
+        == "https://www.google.com/search?q=foo&start=10&cr=%28-countryFR%29.%28-countryIT%29"
+    )
 
 
 def test_gl():
