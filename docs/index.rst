@@ -19,6 +19,7 @@ zyte-spider-templates documentation
    templates/index
    E-commerce <templates/e-commerce>
    Google search <templates/google-search>
+   Job posting <templates/job-posting>
 
 .. toctree::
    :caption: Customization

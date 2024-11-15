@@ -62,3 +62,6 @@ autodoc_pydantic_model_show_validator_summary = False
 redirects = {
     "customization/page-objects": "pages.html",
 }
+
+# workaround for https://github.com/pydantic/pydantic/discussions/7763
+import zyte_spider_templates.spiders.job_posting  # noqa: F401, E402

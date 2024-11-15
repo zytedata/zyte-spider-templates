@@ -46,3 +46,9 @@ Parameter mixins
 
 .. autopydantic_model:: zyte_spider_templates.spiders.serp.SerpMaxPagesParam
     :exclude-members: model_computed_fields
+
+.. autopydantic_model:: zyte_spider_templates.spiders.job_posting.JobPostingCrawlStrategyParam
+    :exclude-members: model_computed_fields
+
+.. autoenum:: zyte_spider_templates.spiders.job_posting.JobPostingCrawlStrategy
+
