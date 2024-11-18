@@ -195,31 +195,17 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
                 f"less than threshold of 0.1:\n{job_posting}"
             )
 
-    @staticmethod
-    def get_parse_navigation_request_priority(
-        request: Union[ProbabilityRequest, Request]
-    ) -> int:
-        if (
-            not hasattr(request, "metadata")
-            or not request.metadata
-            or request.metadata.probability is None
-        ):
-            return 0
-        return int(100 * request.metadata.probability)
-
     def get_parse_navigation_request(
         self,
         request: Union[ProbabilityRequest, Request],
         callback: Optional[Callable] = None,
         page_params: Optional[Dict[str, Any]] = None,
-        priority: Optional[int] = None,
         page_type: str = "jobPostingNavigation",
     ) -> Request:
         callback = callback or self.parse_navigation
 
         return request.to_scrapy(
             callback=callback,
-            priority=priority or self.get_parse_navigation_request_priority(request),
             meta={
                 "page_params": page_params or {},
                 "crawling_logs": {
@@ -237,26 +223,18 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
         page_params: Optional[Dict[str, Any]] = None,
     ):
         return self.get_parse_navigation_request(
-            request, callback, page_params, self._NEXT_PAGE_PRIORITY, "nextPage"
+            request, callback, page_params, "nextPage"
         )
-
-    def get_parse_job_posting_request_priority(
-        self, request: ProbabilityRequest
-    ) -> int:
-        probability = request.get_probability() or 0
-        return int(100 * probability) + self._NEXT_PAGE_PRIORITY
 
     def get_parse_job_posting_request(
         self, request: ProbabilityRequest, callback: Optional[Callable] = None
     ) -> Request:
         callback = callback or self.parse_job_posting
-        priority = self.get_parse_job_posting_request_priority(request)
 
         probability = request.get_probability()
 
         scrapy_request = request.to_scrapy(
             callback=callback,
-            priority=priority,
             meta={
                 "crawling_logs": {
                     "name": request.name,

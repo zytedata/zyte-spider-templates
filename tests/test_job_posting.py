@@ -93,7 +93,6 @@ def test_crawl():
     assert requests[1].callback == spider.parse_job_posting
     assert requests[2].url == nextpage_url
     assert requests[2].callback == spider.parse_navigation
-    assert [request.priority for request in requests] == [199, 183, 100]
 
     # nextpage
     navigation = JobPostingNavigation.from_dict(
@@ -118,7 +117,6 @@ def test_crawl():
     assert requests[0].callback == spider.parse_job_posting
     assert requests[1].url == item_urls[1]
     assert requests[1].callback == spider.parse_job_posting
-    assert [request.priority for request in requests] == [199, 183]
 
 
 def test_crawl_strategy_direct_item():
@@ -482,7 +480,6 @@ def test_get_nextpage_request():
     scrapy_request = spider.get_nextpage_request(request)
     assert isinstance(scrapy_request, scrapy.Request)
     assert scrapy_request.callback == parse_navigation
-    assert scrapy_request.priority == 100
     assert scrapy_request.meta == {
         "page_params": {},
         "crawling_logs": {"name": "", "probability": None, "page_type": "nextPage"},
@@ -501,7 +498,6 @@ def test_get_parse_navigation_request():
     scrapy_request = spider.get_parse_navigation_request(request)
     assert isinstance(scrapy_request, scrapy.Request)
     assert scrapy_request.callback == parse_navigation
-    assert scrapy_request.priority == 0
     assert scrapy_request.meta == {
         "page_params": {},
         "crawling_logs": {
