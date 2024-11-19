@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 @document_enum
 class JobPostingCrawlStrategy(str, Enum):
-    category: str = "category"
+    navigation: str = "navigation"
     """Follow pagination and job posting detail pages."""
 
     direct_item: str = "direct_item"
@@ -50,11 +50,11 @@ class JobPostingCrawlStrategyParam(BaseModel):
     crawl_strategy: JobPostingCrawlStrategy = Field(
         title="Crawl strategy",
         description="Determines how input URLs and follow-up URLs are crawled.",
-        default=JobPostingCrawlStrategy.category,
+        default=JobPostingCrawlStrategy.navigation,
         json_schema_extra={
             "enumMeta": {
-                JobPostingCrawlStrategy.category: {
-                    "title": "Category",
+                JobPostingCrawlStrategy.navigation: {
+                    "title": "Navigation",
                     "description": "Follow pagination and job posting detail pages.",
                 },
                 JobPostingCrawlStrategy.direct_item: {
@@ -104,7 +104,7 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
         "title": "Job posting",
-        "description": "Template for spiders that extract job posting data from job websites.",
+        "description": "Template for spiders that extract job posting data from websites.",
     }
 
     @classmethod

@@ -269,7 +269,7 @@ def test_metadata():
     expected_metadata = {
         "template": True,
         "title": "Job posting",
-        "description": "Template for spiders that extract job posting data from job websites.",
+        "description": "Template for spiders that extract job posting data from websites.",
         "param_schema": {
             "groups": [
                 {
@@ -325,16 +325,16 @@ def test_metadata():
                     "type": "string",
                 },
                 "crawl_strategy": {
-                    "default": "category",
+                    "default": "navigation",
                     "description": (
                         "Determines how input URLs and follow-up URLs are crawled."
                     ),
                     "enumMeta": {
-                        "category": {
+                        "navigation": {
                             "description": (
                                 "Follow pagination and job posting detail pages."
                             ),
-                            "title": "Category",
+                            "title": "Navigation",
                         },
                         "direct_item": {
                             "description": (
@@ -346,7 +346,7 @@ def test_metadata():
                     },
                     "title": "Crawl strategy",
                     "enum": [
-                        "category",
+                        "navigation",
                         "direct_item",
                     ],
                     "type": "string",
