@@ -7,7 +7,7 @@ import scrapy
 from pydantic import ValidationError
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
-from zyte_common_items import ProbabilityRequest, Product, ProductNavigation, Request
+from zyte_common_items import ProbabilityRequest, Product, ProductNavigation
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS,
@@ -357,7 +357,7 @@ def test_arguments():
         spider = EcommerceSpider.from_crawler(crawler, **kwargs, **base_kwargs)
         getter = getattr(crawler.settings, getter_name)
         assert getter(setting) == new_setting_value
-        assert spider.allowed_domains == ["example.com"]
+        assert spider.allowed_domains == ["example.com"]  # type: ignore[attr-defined]
 
 
 def test_metadata():
@@ -607,7 +607,7 @@ def test_get_subcategory_request():
     url = "https://example.com"
 
     # Normal request but with mostly empty values
-    request = Request(url)
+    request = ProbabilityRequest(url=url)
     spider = EcommerceSpider(url="https://example.com")
     parse_navigation = lambda _: None
     spider.parse_navigation = parse_navigation  # type: ignore
@@ -678,7 +678,7 @@ def test_get_nextpage_request():
     url = "https://example.com"
 
     # Minimal Args
-    request = Request(url)
+    request = ProbabilityRequest(url=url)
     spider = EcommerceSpider(url="https://example.com")
     parse_navigation = lambda _: None
     spider.parse_navigation = parse_navigation  # type: ignore
@@ -697,7 +697,7 @@ def test_get_parse_navigation_request():
     url = "https://example.com"
 
     # Minimal args
-    request = Request(url)
+    request = ProbabilityRequest(url=url)
     spider = EcommerceSpider(url="https://example.com")
     parse_navigation = lambda _: None
     spider.parse_navigation = parse_navigation  # type: ignore
@@ -722,7 +722,7 @@ def test_set_allowed_domains(url, allowed_domain):
 
     kwargs = {"url": url}
     spider = EcommerceSpider.from_crawler(crawler, **kwargs)
-    assert spider.allowed_domains == [allowed_domain]
+    assert spider.allowed_domains == [allowed_domain]  # type: ignore[attr-defined]
 
 
 def test_input_none():

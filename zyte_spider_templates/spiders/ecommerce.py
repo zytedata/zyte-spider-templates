@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 from enum import Enum
-from typing import Any, Callable, Dict, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Optional, Union, cast
 
 import scrapy
 from pydantic import BaseModel, ConfigDict, Field
-from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
@@ -34,6 +35,10 @@ from ..params import (
     UrlsFileParam,
     UrlsParam,
 )
+
+if TYPE_CHECKING:
+    # typing.Self requires Python 3.11
+    from typing_extensions import Self
 
 
 @document_enum
@@ -180,7 +185,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
     }
 
     @classmethod
-    def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
+    def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> Self:
         spider = super(EcommerceSpider, cls).from_crawler(crawler, *args, **kwargs)
         parse_input_params(spider)
         spider._init_extract_from()
@@ -204,7 +209,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
             else self.parse_navigation
         )
-        meta = {
+        meta: Dict[str, Any] = {
             "crawling_logs": {
                 "page_type": "product"
                 if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
@@ -234,19 +239,19 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                     f"Heuristics won't be used to crawl other pages which might have products."
                 )
 
-        return Request(
+        return scrapy.Request(
             url=url,
             callback=callback,
             meta=meta,
         )
 
-    def start_requests(self) -> Iterable[Request]:
+    def start_requests(self) -> Iterable[scrapy.Request]:
         for url in self.start_urls:
             yield self.get_start_request(url)
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
-    ) -> Iterable[Request]:
+    ) -> Iterable[scrapy.Request]:
         page_params = self._modify_page_params_for_heuristics(
             response.meta.get("page_params")
         )
@@ -262,7 +267,9 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                     f"are no product links found in {navigation.url}"
                 )
             else:
-                yield self.get_nextpage_request(navigation.nextPage)
+                yield self.get_nextpage_request(
+                    cast(ProbabilityRequest, navigation.nextPage)
+                )
 
         if self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only:
             for request in navigation.subCategories or []:
@@ -285,6 +292,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             else:
                 yield product
         else:
+            assert self.crawler.stats
             self.crawler.stats.inc_value("drop_item/product/low_probability")
             self.logger.info(
                 f"Ignoring item from {response.url} since its probability is "
@@ -292,9 +300,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             )
 
     @staticmethod
-    def get_parse_navigation_request_priority(
-        request: Union[ProbabilityRequest, Request]
-    ) -> int:
+    def get_parse_navigation_request_priority(request: ProbabilityRequest) -> int:
         if (
             not hasattr(request, "metadata")
             or not request.metadata
@@ -305,7 +311,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
     def get_parse_navigation_request(
         self,
-        request: Union[ProbabilityRequest, Request],
+        request: ProbabilityRequest,
         callback: Optional[Callable] = None,
         page_params: Optional[Dict[str, Any]] = None,
         priority: Optional[int] = None,
@@ -328,7 +334,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
     def get_subcategory_request(
         self,
-        request: Union[ProbabilityRequest, Request],
+        request: ProbabilityRequest,
         callback: Optional[Callable] = None,
         page_params: Optional[Dict[str, Any]] = None,
         priority: Optional[int] = None,
@@ -350,7 +356,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
     def get_nextpage_request(
         self,
-        request: Union[ProbabilityRequest, Request],
+        request: ProbabilityRequest,
         callback: Optional[Callable] = None,
         page_params: Optional[Dict[str, Any]] = None,
     ):
@@ -369,7 +375,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         priority = self.get_parse_product_request_priority(request)
 
         probability = request.get_probability()
-        meta = {
+        meta: Dict[str, Any] = {
             "crawling_logs": {
                 "name": request.name,
                 "probability": probability,

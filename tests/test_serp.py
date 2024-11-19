@@ -399,7 +399,7 @@ def test_get_serp_request():
 
     # The page_number parameter is required.
     with pytest.raises(TypeError):
-        spider.get_serp_request(url)
+        spider.get_serp_request(url)  # type: ignore[call-arg]
 
 
 def test_parse_serp():
@@ -444,4 +444,4 @@ def test_parse_serp():
 
     # The page_number parameter is required.
     with pytest.raises(TypeError):
-        spider.parse_serp(response)
+        spider.parse_serp(response)  # type: ignore[call-arg]
