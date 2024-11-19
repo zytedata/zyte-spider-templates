@@ -300,9 +300,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             )
 
     @staticmethod
-    def get_parse_navigation_request_priority(
-        request: Union[ProbabilityRequest, scrapy.Request]
-    ) -> int:
+    def get_parse_navigation_request_priority(request: ProbabilityRequest) -> int:
         if (
             not hasattr(request, "metadata")
             or not request.metadata
