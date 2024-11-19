@@ -7,12 +7,7 @@ import scrapy
 from pydantic import ValidationError
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import get_spider_metadata
-from zyte_common_items import (
-    JobPosting,
-    JobPostingNavigation,
-    ProbabilityRequest,
-    Request,
-)
+from zyte_common_items import JobPosting, JobPostingNavigation, ProbabilityRequest
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS,
@@ -472,7 +467,7 @@ def test_get_nextpage_request():
     url = "https://example.com"
 
     # Minimal Args
-    request = Request(url)
+    request = ProbabilityRequest(url=url)
     spider = JobPostingSpider(url="https://example.com")
     parse_navigation = lambda _: None
     spider.parse_navigation = parse_navigation  # type: ignore
@@ -490,7 +485,7 @@ def test_get_parse_navigation_request():
     url = "https://example.com"
 
     # Minimal args
-    request = Request(url)
+    request = ProbabilityRequest(url=url)
     spider = JobPostingSpider(url="https://example.com")
     parse_navigation = lambda _: None
     spider.parse_navigation = parse_navigation  # type: ignore

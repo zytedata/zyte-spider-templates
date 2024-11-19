@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Optional, cast
 
 import requests
+import scrapy
 from pydantic import BaseModel, ConfigDict, Field
-from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import Args
@@ -154,19 +154,19 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
                 else "jobPostingNavigation"
             },
         }
-        return Request(
+        return scrapy.Request(
             url=url,
             callback=callback,
             meta=meta,
         )
 
-    def start_requests(self) -> Iterable[Request]:
+    def start_requests(self) -> Iterable[scrapy.Request]:
         for url in self.start_urls:
             yield self.get_start_request(url)
 
     def parse_navigation(
         self, response: DummyResponse, navigation: JobPostingNavigation
-    ) -> Iterable[Request]:
+    ) -> Iterable[scrapy.Request]:
         job_postings = navigation.items or []
         for request in job_postings:
             yield self.get_parse_job_posting_request(request)
@@ -178,7 +178,9 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
                     f"are no job posting links found in {navigation.url}"
                 )
             else:
-                yield self.get_nextpage_request(navigation.nextPage)
+                yield self.get_nextpage_request(
+                    cast(ProbabilityRequest, navigation.nextPage)
+                )
 
     def parse_job_posting(
         self, response: DummyResponse, job_posting: JobPosting
@@ -189,6 +191,7 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
         if probability is None or probability >= 0.1:
             yield job_posting
         else:
+            assert self.crawler.stats
             self.crawler.stats.inc_value("drop_item/job_posting/low_probability")
             self.logger.info(
                 f"Ignoring item from {response.url} since its probability is "
@@ -197,11 +200,11 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
 
     def get_parse_navigation_request(
         self,
-        request: Union[ProbabilityRequest, Request],
+        request: ProbabilityRequest,
         callback: Optional[Callable] = None,
         page_params: Optional[Dict[str, Any]] = None,
         page_type: str = "jobPostingNavigation",
-    ) -> Request:
+    ) -> scrapy.Request:
         callback = callback or self.parse_navigation
 
         return request.to_scrapy(
@@ -218,7 +221,7 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
 
     def get_nextpage_request(
         self,
-        request: Union[ProbabilityRequest, Request],
+        request: ProbabilityRequest,
         callback: Optional[Callable] = None,
         page_params: Optional[Dict[str, Any]] = None,
     ):
@@ -228,7 +231,7 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
 
     def get_parse_job_posting_request(
         self, request: ProbabilityRequest, callback: Optional[Callable] = None
-    ) -> Request:
+    ) -> scrapy.Request:
         callback = callback or self.parse_job_posting
 
         probability = request.get_probability()
