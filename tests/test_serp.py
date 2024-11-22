@@ -260,7 +260,7 @@ def test_metadata():
                     "type": "integer",
                 },
                 "max_requests": {
-                    "anyOf": [{"type": "integer"}, {"type": "null"}],
+                    "anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}],
                     "default": 100,
                     "description": (
                         "The maximum number of Zyte API requests allowed for the crawl.\n"

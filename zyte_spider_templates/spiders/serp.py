@@ -58,6 +58,7 @@ class SerpMaxRequestsParam(BaseModel):
             "and do not increase the request count in Scrapy Cloud."
         ),
         default=100,
+        ge=1,
     )
 
 
