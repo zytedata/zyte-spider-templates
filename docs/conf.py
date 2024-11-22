@@ -22,6 +22,14 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
 
 intersphinx_mapping = {
+    "form2request": (
+        "https://form2request.readthedocs.io/en/latest",
+        None,
+    ),
+    "formasaurus": (
+        "https://formasaurus.readthedocs.io/en/latest",
+        None,
+    ),
     "python": (
         "https://docs.python.org/3",
         None,

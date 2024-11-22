@@ -4,19 +4,21 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Optional, Union, cast
 
 import scrapy
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
+from web_poet.page_inputs.browser import BrowserResponse
 from zyte_common_items import (
     CustomAttributes,
     ProbabilityRequest,
     Product,
     ProductNavigation,
+    SearchRequestTemplate,
 )
 
 from zyte_spider_templates.heuristics import is_homepage
-from zyte_spider_templates.params import parse_input_params
+from zyte_spider_templates.params import ExtractFrom, parse_input_params
 from zyte_spider_templates.spiders.base import (
     ARG_SETTING_PRIORITY,
     INPUT_GROUP,
@@ -31,6 +33,7 @@ from ..params import (
     ExtractFromParam,
     GeolocationParam,
     MaxRequestsParam,
+    SearchQueriesParam,
     UrlParam,
     UrlsFileParam,
     UrlsParam,
@@ -153,6 +156,7 @@ class EcommerceSpiderParams(
     MaxRequestsParam,
     GeolocationParam,
     EcommerceCrawlStrategyParam,
+    SearchQueriesParam,
     UrlsFileParam,
     UrlsParam,
     UrlParam,
@@ -165,6 +169,20 @@ class EcommerceSpiderParams(
             ],
         },
     )
+
+    @model_validator(mode="after")
+    def validate_direct_item_and_search_queries(self):
+        if self.search_queries and self.crawl_strategy in {
+            EcommerceCrawlStrategy.direct_item,
+            EcommerceCrawlStrategy.full,
+            EcommerceCrawlStrategy.navigation,
+        }:
+            raise ValueError(
+                f"Cannot combine the {self.crawl_strategy.value!r} value of "
+                f"the crawl_strategy spider parameter with the search_queries "
+                f"spider parameter."
+            )
+        return self
 
 
 class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
@@ -246,8 +264,38 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         )
 
     def start_requests(self) -> Iterable[scrapy.Request]:
-        for url in self.start_urls:
-            yield self.get_start_request(url)
+        if self.args.search_queries:
+            for url in self.start_urls:
+                meta: Dict[str, Any] = {
+                    "crawling_logs": {"page_type": "searchRequestTemplate"},
+                }
+                if self.args.extract_from == ExtractFrom.browserHtml:
+                    meta["inject"] = [BrowserResponse]
+                yield scrapy.Request(
+                    url=url,
+                    callback=self.parse_search_request_template,
+                    meta=meta,
+                )
+        else:
+            for url in self.start_urls:
+                yield self.get_start_request(url)
+
+    def parse_search_request_template(
+        self,
+        response: DummyResponse,
+        search_request_template: SearchRequestTemplate,
+        dynamic: DynamicDeps,
+    ) -> Iterable[scrapy.Request]:
+        probability = search_request_template.get_probability()
+        if probability is not None and probability <= 0:
+            return
+        for query in self.args.search_queries:
+            yield search_request_template.request(query=query).to_scrapy(
+                callback=self.parse_navigation,
+                meta={
+                    "crawling_logs": {"page_type": "productNavigation"},
+                },
+            )
 
     def parse_navigation(
         self, response: DummyResponse, navigation: ProductNavigation
@@ -271,7 +319,10 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                     cast(ProbabilityRequest, navigation.nextPage)
                 )
 
-        if self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only:
+        if (
+            self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only
+            and not self.args.search_queries
+        ):
             for request in navigation.subCategories or []:
                 yield self.get_subcategory_request(request, page_params=page_params)
 
