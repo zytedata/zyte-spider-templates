@@ -19,7 +19,6 @@ from zyte_common_items import (
 
 from .._geolocations import GEOLOCATION_OPTIONS_WITH_CODE, Geolocation
 from ..documentation import document_enum
-from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
 from ._google_gl import GOOGLE_GL_OPTIONS_WITH_CODE, GoogleGl
 from ._google_hl import GOOGLE_HL_OPTIONS_WITH_CODE, GoogleHl
@@ -144,6 +143,21 @@ class SerpMaxPagesParam(BaseModel):
     )
 
 
+# MaxRequestsParam without the widget.
+class SerpMaxRequestsParam(BaseModel):
+    max_requests: Optional[int] = Field(
+        description=(
+            "The maximum number of Zyte API requests allowed for the crawl.\n"
+            "\n"
+            "Requests with error responses that cannot be retried or exceed "
+            "their retry limit also count here, but they incur in no costs "
+            "and do not increase the request count in Scrapy Cloud."
+        ),
+        default=100,
+        ge=1,
+    )
+
+
 class SerpResultsPerPageParam(BaseModel):
     results_per_page: Optional[int] = Field(
         title="Results Per Page",
@@ -226,7 +240,7 @@ class GoogleSearchSpiderParams(
     SerpItemTypeParam,
     SerpResultsPerPageParam,
     SerpMaxPagesParam,
-    MaxRequestsParam,
+    SerpMaxRequestsParam,
     SearchQueriesParam,
     GoogleDomainParam,
     BaseModel,

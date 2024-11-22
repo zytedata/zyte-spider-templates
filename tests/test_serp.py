@@ -292,7 +292,7 @@ def test_metadata():
                     "widget": "textarea",
                 },
                 "max_requests": {
-                    "anyOf": [{"type": "integer"}, {"type": "null"}],
+                    "anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}],
                     "default": 100,
                     "description": (
                         "The maximum number of Zyte API requests allowed for the crawl.\n"
@@ -302,7 +302,6 @@ def test_metadata():
                         "and do not increase the request count in Scrapy Cloud."
                     ),
                     "title": "Max Requests",
-                    "widget": "request-limit",
                 },
                 "max_pages": {
                     "default": 1,
