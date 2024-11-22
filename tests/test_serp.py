@@ -270,7 +270,6 @@ def test_metadata():
                         "and do not increase the request count in Scrapy Cloud."
                     ),
                     "title": "Max Requests",
-                    "widget": "request-limit",
                 },
             },
             "required": ["search_queries"],
