@@ -17,10 +17,43 @@ from zyte_common_items import (
     Serp,
 )
 
+from .._geolocations import GEOLOCATION_OPTIONS_WITH_CODE, Geolocation
 from ..documentation import document_enum
 from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
+from ._google_gl import GOOGLE_GL_OPTIONS_WITH_CODE, GoogleGl
 from .base import BaseSpider
+
+
+class GoogleCrParam(BaseModel):
+    cr: Optional[str] = Field(
+        title="Content Countries",
+        description=(
+            "Restricts search results to documents originating in "
+            "particular countries. See "
+            "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.cr"
+        ),
+        default=None,
+    )
+
+
+class GoogleGlParam(BaseModel):
+    gl: Optional[GoogleGl] = Field(
+        title="User Country",
+        description=(
+            "Boosts results relevant to this country. See "
+            "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.gl"
+        ),
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GOOGLE_GL_OPTIONS_WITH_CODE[code],
+                }
+                for code in GoogleGl
+            }
+        },
+    )
 
 
 class SearchQueriesParam(BaseModel):
@@ -48,6 +81,26 @@ class SearchQueriesParam(BaseModel):
         if not result:
             raise ValueError("The search_queries parameter value is missing or empty.")
         return result
+
+
+class SerpGeolocationParam(BaseModel):
+    # We use “geolocation” as parameter name (instead of e.g. “ip_geolocation”)
+    # to reuse the implementation in BaseSpider.
+    geolocation: Optional[Geolocation] = Field(
+        # The title, worded like this for contrast with gl, is the reason why
+        # ..params.GeolocationParam is not used.
+        title="IP Country",
+        description="Country of the IP addresses to use.",
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
+                }
+                for code in Geolocation
+            }
+        },
+    )
 
 
 class SerpMaxPagesParam(BaseModel):
@@ -133,10 +186,13 @@ class GoogleDomainParam(BaseModel):
 
 
 class GoogleSearchSpiderParams(
-    MaxRequestsParam,
+    SerpGeolocationParam,
+    GoogleCrParam,
+    GoogleGlParam,
     SerpItemTypeParam,
     SerpResultsPerPageParam,
     SerpMaxPagesParam,
+    MaxRequestsParam,
     SearchQueriesParam,
     GoogleDomainParam,
     BaseModel,
@@ -177,6 +233,10 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             )
 
     def get_serp_request(self, url: str, *, page_number: int):
+        if self.args.cr:
+            url = add_or_replace_parameter(url, "cr", self.args.cr)
+        if self.args.gl:
+            url = add_or_replace_parameter(url, "gl", self.args.gl.value)
         if self.args.results_per_page:
             url = add_or_replace_parameter(url, "num", str(self.args.results_per_page))
         return Request(
@@ -210,7 +270,10 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             next_start = page_number * (
                 self.args.results_per_page or self._default_results_per_page
             )
-            if serp.organicResults and serp.metadata.totalOrganicResults > next_start:
+            if serp.organicResults and (
+                serp.metadata.totalOrganicResults is None
+                or serp.metadata.totalOrganicResults > next_start
+            ):
                 next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
                 yield self.get_serp_request(next_url, page_number=page_number + 1)
 

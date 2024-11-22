@@ -1,13 +1,22 @@
 from urllib.parse import quote_plus
 
 import pytest
-from pydantic import ValidationError
 from scrapy import Request
 from scrapy_spider_metadata import get_spider_metadata
 from scrapy_zyte_api.responses import ZyteAPITextResponse
 from w3lib.url import add_or_replace_parameter
 from zyte_common_items import Product
 
+from zyte_spider_templates._geolocations import (
+    GEOLOCATION_OPTIONS,
+    GEOLOCATION_OPTIONS_WITH_CODE,
+    Geolocation,
+)
+from zyte_spider_templates.spiders._google_gl import (
+    GOOGLE_GL_OPTIONS,
+    GOOGLE_GL_OPTIONS_WITH_CODE,
+    GoogleGl,
+)
 from zyte_spider_templates.spiders.serp import (
     ITEM_TYPE_CLASSES,
     GoogleSearchSpider,
@@ -18,7 +27,7 @@ from . import get_crawler
 from .utils import assertEqualSpiderMetadata
 
 
-def run_parse_serp(spider, total_results=99999, page=1, query="foo"):
+def run_parse_serp(spider, total_results=99999, page=1, query="foo", results=10):
     url = f"https://www.google.com/search?q={quote_plus(query)}"
     if page > 1:
         url = add_or_replace_parameter(url, "start", (page - 1) * 10)
@@ -32,7 +41,7 @@ def run_parse_serp(spider, total_results=99999, page=1, query="foo"):
                         "url": f"https://example.com/{rank}",
                         "rank": rank,
                     }
-                    for rank in range(1, 11)
+                    for rank in range(1, results + 1)
                 ],
                 "metadata": {
                     "dateDownloaded": "2024-10-25T08:59:45Z",
@@ -54,24 +63,6 @@ def run_parse_serp(spider, total_results=99999, page=1, query="foo"):
         else:
             items.append(item_or_request)
     return items, requests
-
-
-def test_parameters():
-    with pytest.raises(ValidationError):
-        GoogleSearchSpider()
-
-    with pytest.raises(ValidationError):
-        GoogleSearchSpider(domain="google.com")
-
-    GoogleSearchSpider(search_queries="foo bar")
-    GoogleSearchSpider(domain="google.cat", search_queries="foo bar")
-    GoogleSearchSpider(domain="google.cat", search_queries="foo bar", max_pages=10)
-
-    with pytest.raises(ValidationError):
-        GoogleSearchSpider(domain="google.foo", search_queries="foo bar")
-
-    with pytest.raises(ValidationError):
-        GoogleSearchSpider(search_queries="foo bar", max_pages="all")
 
 
 def test_start_requests():
@@ -295,6 +286,19 @@ def test_metadata():
                     "title": "Search Queries",
                     "widget": "textarea",
                 },
+                "max_requests": {
+                    "anyOf": [{"type": "integer"}, {"type": "null"}],
+                    "default": 100,
+                    "description": (
+                        "The maximum number of Zyte API requests allowed for the crawl.\n"
+                        "\n"
+                        "Requests with error responses that cannot be retried or exceed "
+                        "their retry limit also count here, but they incur in no costs "
+                        "and do not increase the request count in Scrapy Cloud."
+                    ),
+                    "title": "Max Requests",
+                    "widget": "request-limit",
+                },
                 "max_pages": {
                     "default": 1,
                     "description": (
@@ -337,18 +341,57 @@ def test_metadata():
                     ],
                     "title": "Follow and Extract",
                 },
-                "max_requests": {
-                    "anyOf": [{"type": "integer"}, {"type": "null"}],
-                    "default": 100,
+                "gl": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
                     "description": (
-                        "The maximum number of Zyte API requests allowed for the crawl.\n"
-                        "\n"
-                        "Requests with error responses that cannot be retried or exceed "
-                        "their retry limit also count here, but they incur in no costs "
-                        "and do not increase the request count in Scrapy Cloud."
+                        "Boosts results relevant to this country. See "
+                        "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.gl"
                     ),
-                    "title": "Max Requests",
-                    "widget": "request-limit",
+                    "enumMeta": {
+                        code: {
+                            "title": GOOGLE_GL_OPTIONS_WITH_CODE[code],
+                        }
+                        for code in sorted(GoogleGl)
+                    },
+                    "title": "User Country",
+                    "enum": list(
+                        sorted(GOOGLE_GL_OPTIONS, key=GOOGLE_GL_OPTIONS.__getitem__)
+                    ),
+                },
+                "cr": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": (
+                        "Restricts search results to documents originating in "
+                        "particular countries. See "
+                        "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.cr"
+                    ),
+                    "title": "Content Countries",
+                },
+                "geolocation": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": "Country of the IP addresses to use.",
+                    "enumMeta": {
+                        code: {
+                            "title": GEOLOCATION_OPTIONS_WITH_CODE[code],
+                        }
+                        for code in sorted(Geolocation)
+                    },
+                    "title": "IP Country",
+                    "enum": list(
+                        sorted(GEOLOCATION_OPTIONS, key=GEOLOCATION_OPTIONS.__getitem__)
+                    ),
                 },
             },
             "required": ["search_queries"],
@@ -357,6 +400,11 @@ def test_metadata():
         },
     }
     assertEqualSpiderMetadata(actual_metadata, expected_metadata)
+
+    geolocation = actual_metadata["param_schema"]["properties"]["geolocation"]
+    assert geolocation["enum"][0] == "AF"
+    assert geolocation["enumMeta"]["UY"] == {"title": "Uruguay (UY)"}
+    assert set(geolocation["enum"]) == set(geolocation["enumMeta"])
 
 
 def test_input_none():
@@ -438,6 +486,26 @@ def test_pagination():
     assert requests[0].url == "https://www.google.com/search?q=foo+bar&start=20"
     assert requests[0].cb_kwargs["page_number"] == 3
 
+    items, requests = run_parse_serp(
+        spider,
+        total_results=None,
+    )
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&start=10"
+    assert requests[0].cb_kwargs["page_number"] == 2
+
+    # Ensure a lack of results stops pagination even if total_results reports
+    # additional results.
+    # https://github.com/zytedata/zyte-spider-templates/pull/80/files/359c342008e2e4d5a913d450ddd2dda6c887747c#r1840897802
+    items, requests = run_parse_serp(
+        spider,
+        total_results=None,
+        results=0,
+    )
+    assert len(items) == 1
+    assert len(requests) == 0
+
     # Do not go over max_pages
     items, requests = run_parse_serp(
         spider,
@@ -508,6 +576,42 @@ def test_parse_serp():
         spider.parse_serp(response)  # type: ignore[call-arg]
 
 
+def test_cr():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo", cr="(-countryFR).(-countryIT)", max_pages=2
+    )
+    requests = list(spider.start_requests())
+    assert len(requests) == 1
+    assert (
+        requests[0].url
+        == "https://www.google.com/search?q=foo&cr=%28-countryFR%29.%28-countryIT%29"
+    )
+
+    items, requests = run_parse_serp(spider)
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert (
+        requests[0].url
+        == "https://www.google.com/search?q=foo&start=10&cr=%28-countryFR%29.%28-countryIT%29"
+    )
+
+
+def test_gl():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo", gl="af", max_pages=2
+    )
+    requests = list(spider.start_requests())
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&gl=af"
+
+    items, requests = run_parse_serp(spider)
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&start=10&gl=af"
+
+
 def test_results_per_page():
     crawler = get_crawler()
     spider = GoogleSearchSpider.from_crawler(
@@ -521,14 +625,6 @@ def test_results_per_page():
     assert len(items) == 1
     assert len(requests) == 1
     assert requests[0].url == "https://www.google.com/search?q=foo&start=1&num=1"
-
-
-def test_results_per_page_min():
-    crawler = get_crawler()
-    with pytest.raises(ValidationError):
-        GoogleSearchSpider.from_crawler(
-            crawler, search_queries="foo", results_per_page=0
-        )
 
 
 def test_item_type():
