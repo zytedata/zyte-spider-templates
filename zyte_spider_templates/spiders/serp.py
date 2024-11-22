@@ -7,7 +7,6 @@ from scrapy_spider_metadata import Args
 from w3lib.url import add_or_replace_parameter
 from zyte_common_items import Serp
 
-from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
 from .base import BaseSpider
 
@@ -48,6 +47,20 @@ class SerpMaxPagesParam(BaseModel):
     )
 
 
+# MaxRequestsParam without the widget.
+class SerpMaxRequestsParam(BaseModel):
+    max_requests: Optional[int] = Field(
+        description=(
+            "The maximum number of Zyte API requests allowed for the crawl.\n"
+            "\n"
+            "Requests with error responses that cannot be retried or exceed "
+            "their retry limit also count here, but they incur in no costs "
+            "and do not increase the request count in Scrapy Cloud."
+        ),
+        default=100,
+    )
+
+
 class GoogleDomainParam(BaseModel):
     domain: GoogleDomain = Field(
         title="Domain",
@@ -57,7 +70,7 @@ class GoogleDomainParam(BaseModel):
 
 
 class GoogleSearchSpiderParams(
-    MaxRequestsParam,
+    SerpMaxRequestsParam,
     SerpMaxPagesParam,
     SearchQueriesParam,
     GoogleDomainParam,
