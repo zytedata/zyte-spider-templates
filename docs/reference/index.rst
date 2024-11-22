@@ -23,6 +23,14 @@ Pages
 Parameter mixins
 ================
 
+.. autopydantic_model:: zyte_spider_templates.params.CustomAttrsInputParam
+    :exclude-members: model_computed_fields
+
+.. autopydantic_model:: zyte_spider_templates.params.CustomAttrsMethodParam
+    :exclude-members: model_computed_fields
+
+.. autoenum:: zyte_spider_templates.params.CustomAttrsMethod
+
 .. autopydantic_model:: zyte_spider_templates.params.ExtractFromParam
     :exclude-members: model_computed_fields
 
