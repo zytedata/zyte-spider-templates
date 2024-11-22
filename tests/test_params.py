@@ -95,6 +95,33 @@ def test_required_args(spider_cls):
             {"url": "https://example.com", "crawl_strategy": "unknown"},
             False,
         ),
+        (
+            EcommerceSpider,
+            {
+                "url": "https://example.com",
+                "crawl_strategy": "direct_item",
+                "search_queries": "",
+            },
+            True,
+        ),
+        (
+            EcommerceSpider,
+            {
+                "url": "https://example.com",
+                "crawl_strategy": "automatic",
+                "search_queries": "foo",
+            },
+            True,
+        ),
+        (
+            EcommerceSpider,
+            {
+                "url": "https://example.com",
+                "crawl_strategy": "direct_item",
+                "search_queries": "foo",
+            },
+            False,
+        ),
         (GoogleSearchSpider, {"domain": "google.com"}, False),
         (
             GoogleSearchSpider,
@@ -112,6 +139,7 @@ def test_required_args(spider_cls):
             False,
         ),
         (GoogleSearchSpider, {"search_queries": "foo bar", "max_pages": "all"}, False),
+        (GoogleSearchSpider, {"search_queries": "foo", "results_per_page": 0}, False),
     ),
 )
 def test_arg_combinations(spider_cls, args, valid):

@@ -4,7 +4,7 @@ from pathlib import Path
 project = "zyte-spider-templates"
 copyright = "2023, Zyte Group Ltd"
 author = "Zyte Group Ltd"
-release = "0.9.0"
+release = "0.10.0"
 
 sys.path.insert(0, str(Path(__file__).parent.absolute()))  # _ext
 extensions = [
@@ -22,6 +22,14 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
 
 intersphinx_mapping = {
+    "form2request": (
+        "https://form2request.readthedocs.io/en/latest",
+        None,
+    ),
+    "formasaurus": (
+        "https://formasaurus.readthedocs.io/en/latest",
+        None,
+    ),
     "python": (
         "https://docs.python.org/3",
         None,
@@ -46,6 +54,10 @@ intersphinx_mapping = {
         "https://web-poet.readthedocs.io/en/stable",
         None,
     ),
+    "zyte": (
+        "https://docs.zyte.com",
+        None,
+    ),
     "zyte-common-items": (
         "https://zyte-common-items.readthedocs.io/en/latest",
         None,
@@ -57,6 +69,7 @@ autodoc_pydantic_model_show_field_summary = False
 autodoc_pydantic_model_show_json = False
 autodoc_pydantic_model_show_validator_members = False
 autodoc_pydantic_model_show_validator_summary = False
+autodoc_pydantic_field_list_validators = False
 
 # sphinx-reredirects
 redirects = {

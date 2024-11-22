@@ -1,13 +1,24 @@
+from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 from scrapy import Request
 from scrapy.settings import SETTINGS_PRIORITIES, BaseSettings
+from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
 from w3lib.url import add_or_replace_parameter
-from zyte_common_items import Serp
+from zyte_common_items import (
+    Article,
+    ArticleList,
+    ForumThread,
+    JobPosting,
+    Product,
+    ProductList,
+    Serp,
+)
 
 from .._geolocations import GEOLOCATION_OPTIONS_WITH_CODE, Geolocation
+from ..documentation import document_enum
 from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
 from ._google_gl import GOOGLE_GL_OPTIONS_WITH_CODE, GoogleGl
@@ -101,6 +112,71 @@ class SerpMaxPagesParam(BaseModel):
     )
 
 
+class SerpResultsPerPageParam(BaseModel):
+    results_per_page: Optional[int] = Field(
+        title="Results Per Page",
+        description="Maximum number of results per page.",
+        ge=1,
+        default=None,
+    )
+
+
+@document_enum
+class SerpItemType(str, Enum):
+    article: str = "article"
+    """
+    Article data.
+    """
+
+    articleList: str = "articleList"
+    """
+    Article list data.
+    """
+
+    forumThread: str = "forumThread"
+    """
+    Forum thread data.
+    """
+
+    jobPosting: str = "jobPosting"
+    """
+    Job posting data.
+    """
+
+    product: str = "product"
+    """
+    Product data.
+    """
+
+    productList: str = "productList"
+    """
+    Product list data.
+    """
+
+
+ITEM_TYPE_CLASSES = {
+    SerpItemType.article: Article,
+    SerpItemType.articleList: ArticleList,
+    SerpItemType.forumThread: ForumThread,
+    SerpItemType.jobPosting: JobPosting,
+    SerpItemType.product: Product,
+    SerpItemType.productList: ProductList,
+}
+
+
+class SerpItemTypeParam(BaseModel):
+    item_type: Optional[SerpItemType] = Field(
+        title="Follow and Extract",
+        description=(
+            "If specified, follow organic search result links, and extract "
+            "the selected data type from the target pages. Spider output "
+            "items will be of the specified data type, not search engine "
+            "results page items."
+        ),
+        default=None,
+    )
+
+
 class GoogleDomainParam(BaseModel):
     domain: GoogleDomain = Field(
         title="Domain",
@@ -110,11 +186,13 @@ class GoogleDomainParam(BaseModel):
 
 
 class GoogleSearchSpiderParams(
-    MaxRequestsParam,
     SerpGeolocationParam,
     GoogleCrParam,
     GoogleGlParam,
+    SerpItemTypeParam,
+    SerpResultsPerPageParam,
     SerpMaxPagesParam,
+    MaxRequestsParam,
     SearchQueriesParam,
     GoogleDomainParam,
     BaseModel,
@@ -132,7 +210,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
     """
 
     name = "google_search"
-    _results_per_page = 10
+    _default_results_per_page = 10
 
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
@@ -159,6 +237,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             url = add_or_replace_parameter(url, "cr", self.args.cr)
         if self.args.gl:
             url = add_or_replace_parameter(url, "gl", self.args.gl.value)
+        if self.args.results_per_page:
+            url = add_or_replace_parameter(url, "num", str(self.args.results_per_page))
         return Request(
             url=url,
             callback=self.parse_serp,
@@ -186,12 +266,32 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
     def parse_serp(self, response, page_number) -> Iterable[Union[Request, Serp]]:
         serp = Serp.from_dict(response.raw_api_response["serp"])
 
-        next_start = page_number * self._results_per_page
-        if serp.organicResults and (
-            serp.metadata.totalOrganicResults is None
-            or serp.metadata.totalOrganicResults > next_start
-        ):
-            next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
-            yield self.get_serp_request(next_url, page_number=page_number + 1)
+        if page_number < self.args.max_pages:
+            next_start = page_number * (
+                self.args.results_per_page or self._default_results_per_page
+            )
+            if serp.organicResults and (
+                serp.metadata.totalOrganicResults is None
+                or serp.metadata.totalOrganicResults > next_start
+            ):
+                next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
+                yield self.get_serp_request(next_url, page_number=page_number + 1)
 
-        yield serp
+        if self.args.item_type is None:
+            yield serp
+            return
+
+        for result in serp.organicResults:
+            yield response.follow(
+                result.url,
+                callback=self.parse_result,
+                meta={
+                    "crawling_logs": {"page_type": self.args.item_type.value},
+                    "inject": [ITEM_TYPE_CLASSES[self.args.item_type]],
+                },
+            )
+
+    def parse_result(
+        self, response: DummyResponse, dynamic: DynamicDeps
+    ) -> Iterable[Any]:
+        yield next(iter(dynamic.values()))

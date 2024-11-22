@@ -45,7 +45,7 @@ class HeuristicsProductNavigationPage(AutoProductNavigationPage):
         default_probability = 0.1
 
         link_extractor = LinkExtractor(
-            allow_domains=self.page_params.get("full_domain")
+            allow_domains=self.page_params.get("full_domain", [])
         )
         ignore_urls = set(self._urls_for_category())
 
