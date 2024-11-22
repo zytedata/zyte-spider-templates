@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from importlib.metadata import version
-from typing import Annotated, Any, Dict
+from typing import TYPE_CHECKING, Annotated, Any, Dict
 from warnings import warn
 
 import scrapy
@@ -18,6 +20,11 @@ from ..params import (
     UrlsFileParam,
     UrlsParam,
 )
+
+if TYPE_CHECKING:
+    # typing.Self requires Python 3.11
+    from typing_extensions import Self
+
 
 # Higher priority than command-line-defined settings (40).
 ARG_SETTING_PRIORITY: int = 50
@@ -55,7 +62,7 @@ class BaseSpiderParams(
 
 
 class BaseSpider(scrapy.Spider):
-    custom_settings: Dict[str, Any] = {
+    custom_settings: Dict[str, Any] = {  # type: ignore[assignment]
         "ZYTE_API_TRANSPARENT_MODE": True,
         "_ZYTE_API_USER_AGENT": f"zyte-spider-templates/{version('zyte-spider-templates')}",
     }
@@ -71,8 +78,12 @@ class BaseSpider(scrapy.Spider):
     _custom_attrs_dep = None
 
     @classmethod
-    def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> scrapy.Spider:
+    def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> Self:
         spider = super().from_crawler(crawler, *args, **kwargs)
+
+        # all subclasses of this need to also have Args as a subclass
+        # this may be possible to express in type hints instead
+        assert hasattr(spider, "args")
 
         if geolocation := getattr(spider.args, "geolocation", None):
             # We set the geolocation in ZYTE_API_PROVIDER_PARAMS for injected

@@ -76,6 +76,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
     """
 
     name = "google_search"
+    _results_per_page = 10
 
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
@@ -97,10 +98,13 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
                 priority="spider",
             )
 
-    def get_start_request(self, url):
+    def get_serp_request(self, url: str, *, page_number: int):
         return Request(
             url=url,
             callback=self.parse_serp,
+            cb_kwargs={
+                "page_number": page_number,
+            },
             meta={
                 "crawling_logs": {"page_type": "serp"},
                 "zyte_api": {
@@ -117,12 +121,15 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         url = f"https://www.{self.args.domain.value}/search"
         for search_query in search_queries:
             search_url = add_or_replace_parameter(url, "q", search_query)
-            for start in range(0, self.args.max_pages * 10, 10):
-                if start:
-                    search_url = add_or_replace_parameter(
-                        search_url, "start", str(start)
-                    )
-                yield self.get_start_request(search_url)
+            yield self.get_serp_request(search_url, page_number=1)
 
-    def parse_serp(self, response) -> Iterable[Serp]:
-        yield Serp.from_dict(response.raw_api_response["serp"])
+    def parse_serp(self, response, page_number) -> Iterable[Union[Request, Serp]]:
+        serp = Serp.from_dict(response.raw_api_response["serp"])
+
+        if page_number < self.args.max_pages:
+            next_start = page_number * self._results_per_page
+            if serp.organicResults and serp.metadata.totalOrganicResults > next_start:
+                next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
+                yield self.get_serp_request(next_url, page_number=page_number + 1)
+
+        yield serp

@@ -1,6 +1,47 @@
 Changes
 =======
 
+0.10.0 (2024-11-22)
+-------------------
+
+* Dropped Python 3.8 support, added Python 3.13 support.
+
+* Increased the minimum required versions of some dependencies:
+
+  * ``pydantic``: ``2`` → ``2.1``
+
+  * ``scrapy-poet``: ``0.21.0`` → ``0.24.0``
+
+  * ``scrapy-spider-metadata``: ``0.1.2`` → ``0.2.0``
+
+  * ``scrapy-zyte-api[provider]``: ``0.16.0`` → ``0.23.0``
+
+  * ``zyte-common-items``: ``0.22.0`` → ``0.23.0``
+
+* Added :ref:`custom attributes <custom-attributes>` support to the
+  :ref:`e-commerce spider template <e-commerce>` through its new
+  :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.custom_attrs_input`
+  and
+  :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceSpiderParams.custom_attrs_method`
+  parameters.
+
+* The
+  :class:`~zyte_spider_templates.spiders.serp.GoogleSearchSpiderParams.max_pages`
+  parameter of the :ref:`Google Search spider template <google-search>` can no
+  longer be 0 or lower.
+
+* The :ref:`Google Search spider template <google-search>` now follows
+  pagination for the results of each query page by page, instead of sending a
+  request for every page in parallel. It stops once it reaches a page without
+  organic results.
+
+* Improved the description of
+  :class:`~zyte_spider_templates.spiders.ecommerce.EcommerceCrawlStrategy`
+  values.
+
+* Fixed type hint issues related to Scrapy.
+
+
 0.9.0 (2024-09-17)
 ------------------
 
