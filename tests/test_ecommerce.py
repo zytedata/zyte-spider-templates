@@ -7,7 +7,14 @@ import scrapy
 from pydantic import ValidationError
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
-from zyte_common_items import ProbabilityRequest, Product, ProductNavigation, Request
+from web_poet.page_inputs.browser import BrowserResponse
+from zyte_common_items import (
+    ProbabilityRequest,
+    Product,
+    ProductNavigation,
+    SearchRequestTemplate,
+    SearchRequestTemplateMetadata,
+)
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS,
@@ -36,6 +43,19 @@ def test_parameters():
 
     with pytest.raises(ValidationError):
         EcommerceSpider(url="https://example.com", crawl_strategy="unknown")
+
+    EcommerceSpider(
+        url="https://example.com", crawl_strategy="direct_item", search_queries=""
+    )
+    EcommerceSpider(
+        url="https://example.com", crawl_strategy="automatic", search_queries="foo"
+    )
+    with pytest.raises(ValidationError):
+        EcommerceSpider(
+            url="https://example.com",
+            crawl_strategy="direct_item",
+            search_queries="foo",
+        )
 
 
 def test_start_requests():
@@ -258,6 +278,33 @@ def test_parse_product(probability, has_item, item_drop, caplog):
         assert str(product) in caplog.text
 
 
+@pytest.mark.parametrize(
+    ("probability", "yields_items"),
+    (
+        (None, True),  # Default
+        (-1.0, False),
+        (0.0, False),  # page.no_item_found()
+        (1.0, True),
+    ),
+)
+def test_parse_search_request_template_probability(probability, yields_items):
+    crawler = get_crawler()
+    spider = EcommerceSpider.from_crawler(
+        crawler, url="https://example.com", search_queries="foo"
+    )
+    search_request_template = SearchRequestTemplate(url="https://example.com")
+    if probability is not None:
+        search_request_template.metadata = SearchRequestTemplateMetadata(
+            probability=probability
+        )
+    items = list(
+        spider.parse_search_request_template(
+            DummyResponse("https://example.com"), search_request_template, DynamicDeps()
+        )
+    )
+    assert items if yields_items else not items
+
+
 def test_arguments():
     # Ensure passing no arguments works.
     crawler = get_crawler()
@@ -357,7 +404,7 @@ def test_arguments():
         spider = EcommerceSpider.from_crawler(crawler, **kwargs, **base_kwargs)
         getter = getattr(crawler.settings, getter_name)
         assert getter(setting) == new_setting_value
-        assert spider.allowed_domains == ["example.com"]
+        assert spider.allowed_domains == ["example.com"]  # type: ignore[attr-defined]
 
 
 def test_metadata():
@@ -419,6 +466,17 @@ def test_metadata():
                     "pattern": r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$",
                     "title": "URLs file",
                     "type": "string",
+                },
+                "search_queries": {
+                    "default": [],
+                    "description": (
+                        "A list of search queries, one per line, to submit "
+                        "using the search form found on each input URL."
+                    ),
+                    "items": {"type": "string"},
+                    "title": "Search Queries",
+                    "type": "array",
+                    "widget": "textarea",
                 },
                 "crawl_strategy": {
                     "default": "automatic",
@@ -607,7 +665,7 @@ def test_get_subcategory_request():
     url = "https://example.com"
 
     # Normal request but with mostly empty values
-    request = Request(url)
+    request = ProbabilityRequest(url=url)
     spider = EcommerceSpider(url="https://example.com")
     parse_navigation = lambda _: None
     spider.parse_navigation = parse_navigation  # type: ignore
@@ -678,7 +736,7 @@ def test_get_nextpage_request():
     url = "https://example.com"
 
     # Minimal Args
-    request = Request(url)
+    request = ProbabilityRequest(url=url)
     spider = EcommerceSpider(url="https://example.com")
     parse_navigation = lambda _: None
     spider.parse_navigation = parse_navigation  # type: ignore
@@ -697,7 +755,7 @@ def test_get_parse_navigation_request():
     url = "https://example.com"
 
     # Minimal args
-    request = Request(url)
+    request = ProbabilityRequest(url=url)
     spider = EcommerceSpider(url="https://example.com")
     parse_navigation = lambda _: None
     spider.parse_navigation = parse_navigation  # type: ignore
@@ -722,7 +780,7 @@ def test_set_allowed_domains(url, allowed_domain):
 
     kwargs = {"url": url}
     spider = EcommerceSpider.from_crawler(crawler, **kwargs)
-    assert spider.allowed_domains == [allowed_domain]
+    assert spider.allowed_domains == [allowed_domain]  # type: ignore[attr-defined]
 
 
 def test_input_none():
@@ -818,6 +876,58 @@ def test_urls_file():
     assert start_requests[0].url == "https://a.example"
     assert start_requests[1].url == "https://b.example"
     assert start_requests[2].url == "https://c.example"
+
+
+def test_search_queries():
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = EcommerceSpider.from_crawler(crawler, url=url, search_queries="foo bar")
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_search_request_template
+    assert spider.args.search_queries == ["foo bar"]
+
+    spider = EcommerceSpider.from_crawler(crawler, url=url, search_queries="foo\nbar")
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_search_request_template
+    assert spider.args.search_queries == ["foo", "bar"]
+
+    spider = EcommerceSpider.from_crawler(
+        crawler, url=url, search_queries=["foo", "bar"]
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_search_request_template
+    assert spider.args.search_queries == ["foo", "bar"]
+
+
+def test_search_queries_extract_from():
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = EcommerceSpider.from_crawler(crawler, url=url, search_queries="foo")
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert "inject" not in start_requests[0].meta
+
+    spider = EcommerceSpider.from_crawler(
+        crawler, url=url, search_queries="foo", extract_from="httpResponseBody"
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert "inject" not in start_requests[0].meta
+
+    spider = EcommerceSpider.from_crawler(
+        crawler, url=url, search_queries="foo", extract_from="browserHtml"
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].meta["inject"] == [BrowserResponse]
 
 
 @pytest.mark.parametrize(

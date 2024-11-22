@@ -6,8 +6,13 @@ from scrapy import Request
 from scrapy_spider_metadata import get_spider_metadata
 from scrapy_zyte_api.responses import ZyteAPITextResponse
 from w3lib.url import add_or_replace_parameter
+from zyte_common_items import Product
 
-from zyte_spider_templates.spiders.serp import GoogleSearchSpider
+from zyte_spider_templates.spiders.serp import (
+    ITEM_TYPE_CLASSES,
+    GoogleSearchSpider,
+    SerpItemType,
+)
 
 from . import get_crawler
 from .utils import assertEqualSpiderMetadata
@@ -313,6 +318,25 @@ def test_metadata():
                     "description": "Maximum number of results per page.",
                     "title": "Results Per Page",
                 },
+                "item_type": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": None,
+                    "description": (
+                        "If specified, follow organic search result links, "
+                        "and extract the selected data type from the target "
+                        "pages. Spider output items will be of the specified "
+                        "data type, not search engine results page items."
+                    ),
+                    "enum": [
+                        "article",
+                        "articleList",
+                        "forumThread",
+                        "jobPosting",
+                        "product",
+                        "productList",
+                    ],
+                    "title": "Follow and Extract",
+                },
                 "max_requests": {
                     "anyOf": [{"type": "integer"}, {"type": "null"}],
                     "default": 100,
@@ -373,7 +397,9 @@ def test_search_queries():
 
 def test_pagination():
     crawler = get_crawler()
-    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo bar", max_pages=3
+    )
 
     items, requests = run_parse_serp(
         spider,
@@ -412,6 +438,15 @@ def test_pagination():
     assert requests[0].url == "https://www.google.com/search?q=foo+bar&start=20"
     assert requests[0].cb_kwargs["page_number"] == 3
 
+    # Do not go over max_pages
+    items, requests = run_parse_serp(
+        spider,
+        total_results=31,
+        page=3,
+    )
+    assert len(items) == 1
+    assert len(requests) == 0
+
 
 def test_get_serp_request():
     crawler = get_crawler()
@@ -423,12 +458,14 @@ def test_get_serp_request():
 
     # The page_number parameter is required.
     with pytest.raises(TypeError):
-        spider.get_serp_request(url)
+        spider.get_serp_request(url)  # type: ignore[call-arg]
 
 
 def test_parse_serp():
     crawler = get_crawler()
-    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo bar", max_pages=43
+    )
     url = "https://www.google.com/search?q=foo+bar"
     response = ZyteAPITextResponse.from_api_response(
         api_response={
@@ -468,13 +505,13 @@ def test_parse_serp():
 
     # The page_number parameter is required.
     with pytest.raises(TypeError):
-        spider.parse_serp(response)
+        spider.parse_serp(response)  # type: ignore[call-arg]
 
 
 def test_results_per_page():
     crawler = get_crawler()
     spider = GoogleSearchSpider.from_crawler(
-        crawler, search_queries="foo", results_per_page=1
+        crawler, search_queries="foo", results_per_page=1, max_pages=2
     )
     requests = list(spider.start_requests())
     assert len(requests) == 1
@@ -492,3 +529,70 @@ def test_results_per_page_min():
         GoogleSearchSpider.from_crawler(
             crawler, search_queries="foo", results_per_page=0
         )
+
+
+def test_item_type():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo bar", max_pages=43, item_type="product"
+    )
+    url = "https://www.google.com/search?q=foo+bar"
+    response = ZyteAPITextResponse.from_api_response(
+        api_response={
+            "serp": {
+                "organicResults": [
+                    {
+                        "description": "…",
+                        "name": "…",
+                        "url": f"https://example.com/{rank}",
+                        "rank": rank,
+                    }
+                    for rank in range(1, 11)
+                ],
+                "metadata": {
+                    "dateDownloaded": "2024-10-25T08:59:45Z",
+                    "displayedQuery": "foo bar",
+                    "searchedQuery": "foo bar",
+                    "totalOrganicResults": 99999,
+                },
+                "pageNumber": 1,
+                "url": url,
+            },
+            "url": url,
+        },
+    )
+    items = []
+    requests = []
+    for item_or_request in spider.parse_serp(response, page_number=42):
+        if isinstance(item_or_request, Request):
+            requests.append(item_or_request)
+        else:
+            items.append(item_or_request)
+    assert len(items) == 0
+    assert len(requests) == 11
+
+    assert requests[0].url == add_or_replace_parameter(url, "start", "420")
+    assert requests[0].cb_kwargs["page_number"] == 43
+
+    for rank in range(1, 11):
+        assert requests[rank].url == f"https://example.com/{rank}"
+        assert requests[rank].callback == spider.parse_result
+        assert requests[rank].meta == {
+            "crawling_logs": {"page_type": "product"},
+            "inject": [Product],
+        }
+
+
+def test_item_type_mappings():
+    # Ensure that all SerpItemType keys and values match.
+    for entry in SerpItemType:
+        assert entry.name == entry.value
+
+    # Ensure that the ITEM_TYPE_CLASSES dict maps all values from the
+    # corresponding enum except for serp.
+    actual_keys = set(ITEM_TYPE_CLASSES)
+    expected_keys = set(entry.value for entry in SerpItemType)
+    assert actual_keys == expected_keys
+
+    # Also ensure that no dict value is repeated.
+    assert len(actual_keys) == len(set(ITEM_TYPE_CLASSES.values()))
