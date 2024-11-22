@@ -59,6 +59,15 @@ class SerpMaxPagesParam(BaseModel):
     )
 
 
+class SerpResultsPerPageParam(BaseModel):
+    results_per_page: Optional[int] = Field(
+        title="Results Per Page",
+        description="Maximum number of results per page.",
+        ge=1,
+        default=None,
+    )
+
+
 @document_enum
 class SerpItemType(str, Enum):
     article: str = "article"
@@ -126,6 +135,7 @@ class GoogleDomainParam(BaseModel):
 class GoogleSearchSpiderParams(
     MaxRequestsParam,
     SerpItemTypeParam,
+    SerpResultsPerPageParam,
     SerpMaxPagesParam,
     SearchQueriesParam,
     GoogleDomainParam,
@@ -144,7 +154,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
     """
 
     name = "google_search"
-    _results_per_page = 10
+    _default_results_per_page = 10
 
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
@@ -167,6 +177,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             )
 
     def get_serp_request(self, url: str, *, page_number: int):
+        if self.args.results_per_page:
+            url = add_or_replace_parameter(url, "num", str(self.args.results_per_page))
         return Request(
             url=url,
             callback=self.parse_serp,
@@ -195,7 +207,9 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         serp = Serp.from_dict(response.raw_api_response["serp"])
 
         if page_number < self.args.max_pages:
-            next_start = page_number * self._results_per_page
+            next_start = page_number * (
+                self.args.results_per_page or self._default_results_per_page
+            )
             if serp.organicResults and serp.metadata.totalOrganicResults > next_start:
                 next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
                 yield self.get_serp_request(next_url, page_number=page_number + 1)
