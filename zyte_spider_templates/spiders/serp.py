@@ -22,6 +22,7 @@ from ..documentation import document_enum
 from ..params import MaxRequestsParam
 from ._google_domains import GoogleDomain
 from ._google_gl import GOOGLE_GL_OPTIONS_WITH_CODE, GoogleGl
+from ._google_hl import GOOGLE_HL_OPTIONS_WITH_CODE, GoogleHl
 from .base import BaseSpider
 
 
@@ -53,6 +54,37 @@ class GoogleGlParam(BaseModel):
                 for code in GoogleGl
             }
         },
+    )
+
+
+class GoogleHlParam(BaseModel):
+    hl: Optional[GoogleHl] = Field(
+        title="User Language",
+        description=(
+            "User interface language, which can affect search results. See "
+            "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.hl"
+        ),
+        default=None,
+        json_schema_extra={
+            "enumMeta": {
+                code: {
+                    "title": GOOGLE_HL_OPTIONS_WITH_CODE[code],
+                }
+                for code in GoogleHl
+            }
+        },
+    )
+
+
+class GoogleLrParam(BaseModel):
+    lr: Optional[str] = Field(
+        title="Content Languages",
+        description=(
+            "Restricts search results to documents written in the specified "
+            "languages. See "
+            "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.lr"
+        ),
+        default=None,
     )
 
 
@@ -186,6 +218,8 @@ class GoogleDomainParam(BaseModel):
 
 
 class GoogleSearchSpiderParams(
+    GoogleLrParam,
+    GoogleHlParam,
     SerpGeolocationParam,
     GoogleCrParam,
     GoogleGlParam,
@@ -233,12 +267,20 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             )
 
     def get_serp_request(self, url: str, *, page_number: int):
-        if self.args.cr:
-            url = add_or_replace_parameter(url, "cr", self.args.cr)
-        if self.args.gl:
-            url = add_or_replace_parameter(url, "gl", self.args.gl.value)
-        if self.args.results_per_page:
-            url = add_or_replace_parameter(url, "num", str(self.args.results_per_page))
+        for argument, parameter in (
+            (self.args.cr, "cr"),
+            (self.args.gl, "gl"),
+            (self.args.hl, "hl"),
+            (self.args.lr, "lr"),
+            (self.args.results_per_page, "num"),
+        ):
+            if not argument:
+                continue
+            if isinstance(argument, Enum):
+                argument = argument.value
+            if not isinstance(argument, str):
+                argument = str(argument)
+            url = add_or_replace_parameter(url, parameter, argument)
         return Request(
             url=url,
             callback=self.parse_serp,

@@ -17,6 +17,11 @@ from zyte_spider_templates.spiders._google_gl import (
     GOOGLE_GL_OPTIONS_WITH_CODE,
     GoogleGl,
 )
+from zyte_spider_templates.spiders._google_hl import (
+    GOOGLE_HL_OPTIONS,
+    GOOGLE_HL_OPTIONS_WITH_CODE,
+    GoogleHl,
+)
 from zyte_spider_templates.spiders.serp import (
     ITEM_TYPE_CLASSES,
     GoogleSearchSpider,
@@ -393,6 +398,41 @@ def test_metadata():
                         sorted(GEOLOCATION_OPTIONS, key=GEOLOCATION_OPTIONS.__getitem__)
                     ),
                 },
+                "hl": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": (
+                        "User interface language, which can affect search "
+                        "results. See "
+                        "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.hl"
+                    ),
+                    "enumMeta": {
+                        code: {
+                            "title": GOOGLE_HL_OPTIONS_WITH_CODE[code],
+                        }
+                        for code in sorted(GoogleHl)
+                    },
+                    "title": "User Language",
+                    "enum": list(
+                        sorted(GOOGLE_HL_OPTIONS, key=GOOGLE_HL_OPTIONS.__getitem__)
+                    ),
+                },
+                "lr": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": (
+                        "Restricts search results to documents written in the "
+                        "specified languages. See "
+                        "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.lr"
+                    ),
+                    "title": "Content Languages",
+                },
             },
             "required": ["search_queries"],
             "title": "GoogleSearchSpiderParams",
@@ -574,6 +614,36 @@ def test_parse_serp():
     # The page_number parameter is required.
     with pytest.raises(TypeError):
         spider.parse_serp(response)  # type: ignore[call-arg]
+
+
+def test_hl():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo", hl="gl", max_pages=2
+    )
+    requests = list(spider.start_requests())
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&hl=gl"
+
+    items, requests = run_parse_serp(spider)
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&start=10&hl=gl"
+
+
+def test_lr():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(
+        crawler, search_queries="foo", lr="lang_ja", max_pages=2
+    )
+    requests = list(spider.start_requests())
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&lr=lang_ja"
+
+    items, requests = run_parse_serp(spider)
+    assert len(items) == 1
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo&start=10&lr=lang_ja"
 
 
 def test_cr():
