@@ -78,8 +78,7 @@ class ExtractFromParam(BaseModel):
 class GeolocationParam(BaseModel):
     geolocation: Optional[Geolocation] = Field(
         title="Geolocation",
-        description="ISO 3166-1 alpha-2 2-character string specified in "
-        "https://docs.zyte.com/zyte-api/usage/reference.html#operation/extract/request/geolocation.",
+        description="Country of the IP addresses to use.",
         default=None,
         json_schema_extra={
             "enumMeta": {
@@ -106,6 +105,40 @@ class MaxRequestsParam(BaseModel):
             "widget": "request-limit",
         },
     )
+
+
+class SearchQueriesParam(BaseModel):
+    search_queries: List[str] = Field(
+        title="Search Queries",
+        description=(
+            "A list of search queries, one per line, to submit using the "
+            "search form found on each input URL."
+        ),
+        default_factory=list,
+        json_schema_extra={
+            "default": [],
+            "widget": "textarea",
+        },
+    )
+
+    @field_validator("search_queries", mode="before")
+    @classmethod
+    def validate_search_queries(cls, value: Union[List[str], str]) -> List[str]:
+        """Validate a list of search queries.
+
+        If a string is received as input, it is split into multiple strings
+        on new lines.
+        """
+        if isinstance(value, str):
+            value = value.split("\n")
+        if not value:
+            return value
+        result = []
+        for v in value:
+            if not (v := v.strip()):
+                continue
+            result.append(v)
+        return result
 
 
 INPUT_GROUP_FIELDS = ("url", "urls", "urls_file")

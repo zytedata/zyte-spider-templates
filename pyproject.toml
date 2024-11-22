@@ -8,3 +8,4 @@ ignore_missing_imports = true
 
 [tool.black]
 target-version = ["py38", "py39", "py310", "py311", "py312"]
+force-exclude = "template.py"

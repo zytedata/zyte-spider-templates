@@ -6,7 +6,8 @@ Customizing page objects
 
 All parsing is implemented using :ref:`web-poet page objects <page-objects>`
 that use `Zyte API automatic extraction`_ to extract :ref:`standard items
-<item-api>`, both for navigation and for item details.
+<item-api>`: for navigation, for item details, and even for :ref:`search
+request generation <search-queries>`.
 
 .. _Zyte API automatic extraction: https://docs.zyte.com/zyte-api/usage/extract.html
 
@@ -141,3 +142,27 @@ To extract a new field for one or more websites:
 
             def parse_product(self, response: DummyResponse, product: CustomProduct):
                 yield from super().parse_product(response, product)
+
+.. _fix-search:
+
+Fixing search support
+=====================
+
+If the default implementation to build a request out of :ref:`search queries
+<search-queries>` does not work on a given website, you can implement your
+own search request page object to fix that. See
+:ref:`custom-request-template-page`.
+
+For example:
+
+.. code-block:: python
+
+    from web_poet import handle_urls
+    from zyte_common_items import BaseSearchRequestTemplatePage
+
+
+    @handle_urls("example.com")
+    class ExampleComSearchRequestTemplatePage(BaseSearchRequestTemplatePage):
+        @field
+        def url(self):
+            return "https://example.com/search?q={{ query|quote_plus }}"
