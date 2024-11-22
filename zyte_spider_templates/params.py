@@ -155,7 +155,7 @@ URLS_FILE_FIELD_KWARGS = {
 
 
 class UrlsFileParam(BaseModel):
-    urls_file: str = Field(**URLS_FILE_FIELD_KWARGS)  # type: ignore[misc, arg-type]
+    urls_file: str = Field(**URLS_FILE_FIELD_KWARGS)  # type: ignore[call-overload, misc, arg-type]
 
     @model_validator(mode="after")
     def input_group(self):
@@ -193,7 +193,7 @@ URL_FIELD_KWARGS = {
 
 
 class UrlParam(BaseModel):
-    url: str = Field(**URL_FIELD_KWARGS)  # type: ignore[misc, arg-type]
+    url: str = Field(**URL_FIELD_KWARGS)  # type: ignore[call-overload, misc, arg-type]
 
 
 URLS_FIELD_KWARGS = {
@@ -247,7 +247,7 @@ def validate_url_list(value: Union[List[str], str]) -> List[str]:
 
 
 class UrlsParam(BaseModel):
-    urls: Optional[List[str]] = Field(**URLS_FIELD_KWARGS)  # type: ignore[misc, arg-type]
+    urls: Optional[List[str]] = Field(**URLS_FIELD_KWARGS)  # type: ignore[call-overload, misc, arg-type]
 
     @model_validator(mode="after")
     def input_group(self):
