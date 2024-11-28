@@ -64,4 +64,3 @@ Parameter mixins
     :exclude-members: model_computed_fields
 
 .. autoenum:: zyte_spider_templates.spiders.job_posting.JobPostingCrawlStrategy
-

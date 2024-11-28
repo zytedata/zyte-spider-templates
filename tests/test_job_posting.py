@@ -5,7 +5,7 @@ import pytest
 import requests
 import scrapy
 from pydantic import ValidationError
-from scrapy_poet import DummyResponse
+from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
 from zyte_common_items import JobPosting, JobPostingNavigation, ProbabilityRequest
 
@@ -142,7 +142,7 @@ def test_parse_job_posting(probability, has_item, item_drop, caplog):
     mock_crawler = MagicMock()
     spider.crawler = mock_crawler
     logging.getLogger().setLevel(logging.INFO)
-    items = list(spider.parse_job_posting(response, job_posting))
+    items = list(spider.parse_job_posting(response, job_posting, DynamicDeps()))
     if item_drop:
         assert mock_crawler.method_calls == [
             call.stats.inc_value("drop_item/job_posting/low_probability")
@@ -352,11 +352,7 @@ def test_metadata():
                         {"type": "null"},
                     ],
                     "default": None,
-                    "description": (
-                        "ISO 3166-1 alpha-2 2-character string specified in "
-                        "https://docs.zyte.com/zyte-api/usage/reference.html"
-                        "#operation/extract/request/geolocation."
-                    ),
+                    "description": "Country of the IP addresses to use.",
                     "enumMeta": {
                         code: {
                             "title": GEOLOCATION_OPTIONS_WITH_CODE[code],

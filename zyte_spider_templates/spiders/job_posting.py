@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Optional, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Optional, Union, cast
 
 import requests
 import scrapy
 from pydantic import BaseModel, ConfigDict, Field
 from scrapy.crawler import Crawler
-from scrapy_poet import DummyResponse
+from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
-from zyte_common_items import JobPosting, JobPostingNavigation, ProbabilityRequest
+from zyte_common_items import (
+    CustomAttributes,
+    JobPosting,
+    JobPostingNavigation,
+    ProbabilityRequest,
+)
 
 from zyte_spider_templates.spiders.base import (
     ARG_SETTING_PRIORITY,
@@ -154,6 +159,13 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
                 else "jobPostingNavigation"
             },
         }
+        if (
+            self.args.crawl_strategy == JobPostingCrawlStrategy.direct_item
+            and self._custom_attrs_dep
+        ):
+            meta["inject"] = [
+                self._custom_attrs_dep,
+            ]
         return scrapy.Request(
             url=url,
             callback=callback,
@@ -183,13 +195,19 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
                 )
 
     def parse_job_posting(
-        self, response: DummyResponse, job_posting: JobPosting
-    ) -> Iterable[JobPosting]:
+        self, response: DummyResponse, job_posting: JobPosting, dynamic: DynamicDeps
+    ) -> Union[JobPosting, Dict[str, Union[JobPosting, Optional[CustomAttributes]]]]:
         probability = job_posting.get_probability()
 
         # TODO: convert to a configurable parameter later on after the launch
         if probability is None or probability >= 0.1:
-            yield job_posting
+            if self.args.custom_attrs_input:
+                yield {
+                    "jobPosting": job_posting,
+                    "customAttributes": dynamic.get(CustomAttributes),
+                }
+            else:
+                yield job_posting
         else:
             assert self.crawler.stats
             self.crawler.stats.inc_value("drop_item/job_posting/low_probability")
@@ -235,16 +253,21 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
         callback = callback or self.parse_job_posting
 
         probability = request.get_probability()
+        meta: Dict[str, Any] = {
+            "crawling_logs": {
+                "name": request.name,
+                "probability": probability,
+                "page_type": "jobPosting",
+            },
+        }
+        if self._custom_attrs_dep:
+            meta["inject"] = [
+                self._custom_attrs_dep,
+            ]
 
         scrapy_request = request.to_scrapy(
             callback=callback,
-            meta={
-                "crawling_logs": {
-                    "name": request.name,
-                    "probability": probability,
-                    "page_type": "jobPosting",
-                }
-            },
+            meta=meta,
         )
         scrapy_request.meta["allow_offsite"] = True
         return scrapy_request
