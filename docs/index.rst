@@ -22,6 +22,12 @@ zyte-spider-templates documentation
    Job posting <templates/job-posting>
 
 .. toctree::
+   :caption: Features
+   :hidden:
+
+   Search queries <features/search>
+
+.. toctree::
    :caption: Customization
    :hidden:
 

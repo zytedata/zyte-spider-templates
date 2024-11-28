@@ -15,6 +15,7 @@ from ..params import (
     ExtractFromParam,
     GeolocationParam,
     MaxRequestsParam,
+    SearchQueriesParam,
     UrlParam,
     UrlsFileParam,
     UrlsParam,
@@ -33,6 +34,7 @@ class BaseSpiderParams(
     ExtractFromParam,
     MaxRequestsParam,
     GeolocationParam,
+    SearchQueriesParam,
     UrlsFileParam,
     UrlsParam,
     UrlParam,
@@ -56,6 +58,7 @@ class BaseSpiderParams(
             ),
             DeprecationWarning,
         )
+        return self
 
 
 class BaseSpider(scrapy.Spider):
