@@ -152,7 +152,7 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
             if self.args.crawl_strategy == JobPostingCrawlStrategy.direct_item
             else self.parse_navigation
         )
-        meta = {
+        meta: Dict[str, Any] = {
             "crawling_logs": {
                 "page_type": "jobPosting"
                 if self.args.crawl_strategy == JobPostingCrawlStrategy.direct_item
@@ -196,7 +196,9 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
 
     def parse_job_posting(
         self, response: DummyResponse, job_posting: JobPosting, dynamic: DynamicDeps
-    ) -> Union[JobPosting, Dict[str, Union[JobPosting, Optional[CustomAttributes]]]]:
+    ) -> Iterable[
+        Union[JobPosting, Dict[str, Union[JobPosting, Optional[CustomAttributes]]]]
+    ]:
         probability = job_posting.get_probability()
 
         # TODO: convert to a configurable parameter later on after the launch
