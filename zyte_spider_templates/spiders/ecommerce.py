@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Optional, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import scrapy
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -11,8 +21,10 @@ from scrapy_spider_metadata import Args
 from web_poet.page_inputs.browser import BrowserResponse
 from zyte_common_items import (
     CustomAttributes,
+    Item,
     ProbabilityRequest,
     Product,
+    ProductList,
     ProductNavigation,
     SearchRequestTemplate,
 )
@@ -42,6 +54,9 @@ from ..params import (
 if TYPE_CHECKING:
     # typing.Self requires Python 3.11
     from typing_extensions import Self
+
+
+ItemTV = TypeVar("ItemTV", bound=Item)
 
 
 @document_enum
@@ -149,12 +164,24 @@ class EcommerceCrawlStrategyParam(BaseModel):
     )
 
 
+class FollowProductLinksParam(BaseModel):
+    dont_follow_product_links: bool = Field(
+        title="Do not follow product links",
+        description=(
+            "Extract ProductList items from product list pages instead of following "
+            "product links and extracting Product items from them."
+        ),
+        default=False,
+    )
+
+
 class EcommerceSpiderParams(
     CustomAttrsMethodParam,
     CustomAttrsInputParam,
     ExtractFromParam,
     MaxRequestsParam,
     GeolocationParam,
+    FollowProductLinksParam,
     EcommerceCrawlStrategyParam,
     SearchQueriesParam,
     UrlsFileParam,
@@ -171,7 +198,7 @@ class EcommerceSpiderParams(
     )
 
     @model_validator(mode="after")
-    def validate_direct_item_and_search_queries(self):
+    def validate_search_queries_and_strategy(self):
         if self.search_queries and self.crawl_strategy in {
             EcommerceCrawlStrategy.direct_item,
             EcommerceCrawlStrategy.full,
@@ -181,6 +208,18 @@ class EcommerceSpiderParams(
                 f"Cannot combine the {self.crawl_strategy.value!r} value of "
                 f"the crawl_strategy spider parameter with the search_queries "
                 f"spider parameter."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_product_list_and_strategy(self):
+        if self.dont_follow_product_links and self.crawl_strategy in {
+            EcommerceCrawlStrategy.direct_item,
+        }:
+            raise ValueError(
+                f"Cannot combine the {self.crawl_strategy.value!r} value of "
+                f"the crawl_strategy spider parameter with the "
+                f"dont_follow_product_links spider parameter."
             )
         return self
 
@@ -216,6 +255,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 {
                     "productOptions": {"extractFrom": self.args.extract_from},
                     "productNavigationOptions": {"extractFrom": self.args.extract_from},
+                    "productListOptions": {"extractFrom": self.args.extract_from},
                     **self.settings.get("ZYTE_API_PROVIDER_PARAMS", {}),
                 },
                 priority=ARG_SETTING_PRIORITY,
@@ -236,11 +276,11 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         }
         if (
             self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
-            and self._custom_attrs_dep
-        ):
-            meta["inject"] = [
-                self._custom_attrs_dep,
-            ]
+            or self.args.dont_follow_product_links
+        ) and self._custom_attrs_dep:
+            meta.setdefault("inject", []).append(self._custom_attrs_dep)
+        if self.args.dont_follow_product_links:
+            meta.setdefault("inject", []).append(ProductList)
 
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
             meta["page_params"] = {"full_domain": get_domain(url)}
@@ -290,16 +330,30 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         if probability is not None and probability <= 0:
             return
         for query in self.args.search_queries:
+            meta: Dict[str, Any] = {
+                "crawling_logs": {"page_type": "productNavigation"},
+            }
+            if self.args.dont_follow_product_links:
+                meta["inject"] = [ProductList]
+                if self._custom_attrs_dep:
+                    meta["inject"].append(self._custom_attrs_dep)
             yield search_request_template.request(query=query).to_scrapy(
                 callback=self.parse_navigation,
-                meta={
-                    "crawling_logs": {"page_type": "productNavigation"},
-                },
+                meta=meta,
             )
 
     def parse_navigation(
-        self, response: DummyResponse, navigation: ProductNavigation
-    ) -> Iterable[scrapy.Request]:
+        self,
+        response: DummyResponse,
+        navigation: ProductNavigation,
+        dynamic: DynamicDeps,
+    ) -> Iterable[
+        Union[
+            scrapy.Request,
+            ProductList,
+            Dict[str, Union[ProductList, Optional[CustomAttributes]]],
+        ]
+    ]:
         page_params = self._modify_page_params_for_heuristics(
             response.meta.get("page_params")
         )
@@ -326,29 +380,54 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             for request in navigation.subCategories or []:
                 yield self.get_subcategory_request(request, page_params=page_params)
 
+        if self.args.dont_follow_product_links:
+            product_list: ProductList = dynamic[ProductList]
+            if (
+                item := self._produce_item(
+                    product_list,
+                    "productList",
+                    response.url,
+                    dynamic.get(CustomAttributes),
+                )
+            ) is not None:
+                yield item
+
+    def _produce_item(
+        self,
+        api_item: ItemTV,
+        name: str,
+        url: str,
+        custom_attrs: Optional[CustomAttributes],
+    ) -> Union[ItemTV, Dict[str, Union[ItemTV, Optional[CustomAttributes]]], None]:
+        probability = api_item.get_probability()
+        # TODO: convert to a configurable parameter later on after the launch
+        if probability is None or probability >= 0.1:
+            if self.args.custom_attrs_input:
+                return {
+                    name: api_item,
+                    "customAttributes": custom_attrs,
+                }
+            else:
+                return api_item
+        assert self.crawler.stats
+        self.crawler.stats.inc_value(f"drop_item/{name}/low_probability")
+        self.logger.info(
+            f"Ignoring item from {url} since its probability is "
+            f"less than threshold of 0.1:\n{api_item}"
+        )
+        return None
+
     def parse_product(
         self, response: DummyResponse, product: Product, dynamic: DynamicDeps
     ) -> Iterable[
         Union[Product, Dict[str, Union[Product, Optional[CustomAttributes]]]]
     ]:
-        probability = product.get_probability()
-
-        # TODO: convert to a configurable parameter later on after the launch
-        if probability is None or probability >= 0.1:
-            if self.args.custom_attrs_input:
-                yield {
-                    "product": product,
-                    "customAttributes": dynamic.get(CustomAttributes),
-                }
-            else:
-                yield product
-        else:
-            assert self.crawler.stats
-            self.crawler.stats.inc_value("drop_item/product/low_probability")
-            self.logger.info(
-                f"Ignoring item from {response.url} since its probability is "
-                f"less than threshold of 0.1:\n{product}"
+        if (
+            item := self._produce_item(
+                product, "product", response.url, dynamic.get(CustomAttributes)
             )
+        ) is not None:
+            yield item
 
     @staticmethod
     def get_parse_navigation_request_priority(request: ProbabilityRequest) -> int:
@@ -369,18 +448,22 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         page_type: str = "productNavigation",
     ) -> scrapy.Request:
         callback = callback or self.parse_navigation
-
+        meta: Dict[str, Any] = {
+            "page_params": page_params or {},
+            "crawling_logs": {
+                "name": request.name or "",
+                "probability": request.get_probability(),
+                "page_type": page_type,
+            },
+        }
+        if self.args.dont_follow_product_links:
+            meta["inject"] = [ProductList]
+            if self._custom_attrs_dep:
+                meta["inject"].append(self._custom_attrs_dep)
         return request.to_scrapy(
             callback=callback,
             priority=priority or self.get_parse_navigation_request_priority(request),
-            meta={
-                "page_params": page_params or {},
-                "crawling_logs": {
-                    "name": request.name or "",
-                    "probability": request.get_probability(),
-                    "page_type": page_type,
-                },
-            },
+            meta=meta,
         )
 
     def get_subcategory_request(

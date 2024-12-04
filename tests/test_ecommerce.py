@@ -1,4 +1,5 @@
 import logging
+from typing import Iterable, List, cast
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -67,14 +68,22 @@ def test_crawl():
     url = subcategory_urls[0]
     spider = EcommerceSpider(url="https://example.com/")
 
+    def _get_requests(navigation: ProductNavigation) -> List[scrapy.Request]:
+        return list(
+            cast(
+                Iterable[scrapy.Request],
+                spider.parse_navigation(response, navigation, DynamicDeps()),
+            )
+        )
+
     # no links found
     navigation = ProductNavigation.from_dict({"url": url})
-    requests = list(spider.parse_navigation(response, navigation))
+    requests = _get_requests(navigation)
     assert len(requests) == 0
 
     # subcategories only
     navigation = ProductNavigation.from_dict({"url": url, **subcategories})
-    requests = list(spider.parse_navigation(response, navigation))
+    requests = _get_requests(navigation)
     assert len(requests) == 2
     assert requests[0].url == subcategory_urls[0]
     assert requests[0].callback == spider.parse_navigation
@@ -91,7 +100,7 @@ def test_crawl():
             **nextpage,
         }
     )
-    requests = list(spider.parse_navigation(response, navigation))
+    requests = _get_requests(navigation)
     assert len(requests) == 2
     urls = {request.url for request in requests}
     assert urls == {*subcategory_urls}
@@ -107,7 +116,7 @@ def test_crawl():
             **items,
         }
     )
-    requests = list(spider.parse_navigation(response, navigation))
+    requests = _get_requests(navigation)
     urls = {request.url for request in requests}
     assert urls == {*item_urls, *subcategory_urls, nextpage_url}
     for request in requests:
@@ -125,7 +134,7 @@ def test_crawl():
             **items,
         }
     )
-    requests = list(spider.parse_navigation(response, navigation))
+    requests = _get_requests(navigation)
     assert len(requests) == 3
     assert requests[0].url == item_urls[0]
     assert requests[0].callback == spider.parse_product
@@ -143,7 +152,7 @@ def test_crawl():
             **items,
         }
     )
-    requests = list(spider.parse_navigation(response, navigation))
+    requests = _get_requests(navigation)
     assert len(requests) == 4
     assert requests[0].url == item_urls[0]
     assert requests[0].callback == spider.parse_product
@@ -162,7 +171,7 @@ def test_crawl():
             **nextpage,
         }
     )
-    requests = list(spider.parse_navigation(response, navigation))
+    requests = _get_requests(navigation)
     assert len(requests) == 0
 
     # items
@@ -172,7 +181,7 @@ def test_crawl():
             **items,
         }
     )
-    requests = list(spider.parse_navigation(response, navigation))
+    requests = _get_requests(navigation)
     assert len(requests) == 2
     assert requests[0].url == item_urls[0]
     assert requests[0].callback == spider.parse_product
@@ -194,7 +203,7 @@ def test_crawl():
             **items,
         }
     )
-    requests = list(spider.parse_navigation(response, navigation))
+    requests = _get_requests(navigation)
     urls = {request.url for request in requests}
     assert urls == {*item_urls, nextpage_url}
     for request in requests:
@@ -410,6 +419,12 @@ def test_metadata():
                         "direct_item",
                     ],
                     "type": "string",
+                },
+                "dont_follow_product_links": {
+                    "default": False,
+                    "description": "Extract ProductList items from product list pages instead of following product links and extracting Product items from them.",
+                    "title": "Do not follow product links",
+                    "type": "boolean",
                 },
                 "geolocation": {
                     "anyOf": [

@@ -167,6 +167,7 @@ def test_arg_combinations(spider_cls, args, valid):
                     {
                         "productOptions": {"extractFrom": "browserHtml"},
                         "productNavigationOptions": {"extractFrom": "browserHtml"},
+                        "productListOptions": {"extractFrom": "browserHtml"},
                     },
                 ),
                 (
@@ -178,6 +179,7 @@ def test_arg_combinations(spider_cls, args, valid):
                     {
                         "productOptions": {"extractFrom": "httpResponseBody"},
                         "productNavigationOptions": {"extractFrom": "httpResponseBody"},
+                        "productListOptions": {"extractFrom": "httpResponseBody"},
                         "geolocation": "US",
                     },
                 ),
