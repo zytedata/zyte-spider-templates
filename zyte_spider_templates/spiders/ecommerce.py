@@ -359,8 +359,9 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         )
 
         products = navigation.items or []
-        for request in products:
-            yield self.get_parse_product_request(request)
+        if not self.args.dont_follow_product_links:
+            for request in products:
+                yield self.get_parse_product_request(request)
 
         if navigation.nextPage:
             if not products:
