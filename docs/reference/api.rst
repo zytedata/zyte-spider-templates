@@ -5,6 +5,8 @@ API
 Spiders
 =======
 
+.. autoclass:: zyte_spider_templates.ArticleSpider
+
 .. autoclass:: zyte_spider_templates.BaseSpider
 
 .. autoclass:: zyte_spider_templates.EcommerceSpider
@@ -14,6 +16,10 @@ Spiders
 
 Pages
 =====
+
+.. autoclass:: zyte_spider_templates.pages.DefaultSearchRequestTemplatePage
+
+.. autoclass:: zyte_spider_templates.pages.HeuristicsArticleNavigationPage
 
 .. autoclass:: zyte_spider_templates.pages.HeuristicsProductNavigationPage
 
