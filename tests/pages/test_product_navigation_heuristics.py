@@ -1,5 +1,4 @@
 import pytest
-from pytest_twisted import ensureDeferred
 from web_poet import AnyResponse, HttpResponse, PageParams, RequestUrl
 from zyte_common_items import ProbabilityRequest, ProductNavigation
 
@@ -8,7 +7,7 @@ from zyte_spider_templates.pages.product_navigation_heuristics import (
 )
 
 
-@ensureDeferred
+@pytest.mark.asyncio
 async def test_unknown_product_page():
     body = b"""
         <html>
@@ -103,7 +102,7 @@ async def test_unknown_product_page():
     assert page._urls_for_category() == all_valid_urls
 
 
-@ensureDeferred
+@pytest.mark.asyncio
 async def test_crawl_nofollow_links():
     page_params = PageParams({"full_domain": "example.com"})
     body = b"""
@@ -128,6 +127,7 @@ async def test_crawl_nofollow_links():
     assert [req.url for req in page.subCategories] == ["https://example.com/can-follow"]
 
 
+@pytest.mark.deprication_warning
 def test_deprecated_page_objects():
     with pytest.warns(DeprecationWarning, match="page_objects"):
         from zyte_spider_templates.page_objects import (  # noqa: F401

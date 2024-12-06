@@ -1,6 +1,10 @@
 import pytest
 
-from zyte_spider_templates.utils import get_domain, load_url_list
+from zyte_spider_templates.utils import (
+    get_domain,
+    get_domain_fingerprint,
+    load_url_list,
+)
 
 URL_TO_DOMAIN = (
     ("https://example.com", "example.com"),
@@ -47,3 +51,22 @@ def test_load_url_list(input_urls, expected):
         return
     with pytest.raises(expected):
         load_url_list(input_urls)
+
+
+@pytest.mark.parametrize(
+    "url, expected_fingerprint",
+    [
+        # No subdomain
+        ("https://example.com", "c300"),
+        # One subdomain
+        ("https://sub.example.com", "c35d"),
+        # Multiple subdomains
+        ("https://sub1.sub2.example.com", "c3c9"),
+        # No TLD (localhost or internal addresses)
+        ("http://localhost", "3300"),
+        # Complex TLD (e.g., .co.uk) and subdomains
+        ("https://sub.example.co.uk", "c35d"),
+    ],
+)
+def test_get_domain_fingerprint(url, expected_fingerprint):
+    assert get_domain_fingerprint(url) == expected_fingerprint
