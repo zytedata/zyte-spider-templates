@@ -163,6 +163,28 @@ def test_crawling_logs_middleware():
             },
         },
     )
+    job_posting_request = Request(
+        "https://example.com/job_1",
+        priority=10,
+        meta={
+            "crawling_logs": {
+                "name": "Job Posting 1",
+                "probability": 0.1,
+                "page_type": "jobPosting",
+            },
+        },
+    )
+    job_posting_navigation_request = Request(
+        "https://example.com/job_navigation_1",
+        priority=10,
+        meta={
+            "crawling_logs": {
+                "name": "Job Posting Navigation 1",
+                "probability": 0.1,
+                "page_type": "jobPostingNavigation",
+            },
+        },
+    )
     custom_request = Request(
         "https://example.com/custom-page-type",
         meta={
@@ -186,6 +208,10 @@ def test_crawling_logs_middleware():
     product_navigation_heuristics_request_fp = request_fingerprint(
         product_navigation_heuristics_request
     )
+    job_posting_request_fp = request_fingerprint(job_posting_request)
+    job_posting_navigation_request_fp = request_fingerprint(
+        job_posting_navigation_request
+    )
     custom_request_fp = request_fingerprint(custom_request)
     article_request_fp = request_fingerprint(article_request)
     article_navigation_request_fp = request_fingerprint(article_navigation_request)
@@ -204,6 +230,8 @@ def test_crawling_logs_middleware():
         yield article_request
         yield article_navigation_request
         yield article_navigation_heuristics_request
+        yield job_posting_request
+        yield job_posting_navigation_request
         yield custom_request
         yield unknown_request
 
@@ -219,6 +247,8 @@ def test_crawling_logs_middleware():
         "- article: 1\n"
         "- articleNavigation: 1\n"
         "- articleNavigation-heuristics: 1\n"
+        "- jobPosting: 1\n"
+        "- jobPostingNavigation: 1\n"
         "- some other page_type: 1\n"
         "- unknown: 1\n"
         "Structured Logs:\n"
@@ -310,6 +340,26 @@ def test_crawling_logs_middleware():
         '        "request_url": "https://example.com/article_and_navigation_1",\n'
         '        "request_priority": 10,\n'
         f'        "request_fingerprint": "{article_navigation_heuristics_request_fp}"\n'
+        "      }\n"
+        "    ],\n"
+        '    "jobPosting": [\n'
+        "      {\n"
+        '        "name": "Job Posting 1",\n'
+        '        "probability": 0.1,\n'
+        '        "page_type": "jobPosting",\n'
+        '        "request_url": "https://example.com/job_1",\n'
+        '        "request_priority": 10,\n'
+        f'        "request_fingerprint": "{job_posting_request_fp}"\n'
+        "      }\n"
+        "    ],\n"
+        '    "jobPostingNavigation": [\n'
+        "      {\n"
+        '        "name": "Job Posting Navigation 1",\n'
+        '        "probability": 0.1,\n'
+        '        "page_type": "jobPostingNavigation",\n'
+        '        "request_url": "https://example.com/job_navigation_1",\n'
+        '        "request_priority": 10,\n'
+        f'        "request_fingerprint": "{job_posting_navigation_request_fp}"\n'
         "      }\n"
         "    ],\n"
         '    "some other page_type": [\n'

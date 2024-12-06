@@ -76,3 +76,6 @@ autodoc_pydantic_field_show_constraints = False
 redirects = {
     "customization/page-objects": "pages.html",
 }
+
+# workaround for https://github.com/pydantic/pydantic/discussions/7763
+import zyte_spider_templates.spiders.job_posting  # noqa: F401, E402
