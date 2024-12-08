@@ -20,6 +20,7 @@ from zyte_spider_templates.middlewares import (
     CrawlingLogsMiddleware,
     MaxRequestsPerSeedDownloaderMiddleware,
     OffsiteRequestsPerSeedMiddleware,
+    PageParamsMiddlewareBase,
     TrackSeedsSpiderMiddleware,
 )
 
@@ -1358,3 +1359,90 @@ def test_from_crawler():
         OffsiteRequestsPerSeedMiddleware.from_crawler(crawler=crawler),
         OffsiteRequestsPerSeedMiddleware,
     )
+
+
+def test_page_params_middleware_base_update_page_params():
+    request_url = "https://example.com/1"
+    request = Request(request_url)
+    crawler = get_crawler()
+    middleware = PageParamsMiddlewareBase(crawler)
+    assert middleware.update_page_params(request, {}) is None
+
+
+def test_page_params_middleware_base__update_page_params():
+    request_url = "https://example.com/1"
+    request = Request(request_url)
+    crawler = get_crawler()
+    middleware = PageParamsMiddlewareBase(crawler)
+    assert middleware._update_page_params(request) is None
+    assert "page_params" in request.meta
+    assert request.meta["page_params"] == {}
+
+    request = Request(request_url, meta={"page_params": {"test": 1}})
+    crawler = get_crawler()
+    middleware = PageParamsMiddlewareBase(crawler)
+    assert middleware._update_page_params(request) is None
+    assert "page_params" in request.meta
+    assert request.meta["page_params"] == {"test": 1}
+
+
+def test_page_params_middleware_base():
+    class TestSpider(Spider):
+        name = "test"
+
+    crawler = get_crawler()
+    crawler.spider = TestSpider()
+
+    request_url = "https://example.com/1"
+    request = Request(request_url)
+    item = Article(url="https://example.com/article")
+    response = Response(url=request_url, request=request)
+    middleware = PageParamsMiddlewareBase(crawler)
+    result = list(
+        middleware.process_spider_output(response, [request, item], crawler.spider)
+    )
+    assert result[0].meta["page_params"] == {}
+
+    request = Request(url=request_url)
+    result = list(middleware.process_start_requests([request], crawler.spider))
+    assert result[0].meta["page_params"] == {}
+
+    request = Request(request_url, meta={"page_params": {"test": 1}})
+    response = Response(url=request_url, request=request)
+    middleware = PageParamsMiddlewareBase(crawler)
+    result = list(
+        middleware.process_spider_output(response, [request, item], crawler.spider)
+    )
+    assert result[0].meta["page_params"] == {"test": 1}
+
+    result = list(middleware.process_start_requests([request], crawler.spider))
+    assert result[0].meta["page_params"] == {"test": 1}
+
+
+@pytest.mark.asyncio
+async def test_page_params_middleware_base_async():
+    class TestSpider(Spider):
+        name = "test"
+
+    crawler = get_crawler()
+    crawler.spider = TestSpider()
+
+    request_url = "https://example.com/1"
+    request = Request(request_url)
+    item = Article(url="https://example.com/article")
+    response = Response(url=request_url, request=request)
+    middleware = PageParamsMiddlewareBase(crawler)
+    result = await result_as_async_gen(
+        middleware, response, [request, item], crawler.spider
+    )
+    assert result[0].meta["page_params"] == {}
+    assert result[1] == item
+
+    request = Request(request_url, meta={"page_params": {"test": 1}})
+    response = Response(url=request_url, request=request)
+    middleware = PageParamsMiddlewareBase(crawler)
+    result = await result_as_async_gen(
+        middleware, response, [request, item], crawler.spider
+    )
+    assert result[0].meta["page_params"] == {"test": 1}
+    assert result[1] == item
