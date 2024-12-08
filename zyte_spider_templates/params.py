@@ -10,6 +10,7 @@ from pydantic import (
     ConfigDict,
     Field,
     Json,
+    NonNegativeInt,
     field_validator,
     model_validator,
 )
@@ -390,4 +391,15 @@ class CustomAttrsMethodParam(BaseModel):
                 },
             },
         },
+    )
+
+
+class MaxRequestsPerSeedParam(BaseModel):
+    max_requests_per_seed: Optional[NonNegativeInt] = Field(
+        title="Max requests per seed",
+        description=(
+            "The maximum number of follow-up requests allowed per initial URL. "
+            "Unlimited if not set."
+        ),
+        default=None,
     )

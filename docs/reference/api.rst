@@ -1,9 +1,11 @@
-=========
-Reference
-=========
+===
+API
+===
 
 Spiders
 =======
+
+.. autoclass:: zyte_spider_templates.ArticleSpider
 
 .. autoclass:: zyte_spider_templates.BaseSpider
 
@@ -14,6 +16,10 @@ Spiders
 
 Pages
 =====
+
+.. autoclass:: zyte_spider_templates.pages.DefaultSearchRequestTemplatePage
+
+.. autoclass:: zyte_spider_templates.pages.HeuristicsArticleNavigationPage
 
 .. autoclass:: zyte_spider_templates.pages.HeuristicsProductNavigationPage
 
@@ -59,3 +65,22 @@ Parameter mixins
 
 .. autopydantic_model:: zyte_spider_templates.spiders.serp.SerpMaxPagesParam
     :exclude-members: model_computed_fields
+
+.. autopydantic_model:: zyte_spider_templates.spiders.article.ArticleCrawlStrategyParam
+    :exclude-members: model_computed_fields
+
+.. autoenum:: zyte_spider_templates.spiders.article.ArticleCrawlStrategy
+
+
+.. _middlewares:
+
+Middlewares
+===========
+
+.. autoclass:: zyte_spider_templates.CrawlingLogsMiddleware
+.. autoclass:: zyte_spider_templates.TrackNavigationDepthSpiderMiddleware
+.. autoclass:: zyte_spider_templates.MaxRequestsPerSeedDownloaderMiddleware
+.. autoclass:: zyte_spider_templates.OffsiteRequestsPerSeedMiddleware
+.. autoclass:: zyte_spider_templates.OnlyFeedsMiddleware
+.. autoclass:: zyte_spider_templates.TrackSeedsSpiderMiddleware
+.. autoclass:: zyte_spider_templates.IncrementalCrawlMiddleware
