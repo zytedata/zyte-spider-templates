@@ -27,6 +27,7 @@ from zyte_spider_templates.middlewares import (
     TrackNavigationDepthSpiderMiddleware,
     TrackSeedsSpiderMiddleware,
 )
+
 from . import get_crawler as get_crawler_with_settings
 
 
