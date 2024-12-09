@@ -18,13 +18,13 @@ from zyte_common_items import Article, Item, Product
 from zyte_spider_templates.middlewares import (
     AllowOffsiteMiddleware,
     CrawlingLogsMiddleware,
+    DummyDupeFilter,
     MaxRequestsPerSeedDownloaderMiddleware,
     OffsiteRequestsPerSeedMiddleware,
     OnlyFeedsMiddleware,
     PageParamsMiddlewareBase,
     TrackSeedsSpiderMiddleware,
 )
-
 from . import get_crawler as get_crawler_with_settings
 
 
@@ -1464,3 +1464,11 @@ def test_only_feeds_middleware():
     middleware.update_page_params(request, page_params)
 
     assert page_params["only_feeds"] is True
+
+
+def test_dummy_dupe_filter():
+    request_url = "https://example.com/1"
+    request = Request(request_url)
+    middleware = DummyDupeFilter()
+    assert middleware.request_seen(request) is False
+
