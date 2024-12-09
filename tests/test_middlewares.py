@@ -1378,6 +1378,9 @@ def test_page_params_middleware_base():
     item = Article(url="https://example.com/article")
     response = Response(url=request_url, request=request)
     middleware = PageParamsMiddlewareBase(crawler)
+    assert middleware.crawler == crawler
+    assert isinstance(middleware.from_crawler(crawler), PageParamsMiddlewareBase)
+
     result = list(
         middleware.process_spider_output(response, [request, item], crawler.spider)
     )
