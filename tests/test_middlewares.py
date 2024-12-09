@@ -26,6 +26,7 @@ from zyte_spider_templates.middlewares import (
     PageParamsMiddlewareBase,
     TrackSeedsSpiderMiddleware,
 )
+
 from . import get_crawler as get_crawler_with_settings
 
 
@@ -1543,13 +1544,14 @@ async def test_dupe_filter_spider_middleware_async():
     item = Article(url="https://example.com/article")
 
     middleware = DupeFilterSpiderMiddleware(crawler)
+
     assert middleware.crawler == crawler
     assert isinstance(middleware.from_crawler(crawler), DupeFilterSpiderMiddleware)
 
     # Test process_start_requests
     start_requests = [
-        Request(url="https://example.com/1"),
-        Request(url="https://example.com/2"),
+        Request(url="https://example.com/11"),
+        Request(url="https://example.com/21"),
     ]
     processed_requests = list(
         middleware.process_start_requests(start_requests, crawler.spider)
@@ -1558,30 +1560,28 @@ async def test_dupe_filter_spider_middleware_async():
 
     # Simulate duplicate request
     start_requests = [
-        Request(url="https://example.com/1"),
-        Request(url="https://example.com/3"),
+        Request(url="https://example.com/11"),
+        Request(url="https://example.com/31"),
     ]
     processed_requests = list(
         middleware.process_start_requests(start_requests, crawler.spider)
     )
     assert len(processed_requests) == 1
-    assert processed_requests[0].url == "https://example.com/3"
+    assert processed_requests[0].url == "https://example.com/31"
 
     # Test process_spider_output_async
-    response = Response(url="https://example.com/1")
+    response = Response(url="https://example.com/11")
     processed_output = await result_as_async_gen(
         middleware,
         response,
         [
-            Request(url="https://example.com/4"),
+            Request(url="https://example.com/41"),
             item,
-            Request(url="https://example.com/1"),
+            Request(url="https://example.com/11"),
         ],
         crawler.spider,
     )
 
     assert len(processed_output) == 2
-    if processed_output[0].url == "https://example.com/4":
-        assert processed_output[1] == item
-    else:
-        assert processed_output[1] == "https://example.com/4"
+    assert processed_output[0].url == "https://example.com/41"
+    assert processed_output[1] == item
