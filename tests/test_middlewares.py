@@ -19,6 +19,7 @@ from zyte_spider_templates.middlewares import (
     AllowOffsiteMiddleware,
     CrawlingLogsMiddleware,
     DummyDupeFilter,
+    DupeFilterSpiderMiddleware,
     MaxRequestsPerSeedDownloaderMiddleware,
     OffsiteRequestsPerSeedMiddleware,
     OnlyFeedsMiddleware,
@@ -1381,25 +1382,29 @@ def test_page_params_middleware_base():
     assert middleware.crawler == crawler
     assert isinstance(middleware.from_crawler(crawler), PageParamsMiddlewareBase)
 
-    result = list(
+    processed_output = list(
         middleware.process_spider_output(response, [request, item], crawler.spider)
     )
-    assert result[0].meta["page_params"] == {}  # type: ignore[union-attr]
+    assert processed_output[0].meta["page_params"] == {}  # type: ignore[union-attr]
 
     request = Request(url=request_url)
-    result = list(middleware.process_start_requests([request], crawler.spider))
-    assert result[0].meta["page_params"] == {}  # type: ignore[union-attr]
+    processed_output = list(
+        middleware.process_start_requests([request], crawler.spider)
+    )
+    assert processed_output[0].meta["page_params"] == {}  # type: ignore[union-attr]
 
     request = Request(request_url, meta={"page_params": {"test": 1}})
     response = Response(url=request_url, request=request)
     middleware = PageParamsMiddlewareBase(crawler)
-    result = list(
+    processed_output = list(
         middleware.process_spider_output(response, [request, item], crawler.spider)
     )
-    assert result[0].meta["page_params"] == {"test": 1}  # type: ignore[union-attr]
+    assert processed_output[0].meta["page_params"] == {"test": 1}  # type: ignore[union-attr]
 
-    result = list(middleware.process_start_requests([request], crawler.spider))
-    assert result[0].meta["page_params"] == {"test": 1}  # type: ignore[union-attr]
+    processed_output = list(
+        middleware.process_start_requests([request], crawler.spider)
+    )
+    assert processed_output[0].meta["page_params"] == {"test": 1}  # type: ignore[union-attr]
 
 
 @pytest.mark.asyncio
@@ -1416,21 +1421,21 @@ async def test_page_params_middleware_base_async():
     item = Article(url="https://example.com/article")
     response = Response(url=request_url, request=request)
     middleware = PageParamsMiddlewareBase(crawler)
-    result = await result_as_async_gen(
+    processed_output = await result_as_async_gen(
         middleware, response, [request, item], crawler.spider
     )
-    assert result[0].meta["page_params"] == {}
-    assert result[1] == item
+    assert processed_output[0].meta["page_params"] == {}
+    assert processed_output[1] == item
 
     # Explicit page_params in request meta
     request = Request(request_url, meta={"page_params": {"test": 1}})
     response = Response(url=request_url, request=request)
     middleware = PageParamsMiddlewareBase(crawler)
-    result = await result_as_async_gen(
+    processed_output = await result_as_async_gen(
         middleware, response, [request, item], crawler.spider
     )
-    assert result[0].meta["page_params"] == {"test": 1}
-    assert result[1] == item
+    assert processed_output[0].meta["page_params"] == {"test": 1}
+    assert processed_output[1] == item
 
 
 def test_only_feeds_middleware():
@@ -1458,7 +1463,7 @@ def test_only_feeds_middleware():
     request_url = "https://example.com/1"
     request = Request(request_url, meta={"only_feeds": False})
 
-    page_params = {}
+    page_params: dict = {}
     middleware.update_page_params(request, page_params)
 
     assert page_params["only_feeds"] is False
@@ -1477,3 +1482,106 @@ def test_dummy_dupe_filter():
     middleware = DummyDupeFilter()
     assert middleware.request_seen(request) is False
 
+
+def test_dupe_filter_spider_middleware():
+    class TestSpider(Spider):
+        name = "test"
+
+    crawler = get_crawler_with_settings()
+    crawler.spider = TestSpider()
+    crawler.stats = StatsCollector(crawler)
+    item = Article(url="https://example.com/article")
+
+    middleware = DupeFilterSpiderMiddleware(crawler)
+    assert middleware.crawler == crawler
+    assert isinstance(middleware.from_crawler(crawler), DupeFilterSpiderMiddleware)
+
+    # Test process_start_requests
+    start_requests = [
+        Request(url="https://example.com/1"),
+        Request(url="https://example.com/2"),
+    ]
+    processed_requests = list(
+        middleware.process_start_requests(start_requests, crawler.spider)
+    )
+    assert len(processed_requests) == 2
+
+    # Simulate duplicate request
+    start_requests = [
+        Request(url="https://example.com/1"),
+        Request(url="https://example.com/3"),
+    ]
+    processed_requests = list(
+        middleware.process_start_requests(start_requests, crawler.spider)
+    )
+    assert len(processed_requests) == 1
+    assert processed_requests[0].url == "https://example.com/3"
+
+    # Test process_spider_output
+    response = Response(url="https://example.com/1")
+    result = [
+        Request(url="https://example.com/4"),
+        item,
+        Request(url="https://example.com/1"),
+    ]
+    processed_output = list(
+        middleware.process_spider_output(response, result, crawler.spider)
+    )
+    assert len(processed_output) == 2
+    assert processed_output[0].url == "https://example.com/4"  # type: ignore[union-attr]
+    assert processed_output[1] == item
+
+
+@pytest.mark.asyncio
+async def test_dupe_filter_spider_middleware_async():
+    class TestSpider(Spider):
+        name = "test"
+
+    crawler = get_crawler_with_settings()
+    crawler.spider = TestSpider()
+    crawler.stats = StatsCollector(crawler)
+    item = Article(url="https://example.com/article")
+
+    middleware = DupeFilterSpiderMiddleware(crawler)
+    assert middleware.crawler == crawler
+    assert isinstance(middleware.from_crawler(crawler), DupeFilterSpiderMiddleware)
+
+    # Test process_start_requests
+    start_requests = [
+        Request(url="https://example.com/1"),
+        Request(url="https://example.com/2"),
+    ]
+    processed_requests = list(
+        middleware.process_start_requests(start_requests, crawler.spider)
+    )
+    assert len(processed_requests) == 2
+
+    # Simulate duplicate request
+    start_requests = [
+        Request(url="https://example.com/1"),
+        Request(url="https://example.com/3"),
+    ]
+    processed_requests = list(
+        middleware.process_start_requests(start_requests, crawler.spider)
+    )
+    assert len(processed_requests) == 1
+    assert processed_requests[0].url == "https://example.com/3"
+
+    # Test process_spider_output_async
+    response = Response(url="https://example.com/1")
+    processed_output = await result_as_async_gen(
+        middleware,
+        response,
+        [
+            Request(url="https://example.com/4"),
+            item,
+            Request(url="https://example.com/1"),
+        ],
+        crawler.spider,
+    )
+
+    assert len(processed_output) == 2
+    if processed_output[0].url == "https://example.com/4":
+        assert processed_output[1] == item
+    else:
+        assert processed_output[1] == "https://example.com/4"
