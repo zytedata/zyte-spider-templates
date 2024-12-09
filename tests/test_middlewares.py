@@ -455,6 +455,10 @@ def test_process_request():
     crawler = _get_seed_crawler()
     spider_middleware = TrackSeedsSpiderMiddleware(crawler)
     downloader_middleware = MaxRequestsPerSeedDownloaderMiddleware(crawler)
+    assert downloader_middleware.crawler == crawler
+    assert isinstance(downloader_middleware.from_crawler(crawler), MaxRequestsPerSeedDownloaderMiddleware)
+    assert isinstance(spider_middleware.from_crawler(crawler), TrackSeedsSpiderMiddleware)
+
     request_gen: Iterable[Union[Request, Item]]
     request: Union[Request, Item]
 
