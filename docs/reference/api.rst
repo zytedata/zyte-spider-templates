@@ -13,6 +13,8 @@ Spiders
 
 .. autoclass:: zyte_spider_templates.GoogleSearchSpider
 
+.. autoclass:: zyte_spider_templates.JobPostingSpider
+
 
 Pages
 =====
