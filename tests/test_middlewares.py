@@ -1218,6 +1218,8 @@ def test_track_seeds_process_start_requests(
     crawler.spider = TestSpider()
     crawler.stats = StatsCollector(crawler)
     middleware = TrackSeedsSpiderMiddleware(crawler)
+    assert isinstance(middleware.from_crawler(crawler), TrackSeedsSpiderMiddleware)
+
     start_request_url = "https://example.com/1"
     start_request = Request(url=start_request_url, meta=meta)
     result = list(middleware.process_start_requests([start_request], TestSpider()))
