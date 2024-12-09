@@ -20,9 +20,12 @@ from zyte_spider_templates.middlewares import (
     CrawlingLogsMiddleware,
     MaxRequestsPerSeedDownloaderMiddleware,
     OffsiteRequestsPerSeedMiddleware,
+    OnlyFeedsMiddleware,
     PageParamsMiddlewareBase,
     TrackSeedsSpiderMiddleware,
 )
+
+from . import get_crawler as get_crawler_with_settings
 
 
 def get_fingerprinter(crawler):
@@ -1361,31 +1364,6 @@ def test_from_crawler():
     )
 
 
-def test_page_params_middleware_base_update_page_params():
-    request_url = "https://example.com/1"
-    request = Request(request_url)
-    crawler = get_crawler()
-    middleware = PageParamsMiddlewareBase(crawler)
-    assert middleware.update_page_params(request, {}) is None
-
-
-def test_page_params_middleware_base__update_page_params():
-    request_url = "https://example.com/1"
-    request = Request(request_url)
-    crawler = get_crawler()
-    middleware = PageParamsMiddlewareBase(crawler)
-    assert middleware._update_page_params(request) is None
-    assert "page_params" in request.meta
-    assert request.meta["page_params"] == {}
-
-    request = Request(request_url, meta={"page_params": {"test": 1}})
-    crawler = get_crawler()
-    middleware = PageParamsMiddlewareBase(crawler)
-    assert middleware._update_page_params(request) is None
-    assert "page_params" in request.meta
-    assert request.meta["page_params"] == {"test": 1}
-
-
 def test_page_params_middleware_base():
     class TestSpider(Spider):
         name = "test"
@@ -1401,11 +1379,11 @@ def test_page_params_middleware_base():
     result = list(
         middleware.process_spider_output(response, [request, item], crawler.spider)
     )
-    assert result[0].meta["page_params"] == {}
+    assert result[0].meta["page_params"] == {}  # type: ignore[union-attr]
 
     request = Request(url=request_url)
     result = list(middleware.process_start_requests([request], crawler.spider))
-    assert result[0].meta["page_params"] == {}
+    assert result[0].meta["page_params"] == {}  # type: ignore[union-attr]
 
     request = Request(request_url, meta={"page_params": {"test": 1}})
     response = Response(url=request_url, request=request)
@@ -1413,10 +1391,10 @@ def test_page_params_middleware_base():
     result = list(
         middleware.process_spider_output(response, [request, item], crawler.spider)
     )
-    assert result[0].meta["page_params"] == {"test": 1}
+    assert result[0].meta["page_params"] == {"test": 1}  # type: ignore[union-attr]
 
     result = list(middleware.process_start_requests([request], crawler.spider))
-    assert result[0].meta["page_params"] == {"test": 1}
+    assert result[0].meta["page_params"] == {"test": 1}  # type: ignore[union-attr]
 
 
 @pytest.mark.asyncio
@@ -1427,6 +1405,7 @@ async def test_page_params_middleware_base_async():
     crawler = get_crawler()
     crawler.spider = TestSpider()
 
+    # Default page_params value
     request_url = "https://example.com/1"
     request = Request(request_url)
     item = Article(url="https://example.com/article")
@@ -1438,6 +1417,7 @@ async def test_page_params_middleware_base_async():
     assert result[0].meta["page_params"] == {}
     assert result[1] == item
 
+    # Explicit page_params in request meta
     request = Request(request_url, meta={"page_params": {"test": 1}})
     response = Response(url=request_url, request=request)
     middleware = PageParamsMiddlewareBase(crawler)
@@ -1446,3 +1426,41 @@ async def test_page_params_middleware_base_async():
     )
     assert result[0].meta["page_params"] == {"test": 1}
     assert result[1] == item
+
+
+def test_only_feeds_middleware():
+    class TestSpider(Spider):
+        name = "test"
+
+    crawler = get_crawler_with_settings()
+    crawler.spider = TestSpider()
+    crawler.spider.settings = Settings({})
+
+    # ONLY_FEEDS_ENABLED = True
+    crawler.spider.settings.set("ONLY_FEEDS_ENABLED", True)
+    middleware = OnlyFeedsMiddleware(crawler)
+    assert middleware is not None
+
+    # ONLY_FEEDS_ENABLED = False
+    crawler.spider.settings.set("ONLY_FEEDS_ENABLED", False)
+    with pytest.raises(NotConfigured):
+        OnlyFeedsMiddleware(crawler)
+
+    # Explicit only_feeds in request meta
+    crawler.spider.settings.set("ONLY_FEEDS_ENABLED", True)
+    middleware = OnlyFeedsMiddleware(crawler)
+
+    request_url = "https://example.com/1"
+    request = Request(request_url, meta={"only_feeds": False})
+
+    page_params = {}
+    middleware.update_page_params(request, page_params)
+
+    assert page_params["only_feeds"] is False
+
+    # Default only_feeds value
+    request = Request(request_url)
+    page_params = {}
+    middleware.update_page_params(request, page_params)
+
+    assert page_params["only_feeds"] is True
