@@ -169,7 +169,7 @@ class SerpResultsPerPageParam(BaseModel):
 
 @document_enum
 class SerpItemType(str, Enum):
-    none: str = "none"
+    nothing: str = "nothing"
     """
     Do not follow result links.
     """
@@ -224,7 +224,7 @@ class SerpItemTypeParam(BaseModel):
             "items will be of the specified data type, not search engine "
             "results page items."
         ),
-        default=SerpItemType.none,
+        default=SerpItemType.nothing,
     )
 
 
@@ -338,7 +338,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
                 next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
                 yield self.get_serp_request(next_url, page_number=page_number + 1)
 
-        if self.args.item_type == SerpItemType.none:
+        if self.args.item_type == SerpItemType.nothing:
             yield serp
             return
 
