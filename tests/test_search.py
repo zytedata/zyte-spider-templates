@@ -1,4 +1,5 @@
 import pytest
+from pytest_twisted import ensureDeferred
 from web_poet import AnyResponse, BrowserResponse, HttpResponse, PageParams
 
 from zyte_spider_templates.pages.search_request_template import (
@@ -616,7 +617,7 @@ from zyte_spider_templates.pages.search_request_template import (
         ),
     ),
 )
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_search_request_template(html, page_params, expected, caplog):
     caplog.clear()
     caplog.at_level("ERROR")
@@ -645,7 +646,7 @@ async def test_search_request_template(html, page_params, expected, caplog):
             assert expected.get("body", b"") == (search_request.body or b"")
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_search_request_template_browser(caplog):
     """Do not suggest using a browser request if that is already the case."""
     caplog.clear()

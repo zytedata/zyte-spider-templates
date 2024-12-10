@@ -60,6 +60,11 @@ Parameter mixins
 
 .. autoenum:: zyte_spider_templates.spiders.ecommerce.EcommerceCrawlStrategy
 
+.. autopydantic_model:: zyte_spider_templates.spiders.ecommerce.EcommerceExtractParam
+    :exclude-members: model_computed_fields
+
+.. autoenum:: zyte_spider_templates.spiders.ecommerce.EcommerceExtract
+
 .. autopydantic_model:: zyte_spider_templates.spiders.serp.SerpItemTypeParam
     :exclude-members: model_computed_fields
 

@@ -122,6 +122,26 @@ def test_required_args(spider_cls):
             },
             False,
         ),
+        (
+            EcommerceSpider,
+            {
+                "url": "https://example.com",
+                "extract": "product",
+                "crawl_strategy": "direct_item",
+                "search_queries": "foo",
+            },
+            False,
+        ),
+        (
+            EcommerceSpider,
+            {
+                "url": "https://example.com",
+                "extract": "productList",
+                "crawl_strategy": "direct_item",
+                "search_queries": "foo",
+            },
+            True,
+        ),
         (GoogleSearchSpider, {"domain": "google.com"}, False),
         (
             GoogleSearchSpider,

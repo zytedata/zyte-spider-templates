@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+from pytest_twisted import ensureDeferred
 from scrapy.exceptions import CloseSpider, NotConfigured
 from scrapy.http import Request, Response
 from scrapy.settings import Settings
@@ -67,7 +68,7 @@ def test_prepare_manager_with_collection_fp_failure(caplog):
 
 
 @patch("scrapinghub.ScrapinghubClient")
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_middleware_process_spider_output(mock_scrapinghub_client):
     crawler = crawler_for_incremental()
     crawler.spider.settings = Settings({"INCREMENTAL_CRAWL_ENABLED": True})

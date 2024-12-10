@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from freezegun import freeze_time
+from pytest_twisted import ensureDeferred
 from scrapy import Spider
 from scrapy.exceptions import IgnoreRequest, NotConfigured
 from scrapy.http import Request, Response
@@ -1065,7 +1066,7 @@ def test_offsite_requests_per_seed_middleware():
     assert request.meta["seed"] == seed
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def result_as_async_gen(middleware, response, result, spider):
     async def async_generator():
         for r in result:
@@ -1079,7 +1080,7 @@ async def result_as_async_gen(middleware, response, result, spider):
     return processed_result
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_offsite_requests_per_seed_middleware_async():
     class TestSpider(Spider):
         name = "test"
@@ -1458,7 +1459,7 @@ def test_page_params_middleware_base():
     assert processed_output[0].meta["page_params"] == {"test": 1}  # type: ignore[union-attr]
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_page_params_middleware_base_async():
     class TestSpider(Spider):
         name = "test"
@@ -1583,7 +1584,7 @@ def test_dupe_filter_spider_middleware():
     assert processed_output[1] == item
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_dupe_filter_spider_middleware_async():
     class TestSpider(Spider):
         name = "test"
