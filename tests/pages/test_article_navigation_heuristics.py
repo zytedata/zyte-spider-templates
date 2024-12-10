@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-import pytest
+from pytest_twisted import ensureDeferred
 from web_poet import (
     AnyResponse,
     HttpResponse,
@@ -16,7 +16,7 @@ from zyte_spider_templates.pages.article_heuristics import (
 )
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_article_page():
     body = b"""
         <html>

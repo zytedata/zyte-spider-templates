@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest_twisted import ensureDeferred
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.request import RequestFingerprinter
 
@@ -43,7 +44,7 @@ def crawler_for_incremental():
     ],
 )
 @patch("scrapinghub.ScrapinghubClient")
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_get_existing_fingerprints(
     mock_scrapinghub_client,
     batch_size,
