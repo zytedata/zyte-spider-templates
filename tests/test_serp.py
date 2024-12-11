@@ -361,7 +361,7 @@ def test_metadata():
                         }
                         for code in sorted(GoogleGl)
                     },
-                    "title": "User Country",
+                    "title": "User Country (gl)",
                     "enum": list(
                         sorted(GOOGLE_GL_OPTIONS, key=GOOGLE_GL_OPTIONS.__getitem__)
                     ),
@@ -377,7 +377,7 @@ def test_metadata():
                         "particular countries. See "
                         "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.cr"
                     ),
-                    "title": "Content Countries",
+                    "title": "Content Countries (cr)",
                 },
                 "geolocation": {
                     "anyOf": [
@@ -414,7 +414,7 @@ def test_metadata():
                         }
                         for code in sorted(GoogleHl)
                     },
-                    "title": "User Language",
+                    "title": "User Language (hl)",
                     "enum": list(
                         sorted(GOOGLE_HL_OPTIONS, key=GOOGLE_HL_OPTIONS.__getitem__)
                     ),
@@ -430,7 +430,7 @@ def test_metadata():
                         "specified languages. See "
                         "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.lr"
                     ),
-                    "title": "Content Languages",
+                    "title": "Content Languages (lr)",
                 },
             },
             "required": ["search_queries"],
