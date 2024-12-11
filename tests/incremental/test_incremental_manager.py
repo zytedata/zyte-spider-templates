@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+from pytest_twisted import ensureDeferred
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.request import RequestFingerprinter
 from zyte_common_items import Article
@@ -264,7 +265,7 @@ def crawler_for_incremental():
         ),  # Three Requests and one Item with redirected URL in the result, one existing fingerprint in the cache
     ],
 )
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_process_incremental(
     mock_scrapinghub_client,
     input_request,
@@ -289,7 +290,7 @@ async def test_process_incremental(
 
 
 @patch("scrapinghub.ScrapinghubClient")
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_process_incremental_several_items(
     mock_scrapinghub_client,
 ):

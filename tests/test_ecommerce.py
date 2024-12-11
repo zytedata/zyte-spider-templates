@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 import requests
 import scrapy
+from pytest_twisted import ensureDeferred
+from scrapy import signals
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
 from web_poet.page_inputs.browser import BrowserResponse
@@ -36,6 +38,33 @@ def test_start_requests():
     assert len(requests) == 1
     assert requests[0].url == url
     assert requests[0].callback == spider.parse_navigation
+
+
+def test_start_requests_crawling_logs_page_type():
+    url = "https://example.com"
+    crawler = get_crawler()
+
+    spider = EcommerceSpider.from_crawler(crawler, url=url)
+    requests = list(spider.start_requests())
+    assert requests[0].meta["crawling_logs"]["page_type"] == "productNavigation"
+
+    spider = EcommerceSpider.from_crawler(
+        crawler, url=url, crawl_strategy="direct_item"
+    )
+    requests = list(spider.start_requests())
+    assert requests[0].meta["crawling_logs"]["page_type"] == "product"
+
+    spider = EcommerceSpider.from_crawler(
+        crawler, url=url, extract="product", crawl_strategy="direct_item"
+    )
+    requests = list(spider.start_requests())
+    assert requests[0].meta["crawling_logs"]["page_type"] == "product"
+
+    spider = EcommerceSpider.from_crawler(
+        crawler, url=url, extract="productList", crawl_strategy="direct_item"
+    )
+    requests = list(spider.start_requests())
+    assert requests[0].meta["crawling_logs"]["page_type"] == "productList"
 
 
 def test_crawl():
@@ -213,16 +242,320 @@ def test_crawl():
             assert request.callback == spider.parse_navigation
 
 
-def test_crawl_strategy_direct_item():
-    crawler = get_crawler()
-    spider = EcommerceSpider.from_crawler(
-        crawler,
-        url="https://example.com",
-        crawl_strategy="direct_item",
-    )
-    start_requests = list(spider.start_requests())
-    assert len(start_requests) == 1
-    assert start_requests[0].callback == spider.parse_product
+@pytest.mark.parametrize(
+    ("args", "output"),
+    (
+        *(
+            (
+                {"url": "https://example.com/", **crawl_strategy_args, **extract_args},
+                {
+                    "https://example.com/product/1",
+                    "https://example.com/product/2",
+                    "https://example.com/page/2/product/1",
+                    "https://example.com/page/2/product/2",
+                    "https://example.com/category/1/product/1",
+                    "https://example.com/category/1/product/2",
+                    "https://example.com/category/1/page/2/product/1",
+                    "https://example.com/category/1/page/2/product/2",
+                    "https://example.com/non-navigation/product/1",
+                    "https://example.com/non-navigation/product/2",
+                },
+            )
+            for crawl_strategy_args in ({}, {"crawl_strategy": "automatic"})
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/category/1",
+                    **crawl_strategy_args,
+                    **extract_args,
+                },
+                {
+                    "https://example.com/category/1/product/1",
+                    "https://example.com/category/1/product/2",
+                    "https://example.com/category/1/page/2/product/1",
+                    "https://example.com/category/1/page/2/product/2",
+                },
+            )
+            for crawl_strategy_args in ({}, {"crawl_strategy": "automatic"})
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/",
+                    "crawl_strategy": "full",
+                    **extract_args,
+                },
+                {
+                    "https://example.com/product/1",
+                    "https://example.com/product/2",
+                    "https://example.com/page/2/product/1",
+                    "https://example.com/page/2/product/2",
+                    "https://example.com/category/1/product/1",
+                    "https://example.com/category/1/product/2",
+                    "https://example.com/category/1/page/2/product/1",
+                    "https://example.com/category/1/page/2/product/2",
+                    "https://example.com/non-navigation/product/1",
+                    "https://example.com/non-navigation/product/2",
+                },
+            )
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/category/1",
+                    "crawl_strategy": "full",
+                    **extract_args,
+                },
+                {
+                    "https://example.com/category/1/product/1",
+                    "https://example.com/category/1/product/2",
+                    "https://example.com/category/1/page/2/product/1",
+                    "https://example.com/category/1/page/2/product/2",
+                    "https://example.com/non-navigation/product/1",
+                    "https://example.com/non-navigation/product/2",
+                },
+            )
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/",
+                    "crawl_strategy": "navigation",
+                    **extract_args,
+                },
+                {
+                    "https://example.com/product/1",
+                    "https://example.com/product/2",
+                    "https://example.com/page/2/product/1",
+                    "https://example.com/page/2/product/2",
+                    "https://example.com/category/1/product/1",
+                    "https://example.com/category/1/product/2",
+                    "https://example.com/category/1/page/2/product/1",
+                    "https://example.com/category/1/page/2/product/2",
+                },
+            )
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/category/1",
+                    "crawl_strategy": "navigation",
+                    **extract_args,
+                },
+                {
+                    "https://example.com/category/1/product/1",
+                    "https://example.com/category/1/product/2",
+                    "https://example.com/category/1/page/2/product/1",
+                    "https://example.com/category/1/page/2/product/2",
+                },
+            )
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/",
+                    "crawl_strategy": "pagination_only",
+                    **extract_args,
+                },
+                {
+                    "https://example.com/product/1",
+                    "https://example.com/product/2",
+                    "https://example.com/page/2/product/1",
+                    "https://example.com/page/2/product/2",
+                },
+            )
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/category/1",
+                    "crawl_strategy": "pagination_only",
+                    **extract_args,
+                },
+                {
+                    "https://example.com/category/1/product/1",
+                    "https://example.com/category/1/product/2",
+                    "https://example.com/category/1/page/2/product/1",
+                    "https://example.com/category/1/page/2/product/2",
+                },
+            )
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/",
+                    "crawl_strategy": "direct_item",
+                    **extract_args,
+                },
+                {
+                    "https://example.com/",
+                },
+            )
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/category/1",
+                    "crawl_strategy": "direct_item",
+                    **extract_args,
+                },
+                {
+                    "https://example.com/category/1",
+                },
+            )
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/",
+                    "extract": "productList",
+                    **crawl_strategy_args,
+                },
+                {
+                    "https://example.com/",
+                    "https://example.com/page/2",
+                    "https://example.com/category/1",
+                    "https://example.com/category/1/page/2",
+                    "https://example.com/non-navigation",
+                },
+            )
+            for crawl_strategy_args in ({}, {"crawl_strategy": "automatic"})
+        ),
+        *(
+            (
+                {
+                    "url": "https://example.com/category/1",
+                    "extract": "productList",
+                    **crawl_strategy_args,
+                },
+                {
+                    "https://example.com/category/1",
+                    "https://example.com/category/1/page/2",
+                },
+            )
+            for crawl_strategy_args in ({}, {"crawl_strategy": "automatic"})
+        ),
+        (
+            {
+                "url": "https://example.com/",
+                "crawl_strategy": "full",
+                "extract": "productList",
+            },
+            {
+                "https://example.com/",
+                "https://example.com/page/2",
+                "https://example.com/category/1",
+                "https://example.com/category/1/page/2",
+                "https://example.com/non-navigation",
+            },
+        ),
+        (
+            {
+                "url": "https://example.com/category/1",
+                "crawl_strategy": "full",
+                "extract": "productList",
+            },
+            {
+                "https://example.com/category/1",
+                "https://example.com/category/1/page/2",
+                "https://example.com/non-navigation",
+            },
+        ),
+        (
+            {
+                "url": "https://example.com/",
+                "crawl_strategy": "navigation",
+                "extract": "productList",
+            },
+            {
+                "https://example.com/",
+                "https://example.com/page/2",
+                "https://example.com/category/1",
+                "https://example.com/category/1/page/2",
+            },
+        ),
+        (
+            {
+                "url": "https://example.com/category/1",
+                "crawl_strategy": "navigation",
+                "extract": "productList",
+            },
+            {
+                "https://example.com/category/1",
+                "https://example.com/category/1/page/2",
+            },
+        ),
+        (
+            {
+                "url": "https://example.com/",
+                "crawl_strategy": "pagination_only",
+                "extract": "productList",
+            },
+            {
+                "https://example.com/",
+                "https://example.com/page/2",
+            },
+        ),
+        (
+            {
+                "url": "https://example.com/category/1",
+                "crawl_strategy": "pagination_only",
+                "extract": "productList",
+            },
+            {
+                "https://example.com/category/1",
+                "https://example.com/category/1/page/2",
+            },
+        ),
+        (
+            {
+                "url": "https://example.com/",
+                "crawl_strategy": "direct_item",
+                "extract": "productList",
+            },
+            {
+                "https://example.com/",
+            },
+        ),
+        (
+            {
+                "url": "https://example.com/category/1",
+                "crawl_strategy": "direct_item",
+                "extract": "productList",
+            },
+            {
+                "https://example.com/category/1",
+            },
+        ),
+    ),
+)
+@ensureDeferred
+async def test_crawl_strategies(args, output, mockserver):
+    settings = {
+        "ZYTE_API_URL": mockserver.urljoin("/"),
+        "ZYTE_API_KEY": "a",
+        "ADDONS": {"scrapy_zyte_api.Addon": 500},
+    }
+    crawler = get_crawler(settings=settings, spider_cls=EcommerceSpider)
+    actual_output = set()
+
+    def track_item(item, response, spider):
+        actual_output.add(item.url)
+
+    crawler.signals.connect(track_item, signal=signals.item_scraped)
+    await crawler.crawl(**args)
+    assert actual_output == output
 
 
 @pytest.mark.parametrize(
@@ -354,6 +687,16 @@ def test_metadata():
                     "type": "array",
                     "widget": "textarea",
                 },
+                "extract": {
+                    "default": "product",
+                    "description": "Data to return.",
+                    "title": "Extract",
+                    "enum": [
+                        "product",
+                        "productList",
+                    ],
+                    "type": "string",
+                },
                 "crawl_strategy": {
                     "default": "automatic",
                     "description": "Determines how the start URL and follow-up URLs are crawled.",
@@ -371,13 +714,15 @@ def test_metadata():
                         },
                         "direct_item": {
                             "description": (
-                                "Directly extract products from the provided URLs, "
-                                "without any crawling. To use this strategy, pass "
-                                "individual product URLs to the spider, not the "
-                                "website or product category URLs. Common use cases "
-                                "are product monitoring and batch extraction."
+                                "Directly extract items from the provided "
+                                "URLs, without any crawling. To use this "
+                                "strategy, pass to the spider individual "
+                                "product or product list URLs (in line with "
+                                "the extract spider parameter value). Common "
+                                "use cases are product monitoring and batch "
+                                "extraction."
                             ),
-                            "title": "Direct URLs to Product",
+                            "title": "Direct URLs",
                         },
                         "full": {
                             "description": (
@@ -419,12 +764,6 @@ def test_metadata():
                         "direct_item",
                     ],
                     "type": "string",
-                },
-                "dont_follow_product_links": {
-                    "default": False,
-                    "description": "Extract ProductList items from product list pages instead of following product links and extracting Product items from them.",
-                    "title": "Do not follow product links",
-                    "type": "boolean",
                 },
                 "geolocation": {
                     "anyOf": [

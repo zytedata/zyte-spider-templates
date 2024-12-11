@@ -94,10 +94,10 @@ class EcommerceCrawlStrategy(str, Enum):
 
     direct_item: str = "direct_item"
     """
-    Directly extract products from the provided URLs, without any crawling. To
-    use this strategy, pass individual product URLs to the spider, not the
-    website or product category URLs. Common use cases are product monitoring
-    and batch extraction.
+    Directly extract items from the provided URLs, without any crawling. To use
+    this strategy, pass to the spider individual product or product list URLs
+    (in line with the extract spider parameter value). Common use cases are
+    product monitoring and batch extraction.
     """
 
 
@@ -150,13 +150,14 @@ class EcommerceCrawlStrategyParam(BaseModel):
                     ),
                 },
                 EcommerceCrawlStrategy.direct_item: {
-                    "title": "Direct URLs to Product",
+                    "title": "Direct URLs",
                     "description": (
-                        "Directly extract products from the provided URLs, "
-                        "without any crawling. To use this strategy, pass "
-                        "individual product URLs to the spider, not the "
-                        "website or product category URLs. Common use cases "
-                        "are product monitoring and batch extraction."
+                        "Directly extract items from the provided URLs, "
+                        "without any crawling. To use this strategy, pass to "
+                        "the spider individual product or product list URLs "
+                        "(in line with the extract spider parameter value). "
+                        "Common use cases are product monitoring and batch "
+                        "extraction."
                     ),
                 },
             },
@@ -164,14 +165,24 @@ class EcommerceCrawlStrategyParam(BaseModel):
     )
 
 
-class FollowProductLinksParam(BaseModel):
-    dont_follow_product_links: bool = Field(
-        title="Do not follow product links",
-        description=(
-            "Extract ProductList items from product list pages instead of following "
-            "product links and extracting Product items from them."
-        ),
-        default=False,
+@document_enum
+class EcommerceExtract(str, Enum):
+    product: str = "product"
+    """
+    Product data from product detail pages.
+    """
+
+    productList: str = "productList"
+    """
+    Product list data from product listing pages (e.g. category pages).
+    """
+
+
+class EcommerceExtractParam(BaseModel):
+    extract: EcommerceExtract = Field(
+        title="Extract",
+        description="Data to return.",
+        default=EcommerceExtract.product,
     )
 
 
@@ -181,8 +192,8 @@ class EcommerceSpiderParams(
     ExtractFromParam,
     MaxRequestsParam,
     GeolocationParam,
-    FollowProductLinksParam,
     EcommerceCrawlStrategyParam,
+    EcommerceExtractParam,
     SearchQueriesParam,
     UrlsFileParam,
     UrlsParam,
@@ -200,7 +211,6 @@ class EcommerceSpiderParams(
     @model_validator(mode="after")
     def validate_search_queries_and_strategy(self):
         if self.search_queries and self.crawl_strategy in {
-            EcommerceCrawlStrategy.direct_item,
             EcommerceCrawlStrategy.full,
             EcommerceCrawlStrategy.navigation,
         }:
@@ -209,17 +219,16 @@ class EcommerceSpiderParams(
                 f"the crawl_strategy spider parameter with the search_queries "
                 f"spider parameter."
             )
-        return self
-
-    @model_validator(mode="after")
-    def validate_product_list_and_strategy(self):
-        if self.dont_follow_product_links and self.crawl_strategy in {
-            EcommerceCrawlStrategy.direct_item,
-        }:
+        if (
+            self.search_queries
+            and self.crawl_strategy == EcommerceCrawlStrategy.direct_item
+            and self.extract != EcommerceExtract.productList
+        ):
             raise ValueError(
                 f"Cannot combine the {self.crawl_strategy.value!r} value of "
-                f"the crawl_strategy spider parameter with the "
-                f"dont_follow_product_links spider parameter."
+                f"the crawl_strategy spider parameter with the search_queries "
+                f"spider parameter unless the extract spider parameter is "
+                f"{EcommerceExtract.productList.value!r}."
             )
         return self
 
@@ -265,21 +274,22 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         callback = (
             self.parse_product
             if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
+            and self.args.extract == EcommerceExtract.product
             else self.parse_navigation
         )
         meta: Dict[str, Any] = {
             "crawling_logs": {
-                "page_type": "product"
+                "page_type": self.args.extract.value
                 if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
                 else "productNavigation"
             },
         }
         if (
             self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
-            or self.args.dont_follow_product_links
+            or self.args.extract == EcommerceExtract.productList
         ) and self._custom_attrs_dep:
             meta.setdefault("inject", []).append(self._custom_attrs_dep)
-        if self.args.dont_follow_product_links:
+        if self.args.extract == EcommerceExtract.productList:
             meta.setdefault("inject", []).append(ProductList)
 
         if self.args.crawl_strategy == EcommerceCrawlStrategy.full:
@@ -333,7 +343,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             meta: Dict[str, Any] = {
                 "crawling_logs": {"page_type": "productNavigation"},
             }
-            if self.args.dont_follow_product_links:
+            if self.args.extract == EcommerceExtract.productList:
                 meta["inject"] = [ProductList]
                 if self._custom_attrs_dep:
                     meta["inject"].append(self._custom_attrs_dep)
@@ -359,11 +369,14 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         )
 
         products = navigation.items or []
-        if not self.args.dont_follow_product_links:
+        if self.args.extract == EcommerceExtract.product:
             for request in products:
                 yield self.get_parse_product_request(request)
 
-        if navigation.nextPage:
+        if (
+            self.args.crawl_strategy != EcommerceCrawlStrategy.direct_item
+            and navigation.nextPage
+        ):
             if not products:
                 self.logger.info(
                     f"Ignoring nextPage link {navigation.nextPage} since there "
@@ -375,13 +388,17 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 )
 
         if (
-            self.args.crawl_strategy != EcommerceCrawlStrategy.pagination_only
+            self.args.crawl_strategy
+            not in {
+                EcommerceCrawlStrategy.direct_item,
+                EcommerceCrawlStrategy.pagination_only,
+            }
             and not self.args.search_queries
         ):
             for request in navigation.subCategories or []:
                 yield self.get_subcategory_request(request, page_params=page_params)
 
-        if self.args.dont_follow_product_links:
+        if self.args.extract == EcommerceExtract.productList:
             product_list: ProductList = dynamic[ProductList]
             if (
                 item := self._produce_item(
@@ -457,7 +474,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 "page_type": page_type,
             },
         }
-        if self.args.dont_follow_product_links:
+        if self.args.extract == EcommerceExtract.productList:
             meta["inject"] = [ProductList]
             if self._custom_attrs_dep:
                 meta["inject"].append(self._custom_attrs_dep)

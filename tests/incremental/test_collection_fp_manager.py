@@ -1,8 +1,10 @@
+from asyncio import ensure_future
 from unittest.mock import MagicMock, patch
 
 import pytest
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.request import RequestFingerprinter
+from twisted.internet.defer import Deferred, inlineCallbacks
 
 from tests import get_crawler
 from zyte_spider_templates._incremental.manager import CollectionsFingerprintsManager
@@ -43,8 +45,8 @@ def crawler_for_incremental():
     ],
 )
 @patch("scrapinghub.ScrapinghubClient")
-@pytest.mark.asyncio
-async def test_get_existing_fingerprints(
+@inlineCallbacks
+def test_get_existing_fingerprints(
     mock_scrapinghub_client,
     batch_size,
     fingerprints,
@@ -68,10 +70,10 @@ async def test_get_existing_fingerprints(
     mock_manager.get_keys_from_collection = MagicMock(return_value=keys_in_collection)  # type: ignore
     mock_manager.batch = fingerprints_batch
 
-    assert (
-        await mock_manager.get_existing_fingerprints_async(fingerprints)
-        == expected_result
+    r = yield Deferred.fromFuture(
+        ensure_future(mock_manager.get_existing_fingerprints_async(fingerprints))
     )
+    assert r == expected_result
 
 
 @pytest.mark.parametrize(
