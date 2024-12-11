@@ -327,8 +327,7 @@ def test_metadata():
                     "title": "Results Per Page",
                 },
                 "item_type": {
-                    "anyOf": [{"type": "string"}, {"type": "null"}],
-                    "default": None,
+                    "default": "off",
                     "description": (
                         "If specified, follow organic search result links, "
                         "and extract the selected data type from the target "
@@ -336,6 +335,7 @@ def test_metadata():
                         "data type, not search engine results page items."
                     ),
                     "enum": [
+                        "off",
                         "article",
                         "articleList",
                         "forumThread",
@@ -344,6 +344,7 @@ def test_metadata():
                         "productList",
                     ],
                     "title": "Follow and Extract",
+                    "type": "string",
                 },
                 "gl": {
                     "anyOf": [
@@ -756,7 +757,9 @@ def test_item_type_mappings():
     # Ensure that the ITEM_TYPE_CLASSES dict maps all values from the
     # corresponding enum except for serp.
     actual_keys = set(ITEM_TYPE_CLASSES)
-    expected_keys = set(entry.value for entry in SerpItemType)
+    expected_keys = set(
+        entry.value for entry in SerpItemType if entry != SerpItemType.off
+    )
     assert actual_keys == expected_keys
 
     # Also ensure that no dict value is repeated.
