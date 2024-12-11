@@ -327,7 +327,7 @@ def test_metadata():
                     "title": "Results Per Page",
                 },
                 "item_type": {
-                    "default": "nothing",
+                    "default": "off",
                     "description": (
                         "If specified, follow organic search result links, "
                         "and extract the selected data type from the target "
@@ -335,7 +335,7 @@ def test_metadata():
                         "data type, not search engine results page items."
                     ),
                     "enum": [
-                        "nothing",
+                        "off",
                         "article",
                         "articleList",
                         "forumThread",
@@ -758,7 +758,7 @@ def test_item_type_mappings():
     # corresponding enum except for serp.
     actual_keys = set(ITEM_TYPE_CLASSES)
     expected_keys = set(
-        entry.value for entry in SerpItemType if entry != SerpItemType.nothing
+        entry.value for entry in SerpItemType if entry != SerpItemType.off
     )
     assert actual_keys == expected_keys
 
