@@ -20,6 +20,36 @@ def get_ephemeral_port():
 
 
 class DefaultResource(Resource):
+    """Mock server to fake Zyte API responses.
+
+    To use, include the mockserver fixture in the signature of your test, and
+    point the ZYTE_API_URL setting to the mock server. See
+    ``tests/test_ecommerce.py::test_crawl_strategies`` for an example.
+
+    This mock server is designed to fake a website with the following pages:
+
+    ```
+    https://example.com/
+    https://example.com/page/2
+    https://example.com/category/1
+    https://example.com/category/1/page/2
+    https://example.com/non-navigation
+    ```
+
+    When browserHtml is requested (for any URL, listed above or not), it is
+    a minimal HTML with an anchor tag pointing to
+    https://example.com/non-navigation.
+
+    When productNavigation is requested, nextPage and subCategories are filled
+    accordingly. productNavigation.items always has 2 product URLs, which are
+    the result of appending ``/product/<n>`` to the request URL.
+    https://example.com/non-navigation is not reachable through
+    productNavigation.
+
+    When product or productList is requested, an item with the current URL is
+    always returned.
+    """
+
     def getChild(self, path, request):
         return self
 
