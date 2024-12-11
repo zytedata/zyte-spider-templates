@@ -169,19 +169,19 @@ class EcommerceCrawlStrategyParam(BaseModel):
 class EcommerceExtract(str, Enum):
     product: str = "product"
     """
-    Product data from a product details page.
+    Product data from product detail pages.
     """
 
     productList: str = "productList"
     """
-    Product list data from a product listing page (e.g. a category page).
+    Product list data from product listing pages (e.g. category pages).
     """
 
 
 class EcommerceExtractParam(BaseModel):
     extract: EcommerceExtract = Field(
         title="Extract",
-        description="Determines what type of output data items to extract.",
+        description="Data to return.",
         default=EcommerceExtract.product,
     )
 

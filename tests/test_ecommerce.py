@@ -689,7 +689,7 @@ def test_metadata():
                 },
                 "extract": {
                     "default": "product",
-                    "description": "Determines what type of output data items to extract.",
+                    "description": "Data to return.",
                     "title": "Extract",
                     "enum": [
                         "product",
