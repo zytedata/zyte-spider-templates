@@ -27,7 +27,7 @@ from .base import BaseSpider
 
 class GoogleCrParam(BaseModel):
     cr: Optional[str] = Field(
-        title="Content Countries",
+        title="Content Countries (cr)",
         description=(
             "Restricts search results to documents originating in "
             "particular countries. See "
@@ -39,7 +39,7 @@ class GoogleCrParam(BaseModel):
 
 class GoogleGlParam(BaseModel):
     gl: Optional[GoogleGl] = Field(
-        title="User Country",
+        title="User Country (gl)",
         description=(
             "Boosts results relevant to this country. See "
             "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.gl"
@@ -58,7 +58,7 @@ class GoogleGlParam(BaseModel):
 
 class GoogleHlParam(BaseModel):
     hl: Optional[GoogleHl] = Field(
-        title="User Language",
+        title="User Language (hl)",
         description=(
             "User interface language, which can affect search results. See "
             "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.hl"
@@ -77,7 +77,7 @@ class GoogleHlParam(BaseModel):
 
 class GoogleLrParam(BaseModel):
     lr: Optional[str] = Field(
-        title="Content Languages",
+        title="Content Languages (lr)",
         description=(
             "Restricts search results to documents written in the specified "
             "languages. See "
