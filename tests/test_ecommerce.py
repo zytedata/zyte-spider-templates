@@ -68,6 +68,8 @@ def test_start_requests_crawling_logs_page_type():
 
 
 def test_crawl():
+    crawler = get_crawler()
+
     subcategory_urls = [
         "https://example.com/category/tech",
         "https://example.com/category/books",
@@ -95,7 +97,7 @@ def test_crawl():
     }
 
     url = subcategory_urls[0]
-    spider = EcommerceSpider(url="https://example.com/")
+    spider = EcommerceSpider.from_crawler(crawler, url="https://example.com/")
 
     def _get_requests(navigation: ProductNavigation) -> List[scrapy.Request]:
         return list(
@@ -219,8 +221,8 @@ def test_crawl():
     assert [request.priority for request in requests] == [199, 183]
 
     # Test parse_navigation() behavior on pagination_only crawl strategy.
-    spider = EcommerceSpider(
-        url="https://example.com/", crawl_strategy="pagination_only"
+    spider = EcommerceSpider.from_crawler(
+        crawler, url="https://example.com/", crawl_strategy="pagination_only"
     )
 
     # nextpage + items
