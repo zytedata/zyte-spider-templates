@@ -26,6 +26,19 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
+class _LogExceptionContextManager:
+    def __init__(self, spider):
+        self._spider = spider
+
+    def __enter__(self):
+        return
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        if exc_type is not None:
+            self._spider.logger.exception(exc_value)
+        return True
+
+
 # Higher priority than command-line-defined settings (40).
 ARG_SETTING_PRIORITY: int = 50
 
@@ -120,5 +133,7 @@ class BaseSpider(scrapy.Spider):
                 CustomAttributes,
                 custom_attrs(custom_attrs_input, custom_attrs_options),
             ]
+
+        spider._log_exception = _LogExceptionContextManager(spider)
 
         return spider

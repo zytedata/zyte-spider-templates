@@ -48,6 +48,8 @@ class DefaultResource(Resource):
 
     When product or productList is requested, an item with the current URL is
     always returned.
+
+    All output also includes invalid links (mailto:…).
     """
 
     def getChild(self, path, request):
@@ -69,7 +71,7 @@ class DefaultResource(Resource):
         response_data["url"] = request_data["url"]
 
         non_navigation_url = "https://example.com/non-navigation"
-        html = f"""<html><body><a href="{non_navigation_url}"></a></body></html>"""
+        html = f"""<html><body><a href="{non_navigation_url}"></a><a href="mailto:jane@example.com"></a></body></html>"""
         if request_data.get("browserHtml", False) is True:
             response_data["browserHtml"] = html
 
@@ -94,11 +96,15 @@ class DefaultResource(Resource):
                 }
                 if "/category/" not in request_data["url"]:
                     kwargs["subCategories"] = [
+                        {"url": "mailto:jane@example.com"},
                         {"url": f"{request_data['url'].rstrip('/')}/category/1"},
                     ]
+            else:
+                kwargs["nextPage"] = {"url": "mailto:jane@example.com"}
             response_data["productNavigation"] = {
                 "url": request_data["url"],
                 "items": [
+                    {"url": "mailto:jane@example.com"},
                     {"url": f"{request_data['url'].rstrip('/')}/product/1"},
                     {"url": f"{request_data['url'].rstrip('/')}/product/2"},
                 ],

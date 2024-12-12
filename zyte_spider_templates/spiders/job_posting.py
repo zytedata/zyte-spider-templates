@@ -174,14 +174,16 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
 
     def start_requests(self) -> Iterable[scrapy.Request]:
         for url in self.start_urls:
-            yield self.get_start_request(url)
+            with self._log_exception:
+                yield self.get_start_request(url)
 
     def parse_navigation(
         self, response: DummyResponse, navigation: JobPostingNavigation
     ) -> Iterable[scrapy.Request]:
         job_postings = navigation.items or []
         for request in job_postings:
-            yield self.get_parse_job_posting_request(request)
+            with self._log_exception:
+                yield self.get_parse_job_posting_request(request)
 
         if navigation.nextPage:
             if not job_postings:
@@ -190,9 +192,10 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
                     f"are no job posting links found in {navigation.url}"
                 )
             else:
-                yield self.get_nextpage_request(
-                    cast(ProbabilityRequest, navigation.nextPage)
-                )
+                with self._log_exception:
+                    yield self.get_nextpage_request(
+                        cast(ProbabilityRequest, navigation.nextPage)
+                    )
 
     def parse_job_posting(
         self, response: DummyResponse, job_posting: JobPosting, dynamic: DynamicDeps
