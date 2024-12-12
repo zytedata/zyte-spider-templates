@@ -49,7 +49,7 @@ class DefaultResource(Resource):
     When product or productList is requested, an item with the current URL is
     always returned.
 
-    All output also includes invalid links (mailto:…).
+    All output also includes unsupported links (mailto:…).
     """
 
     def getChild(self, path, request):
