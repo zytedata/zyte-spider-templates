@@ -119,6 +119,8 @@ def get_spider_name(crawler: Crawler) -> str:
 
 def get_client() -> scrapinghub.ScrapinghubClient:
     # auth is taken from SH_APIKEY or SHUB_JOBAUTH
+    # TODO TESTING
+    logger.info(f"SHUB_APIURL: {os.getenv('SHUB_APIURL')}, SHUB_STORAGE: {os.getenv('SHUB_STORAGE')}")  # type: ignore[union-attr]
     return scrapinghub.ScrapinghubClient(
         dash_endpoint=os.getenv("SHUB_APIURL"),
         endpoint=os.getenv("SHUB_STORAGE"),
