@@ -89,6 +89,7 @@ class BaseSpider(scrapy.Spider):
     _NEXT_PAGE_PRIORITY: int = 100
 
     _custom_attrs_dep = None
+    _log_exception: _LogExceptionContextManager = None  # type: ignore[assignment]
 
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> Self:
