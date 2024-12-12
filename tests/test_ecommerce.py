@@ -680,7 +680,13 @@ def test_metadata():
                     "default": [],
                     "description": (
                         "A list of search queries, one per line, to submit "
-                        "using the search form found on each input URL."
+                        "using the search form found on each input URL. Only "
+                        "works for input URLs that support search. May not "
+                        "work on every website. Search queries are not "
+                        'compatible with the "full" and "navigation" '
+                        "crawl strategies, and when extracting products, they "
+                        'are not compatible with the "direct_item" crawl '
+                        "strategy either."
                     ),
                     "items": {"type": "string"},
                     "title": "Search Queries",
