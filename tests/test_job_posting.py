@@ -49,6 +49,7 @@ def test_start_requests():
 
 
 def test_crawl():
+    crawler = get_crawler()
     url = "https://example.com/category/tech"
     nextpage_url = "https://example.com/category/tech?p=2"
     item_urls = [
@@ -65,7 +66,7 @@ def test_crawl():
             {"url": item_urls[1], "metadata": {"probability": 0.83}},
         ],
     }
-    spider = JobPostingSpider(url="https://example.com/")
+    spider = JobPostingSpider.from_crawler(crawler, url="https://example.com/")
 
     # no links found
     navigation = JobPostingNavigation.from_dict({"url": url})

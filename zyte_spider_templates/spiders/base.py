@@ -26,6 +26,23 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
+class _LogExceptionsContextManager:
+    def __init__(self, spider, exc_info):
+        self._spider = spider
+        self._exc_info = exc_info
+
+    def __enter__(self):
+        return
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        if exc_type is None:
+            return True
+        if issubclass(exc_type, self._exc_info):
+            self._spider.logger.exception(exc_value)
+            return True
+        return False
+
+
 # Higher priority than command-line-defined settings (40).
 ARG_SETTING_PRIORITY: int = 50
 
@@ -76,6 +93,7 @@ class BaseSpider(scrapy.Spider):
     _NEXT_PAGE_PRIORITY: int = 100
 
     _custom_attrs_dep = None
+    _log_request_exception: _LogExceptionsContextManager = None  # type: ignore[assignment]
 
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> Self:
@@ -120,5 +138,7 @@ class BaseSpider(scrapy.Spider):
                 CustomAttributes,
                 custom_attrs(custom_attrs_input, custom_attrs_options),
             ]
+
+        spider._log_request_exception = _LogExceptionsContextManager(spider, ValueError)
 
         return spider
