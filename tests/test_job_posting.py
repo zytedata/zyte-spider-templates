@@ -265,7 +265,7 @@ def test_metadata():
     expected_metadata = {
         "template": True,
         "title": "Job posting",
-        "description": "Template for spiders that extract job posting data from websites.",
+        "description": "[Experimental] Template for spiders that extract job posting data from websites.",
         "param_schema": {
             "groups": [
                 {
