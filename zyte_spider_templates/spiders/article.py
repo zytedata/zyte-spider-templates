@@ -87,7 +87,7 @@ class IncrementalParam(BaseModel):
         ),
         default=False,
     )
-    incremental_collection_name: Optional[str] = Field(
+    incremental_collection_name: str = Field(
         description=(
             "Name of the Zyte Scrapy Cloud Collection used during an incremental crawl."
             "By default, a Collection named after the spider (or virtual spider) is used, "
@@ -98,7 +98,6 @@ class IncrementalParam(BaseModel):
             "- the same spider uses different collections (e.g., for development runs vs. production runs). "
             "Only ASCII alphanumeric characters and underscores are allowed in the collection name."
         ),
-        default=None,
         pattern="^[a-zA-Z0-9_]+$",
     )
 
