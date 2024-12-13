@@ -321,7 +321,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 }
                 if self.args.extract_from == ExtractFrom.browserHtml:
                     meta["inject"] = [BrowserResponse]
-                with self._log_exception:
+                with self._log_request_exception:
                     yield scrapy.Request(
                         url=url,
                         callback=self.parse_search_request_template,
@@ -329,7 +329,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                     )
         else:
             for url in self.start_urls:
-                with self._log_exception:
+                with self._log_request_exception:
                     yield self.get_start_request(url)
 
     def parse_search_request_template(
@@ -349,7 +349,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 meta["inject"] = [ProductList]
                 if self._custom_attrs_dep:
                     meta["inject"].append(self._custom_attrs_dep)
-            with self._log_exception:
+            with self._log_request_exception:
                 yield search_request_template.request(query=query).to_scrapy(
                     callback=self.parse_navigation,
                     meta=meta,
@@ -374,7 +374,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
         products = navigation.items or []
         if self.args.extract == EcommerceExtract.product:
             for request in products:
-                with self._log_exception:
+                with self._log_request_exception:
                     yield self.get_parse_product_request(request)
 
         if (
@@ -387,7 +387,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                     f"are no product links found in {navigation.url}"
                 )
             else:
-                with self._log_exception:
+                with self._log_request_exception:
                     yield self.get_nextpage_request(
                         cast(ProbabilityRequest, navigation.nextPage)
                     )
@@ -401,7 +401,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
             and not self.args.search_queries
         ):
             for request in navigation.subCategories or []:
-                with self._log_exception:
+                with self._log_request_exception:
                     yield self.get_subcategory_request(request, page_params=page_params)
 
         if self.args.extract == EcommerceExtract.productList:

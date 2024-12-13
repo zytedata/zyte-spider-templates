@@ -317,7 +317,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         url = f"https://www.{self.args.domain.value}/search"
         for search_query in search_queries:
             search_url = add_or_replace_parameter(url, "q", search_query)
-            with self._log_exception:
+            with self._log_request_exception:
                 yield self.get_serp_request(search_url, page_number=1)
 
     def parse_serp(self, response, page_number) -> Iterable[Union[Request, Serp]]:
@@ -332,7 +332,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
                 or serp.metadata.totalOrganicResults > next_start
             ):
                 next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
-                with self._log_exception:
+                with self._log_request_exception:
                     yield self.get_serp_request(next_url, page_number=page_number + 1)
 
         if self.args.item_type is None:
@@ -340,7 +340,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             return
 
         for result in serp.organicResults:
-            with self._log_exception:
+            with self._log_request_exception:
                 yield response.follow(
                     result.url,
                     callback=self.parse_result,
