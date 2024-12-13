@@ -13,6 +13,7 @@ from scrapy.http.request import Request
 from zyte_common_items import Item
 
 from zyte_spider_templates.utils import (
+    get_client,
     get_project_id,
     get_request_fingerprint,
     get_spider_name,
@@ -57,8 +58,7 @@ class CollectionsFingerprintsManager:
         )
 
     def init_collection(self, project_id, collection_name) -> None:
-        # auth is taken from SH_APIKEY or SHUB_JOBAUTH
-        client = scrapinghub.ScrapinghubClient()
+        client = get_client()
         collection = client.get_project(project_id).collections.get_store(
             collection_name
         )

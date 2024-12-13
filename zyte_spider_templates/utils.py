@@ -4,6 +4,7 @@ import os
 import re
 from typing import List, Optional
 
+import scrapinghub
 import tldextract
 from scrapy.crawler import Crawler
 from scrapy.http import Request
@@ -114,3 +115,11 @@ def get_spider_name(crawler: Crawler) -> str:
 
     logger.info(f"Picked spider name {crawler.spider.name} from the spider.")  # type: ignore[union-attr]
     return crawler.spider.name  # type: ignore[union-attr]
+
+
+def get_client() -> scrapinghub.ScrapinghubClient:
+    # auth is taken from SH_APIKEY or SHUB_JOBAUTH
+    return scrapinghub.ScrapinghubClient(
+        dash_endpoint=os.getenv("SHUB_APIURL"),
+        endpoint=os.getenv("SHUB_STORAGE"),
+    )

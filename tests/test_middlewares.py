@@ -25,6 +25,7 @@ from zyte_spider_templates.middlewares import (
     OffsiteRequestsPerSeedMiddleware,
     OnlyFeedsMiddleware,
     PageParamsMiddlewareBase,
+    TrackNavigationDepthSpiderMiddleware,
     TrackSeedsSpiderMiddleware,
 )
 
@@ -506,6 +507,15 @@ def test_process_request():
     crawler = _get_seed_crawler()
     spider_middleware = TrackSeedsSpiderMiddleware(crawler)
     downloader_middleware = MaxRequestsPerSeedDownloaderMiddleware(crawler)
+    assert downloader_middleware.crawler == crawler
+    assert isinstance(
+        downloader_middleware.from_crawler(crawler),
+        MaxRequestsPerSeedDownloaderMiddleware,
+    )
+    assert isinstance(
+        spider_middleware.from_crawler(crawler), TrackSeedsSpiderMiddleware
+    )
+
     request_gen: Iterable[Union[Request, Item]]
     request: Union[Request, Item]
 
@@ -1636,3 +1646,92 @@ async def test_dupe_filter_spider_middleware_async():
     assert len(processed_output) == 2
     assert processed_output[0].url == "https://example.com/41"
     assert processed_output[1] == item
+
+
+def test_track_navigation_depth_spider_middleware():
+    class TestSpider(Spider):
+        name = "test"
+
+    crawler = get_crawler_with_settings()
+    crawler.spider = TestSpider()
+    crawler.stats = StatsCollector(crawler)
+    crawler.spider.settings = Settings({})
+    request_url_1 = "https://example.com/1"
+    request_url_2 = "https://example.com/2"
+    item = Article(url="https://example.com/article")
+
+    # NAVIGATION_DEPTH_LIMIT = 1
+    crawler.spider.settings.set("NAVIGATION_DEPTH_LIMIT", 1)
+    middleware = TrackNavigationDepthSpiderMiddleware(crawler)
+    assert middleware is not None
+    assert middleware.max_navigation_depth == 1
+
+    assert isinstance(
+        middleware.from_crawler(crawler), TrackNavigationDepthSpiderMiddleware
+    )
+
+    # NAVIGATION_DEPTH_LIMIT = 0
+    crawler.spider.settings.set("NAVIGATION_DEPTH_LIMIT", 0)
+    with pytest.raises(NotConfigured):
+        TrackNavigationDepthSpiderMiddleware(crawler)
+
+    # Explicit final_navigation_page in request meta
+    crawler.spider.settings.set("NAVIGATION_DEPTH_LIMIT", 1)
+    middleware = TrackNavigationDepthSpiderMiddleware(crawler)
+
+    request = Request(request_url_1, meta={"final_navigation_page": True})
+    page_params: dict = {}
+    middleware.update_page_params(request, page_params)
+    assert page_params["skip_subcategories"] is True
+
+    # Default final_navigation_page value
+    request = Request(request_url_1)
+    page_params = {}
+    middleware.update_page_params(request, page_params)
+    assert page_params["skip_subcategories"] is None
+
+    # Test process_start_requests with NAVIGATION_DEPTH_LIMIT = 1
+    crawler.spider.settings.set("NAVIGATION_DEPTH_LIMIT", 1)
+    middleware = TrackNavigationDepthSpiderMiddleware(crawler)
+    processed_requests = list(
+        middleware.process_start_requests(
+            [Request(url=request_url_1), Request(url=request_url_2)], crawler.spider
+        )
+    )
+    assert len(processed_requests) == 2
+    for i in (0, 1):
+        assert processed_requests[i].meta["final_navigation_page"] is True
+        assert processed_requests[i].meta["navigation_depth"] == 1
+        assert processed_requests[i].meta["page_params"] == {"skip_subcategories": None}
+
+    # Test process_start_requests with NAVIGATION_DEPTH_LIMIT = 2
+    crawler.spider.settings.set("NAVIGATION_DEPTH_LIMIT", 2)
+    middleware = TrackNavigationDepthSpiderMiddleware(crawler)
+    processed_requests = list(
+        middleware.process_start_requests(
+            [Request(url=request_url_1), Request(url=request_url_2)], crawler.spider
+        )
+    )
+    assert len(processed_requests) == 2
+    for i in (0, 1):
+        assert processed_requests[i].meta["final_navigation_page"] is False
+        assert processed_requests[i].meta["navigation_depth"] == 1
+        assert processed_requests[i].meta["page_params"] == {"skip_subcategories": None}
+
+    # Test process_spider_output
+    crawler.spider.settings.set("NAVIGATION_DEPTH_LIMIT", 1)
+    middleware = TrackNavigationDepthSpiderMiddleware(crawler)
+
+    response = Response(url=request_url_1, request=Request(url=request_url_1, meta={}))
+    result = [
+        Request(url=request_url_1, meta={}),
+        item,
+        Request(url=request_url_2, meta={}),
+    ]
+    processed_output = list(
+        middleware.process_spider_output(response, result, crawler.spider)
+    )
+    assert len(processed_output) == 3
+    assert processed_output[0].url == request_url_1  # type: ignore[union-attr]
+    assert processed_output[1] == item
+    assert processed_output[2].url == request_url_2  # type: ignore[union-attr]
