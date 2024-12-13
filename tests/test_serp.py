@@ -327,8 +327,7 @@ def test_metadata():
                     "title": "Results Per Page",
                 },
                 "item_type": {
-                    "anyOf": [{"type": "string"}, {"type": "null"}],
-                    "default": None,
+                    "default": "off",
                     "description": (
                         "If specified, follow organic search result links, "
                         "and extract the selected data type from the target "
@@ -336,6 +335,7 @@ def test_metadata():
                         "data type, not search engine results page items."
                     ),
                     "enum": [
+                        "off",
                         "article",
                         "articleList",
                         "forumThread",
@@ -344,6 +344,7 @@ def test_metadata():
                         "productList",
                     ],
                     "title": "Follow and Extract",
+                    "type": "string",
                 },
                 "gl": {
                     "anyOf": [
@@ -361,7 +362,7 @@ def test_metadata():
                         }
                         for code in sorted(GoogleGl)
                     },
-                    "title": "User Country",
+                    "title": "User Country (gl)",
                     "enum": list(
                         sorted(GOOGLE_GL_OPTIONS, key=GOOGLE_GL_OPTIONS.__getitem__)
                     ),
@@ -377,7 +378,7 @@ def test_metadata():
                         "particular countries. See "
                         "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.cr"
                     ),
-                    "title": "Content Countries",
+                    "title": "Content Countries (cr)",
                 },
                 "geolocation": {
                     "anyOf": [
@@ -414,7 +415,7 @@ def test_metadata():
                         }
                         for code in sorted(GoogleHl)
                     },
-                    "title": "User Language",
+                    "title": "User Language (hl)",
                     "enum": list(
                         sorted(GOOGLE_HL_OPTIONS, key=GOOGLE_HL_OPTIONS.__getitem__)
                     ),
@@ -430,7 +431,7 @@ def test_metadata():
                         "specified languages. See "
                         "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.lr"
                     ),
-                    "title": "Content Languages",
+                    "title": "Content Languages (lr)",
                 },
             },
             "required": ["search_queries"],
@@ -756,7 +757,9 @@ def test_item_type_mappings():
     # Ensure that the ITEM_TYPE_CLASSES dict maps all values from the
     # corresponding enum except for serp.
     actual_keys = set(ITEM_TYPE_CLASSES)
-    expected_keys = set(entry.value for entry in SerpItemType)
+    expected_keys = set(
+        entry.value for entry in SerpItemType if entry != SerpItemType.off
+    )
     assert actual_keys == expected_keys
 
     # Also ensure that no dict value is repeated.
