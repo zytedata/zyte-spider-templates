@@ -313,7 +313,10 @@ def test_metadata():
                     "type": "boolean",
                 },
                 "incremental_collection_name": {
-                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "anyOf": [
+                        {"type": "string", "pattern": "^[a-zA-Z0-9_]+$"},
+                        {"type": "null"},
+                    ],
                     "default": None,
                     "description": "Name of the Zyte Scrapy Cloud Collection used during an incremental crawl."
                     "By default, a Collection named after the spider (or virtual spider) is used, "
@@ -321,7 +324,8 @@ def test_metadata():
                     "provided those previous runs had `incremental` argument set to `true`."
                     "Using a different collection name makes sense, for example, in the following cases:"
                     "- different spiders share a collection."
-                    "- the same spider uses different collections (e.g., for development runs vs. production runs).",
+                    "- the same spider uses different collections (e.g., for development runs vs. production runs). "
+                    "Only ASCII alphanumeric characters and underscores are allowed in the collection name.",
                     "title": "Incremental Collection Name",
                 },
                 "crawl_strategy": {

@@ -95,9 +95,11 @@ class IncrementalParam(BaseModel):
             "provided those previous runs had `incremental` argument set to `true`."
             "Using a different collection name makes sense, for example, in the following cases:"
             "- different spiders share a collection."
-            "- the same spider uses different collections (e.g., for development runs vs. production runs)."
+            "- the same spider uses different collections (e.g., for development runs vs. production runs). "
+            "Only ASCII alphanumeric characters and underscores are allowed in the collection name."
         ),
         default=None,
+        pattern="^[a-zA-Z0-9_]+$",
     )
 
 

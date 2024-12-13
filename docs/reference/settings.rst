@@ -156,6 +156,8 @@ INCREMENTAL_CRAWL_COLLECTION_NAME
     :attr:`~zyte_spider_templates.spiders.article.ArticleSpiderParams.incremental_collection_name`
     command-line parameter instead of this setting.
 
+.. note::
+    Only ASCII alphanumeric characters and underscores are allowed.
 
 Default: `<The current spider's name>_incremental`.
 The current spider's name here will be virtual spider's name, if it's a virtual spider;
