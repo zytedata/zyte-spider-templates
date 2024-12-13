@@ -3,7 +3,6 @@ import scrapy
 from duplicate_url_discarder_rules import RULE_PATHS
 from packaging import version
 from scrapy.utils.test import get_crawler
-from zyte_common_items.pipelines import DropLowProbabilityItemPipeline
 
 from zyte_spider_templates import (
     AllowOffsiteMiddleware,
@@ -44,7 +43,6 @@ def _test_setting_changes(initial_settings, expected_settings):
         "DOWNLOADER_MIDDLEWARES",
         "SCRAPY_POET_PROVIDERS",
         "SPIDER_MIDDLEWARES",
-        "ITEM_PIPELINES",
     ):
         if setting not in crawler.settings:
             assert setting not in expected_settings
@@ -91,9 +89,6 @@ def _test_setting_changes(initial_settings, expected_settings):
                     TrackSeedsSpiderMiddleware: 550,
                     CrawlingLogsMiddleware: 1000,
                 },
-                "ITEM_PIPELINES": {
-                    DropLowProbabilityItemPipeline: 0,
-                },
                 "SPIDER_MODULES": [
                     "zyte_spider_templates.spiders",
                 ],
@@ -137,9 +132,6 @@ def test_poet_setting_changes_since_scrapy_2_11_2(initial_settings, expected_set
                     AllowOffsiteMiddleware: 500,
                     TrackSeedsSpiderMiddleware: 550,
                     CrawlingLogsMiddleware: 1000,
-                },
-                "ITEM_PIPELINES": {
-                    DropLowProbabilityItemPipeline: 0,
                 },
                 "SPIDER_MODULES": [
                     "zyte_spider_templates.spiders",

@@ -9,6 +9,7 @@ import scrapy
 from pydantic import BaseModel, ConfigDict, Field
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
+from scrapy.settings import BaseSettings
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
 from web_poet import BrowserResponse, HttpResponse
@@ -18,6 +19,7 @@ from zyte_common_items import (
     ProbabilityMetadata,
     ProbabilityRequest,
 )
+from zyte_common_items.pipelines import DropLowProbabilityItemPipeline
 
 from zyte_spider_templates.documentation import document_enum
 from zyte_spider_templates.pages.article_heuristics import is_feed_request
@@ -189,6 +191,11 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
             )
 
         return spider
+
+    @classmethod
+    def update_settings(cls, settings: BaseSettings) -> None:
+        super().update_settings(settings)
+        settings["ITEM_PIPELINES"][DropLowProbabilityItemPipeline] = 0
 
     def _init_input(self):
         urls_file = self.args.urls_file

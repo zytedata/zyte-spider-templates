@@ -4,7 +4,6 @@ from typing import Any, List, Optional, Type
 from duplicate_url_discarder_rules import RULE_PATHS
 from scrapy.settings import BaseSettings
 from scrapy.utils.misc import load_object
-from zyte_common_items.pipelines import DropLowProbabilityItemPipeline
 
 from zyte_spider_templates import (
     AllowOffsiteMiddleware,
@@ -144,7 +143,6 @@ class Addon:
             settings, "SPIDER_MIDDLEWARES", TrackNavigationDepthSpiderMiddleware, 110
         )
         _setdefault(settings, "SPIDER_MIDDLEWARES", CrawlingLogsMiddleware, 1000)
-        _setdefault(settings, "ITEM_PIPELINES", DropLowProbabilityItemPipeline, 0)
 
         try:
             from scrapy.downloadermiddlewares.offsite import OffsiteMiddleware
