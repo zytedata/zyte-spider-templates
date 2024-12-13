@@ -175,7 +175,7 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
         "title": "Article",
-        "description": "Template for spiders that extract article data from news or blog websites.",
+        "description": "[Experimental] Template for spiders that extract article data from news or blog websites.",
     }
 
     @classmethod
