@@ -313,7 +313,10 @@ def test_metadata():
                     "type": "boolean",
                 },
                 "incremental_collection_name": {
-                    "anyOf": [{"type": "string", "pattern": "^[a-zA-Z0-9_]+$"}, {"type": "null"}],
+                    "anyOf": [
+                        {"type": "string", "pattern": "^[a-zA-Z0-9_]+$"},
+                        {"type": "null"},
+                    ],
                     "default": None,
                     "description": "Name of the Zyte Scrapy Cloud Collection used during an incremental crawl."
                     "By default, a Collection named after the spider (or virtual spider) is used, "
