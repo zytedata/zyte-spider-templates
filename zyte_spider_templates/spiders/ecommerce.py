@@ -7,6 +7,7 @@ from typing import (
     Callable,
     Dict,
     Iterable,
+    List,
     Optional,
     TypeVar,
     Union,
@@ -186,6 +187,25 @@ class EcommerceExtractParam(BaseModel):
     )
 
 
+class EcommerceSearchQueriesParam(SearchQueriesParam):
+    search_queries: List[str] = Field(
+        title="Search Queries",
+        description=(
+            "A list of search queries, one per line, to submit using the "
+            "search form found on each input URL. Only works for input URLs "
+            "that support search. May not work on every website. Search "
+            'queries are not compatible with the "full" and "navigation" '
+            "crawl strategies, and when extracting products, they are not "
+            'compatible with the "direct_item" crawl strategy either.'
+        ),
+        default_factory=list,
+        json_schema_extra={
+            "default": [],
+            "widget": "textarea",
+        },
+    )
+
+
 class EcommerceSpiderParams(
     CustomAttrsMethodParam,
     CustomAttrsInputParam,
@@ -194,7 +214,7 @@ class EcommerceSpiderParams(
     GeolocationParam,
     EcommerceCrawlStrategyParam,
     EcommerceExtractParam,
-    SearchQueriesParam,
+    EcommerceSearchQueriesParam,
     UrlsFileParam,
     UrlsParam,
     UrlParam,
