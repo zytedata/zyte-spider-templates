@@ -13,6 +13,8 @@ Spiders
 
 .. autoclass:: zyte_spider_templates.GoogleSearchSpider
 
+.. autoclass:: zyte_spider_templates.JobPostingSpider
+
 
 Pages
 =====
@@ -58,6 +60,11 @@ Parameter mixins
 
 .. autoenum:: zyte_spider_templates.spiders.ecommerce.EcommerceCrawlStrategy
 
+.. autopydantic_model:: zyte_spider_templates.spiders.ecommerce.EcommerceExtractParam
+    :exclude-members: model_computed_fields
+
+.. autoenum:: zyte_spider_templates.spiders.ecommerce.EcommerceExtract
+
 .. autopydantic_model:: zyte_spider_templates.spiders.serp.SerpItemTypeParam
     :exclude-members: model_computed_fields
 
@@ -70,6 +77,11 @@ Parameter mixins
     :exclude-members: model_computed_fields
 
 .. autoenum:: zyte_spider_templates.spiders.article.ArticleCrawlStrategy
+
+.. autopydantic_model:: zyte_spider_templates.spiders.job_posting.JobPostingCrawlStrategyParam
+    :exclude-members: model_computed_fields
+
+.. autoenum:: zyte_spider_templates.spiders.job_posting.JobPostingCrawlStrategy
 
 
 .. _middlewares:
