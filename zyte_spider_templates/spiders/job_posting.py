@@ -109,7 +109,7 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
         "title": "Job posting",
-        "description": "Template for spiders that extract job posting data from websites.",
+        "description": "[Experimental] Template for spiders that extract job posting data from websites.",
     }
 
     @classmethod
