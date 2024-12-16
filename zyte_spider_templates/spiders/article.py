@@ -295,15 +295,16 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
 
         for url in self.start_urls:
             meta = {"request_type": request_type}
-            yield self.get_parse_request(
-                ProbabilityRequest(
-                    url=url,
-                    name=f"[{request_type.value.name}]",
-                    metadata=ProbabilityMetadata(probability=probability),
-                ),
-                meta=meta,
-                is_feed=False,
-            )
+            with self._log_request_exception:
+                yield self.get_parse_request(
+                    ProbabilityRequest(
+                        url=url,
+                        name=f"[{request_type.value.name}]",
+                        metadata=ProbabilityMetadata(probability=probability),
+                    ),
+                    meta=meta,
+                    is_feed=False,
+                )
 
     def parse_dynamic(
         self,
@@ -338,9 +339,10 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
                     "request_type": RequestType.NEXT_PAGE,
                     "increase_navigation_depth": False,
                 }
-                yield self.get_parse_request(
-                    navigation.nextPage, meta=meta, is_feed=False
-                )
+                with self._log_request_exception:
+                    yield self.get_parse_request(
+                        navigation.nextPage, meta=meta, is_feed=False
+                    )
 
         subcategories = navigation.subCategories or []
         items = navigation.items or []
@@ -384,7 +386,8 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
                 "increase_navigation_depth": increase_navigation_depth,
             }
 
-            yield self.get_parse_request(req, meta=meta, is_feed=is_feed)
+            with self._log_request_exception:
+                yield self.get_parse_request(req, meta=meta, is_feed=is_feed)
 
     def get_parse_request(
         self,

@@ -14,6 +14,7 @@ from .middlewares import (
 from .spiders.article import ArticleSpider
 from .spiders.base import BaseSpider, BaseSpiderParams
 from .spiders.ecommerce import EcommerceSpider
+from .spiders.job_posting import JobPostingSpider
 from .spiders.serp import GoogleSearchSpider
 
 from ._addon import Addon  # isort: skip

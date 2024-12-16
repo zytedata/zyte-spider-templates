@@ -25,7 +25,7 @@ setup(
         "scrapy>=2.11.0",
         "scrapy-poet>=0.24.0",
         "scrapy-spider-metadata>=0.2.0",
-        "scrapy-zyte-api[provider]>=0.23.0",
+        "scrapy-zyte-api[provider]>=0.24.0",
         "web-poet>=0.17.1",
         "xtractmime>=0.2.1",
         "zyte-common-items>=0.26.2",

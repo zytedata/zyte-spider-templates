@@ -20,6 +20,7 @@ zyte-spider-templates documentation
    E-commerce <templates/e-commerce>
    Article <templates/article>
    Google search <templates/google-search>
+   Job posting <templates/job-posting>
 
 .. toctree::
    :caption: Features
