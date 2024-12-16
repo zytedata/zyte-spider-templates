@@ -95,9 +95,11 @@ class IncrementalParam(BaseModel):
             "provided those previous runs had `incremental` argument set to `true`."
             "Using a different collection name makes sense, for example, in the following cases:"
             "- different spiders share a collection."
-            "- the same spider uses different collections (e.g., for development runs vs. production runs)."
+            "- the same spider uses different collections (e.g., for development runs vs. production runs). "
+            "Only ASCII alphanumeric characters and underscores are allowed in the collection name."
         ),
         default=None,
+        pattern="^[a-zA-Z0-9_]+$",
     )
 
 
@@ -173,7 +175,7 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
     metadata: Dict[str, Any] = {
         **BaseSpider.metadata,
         "title": "Article",
-        "description": "Template for spiders that extract article data from news or blog websites.",
+        "description": "[Experimental] Template for spiders that extract article data from news or blog websites.",
     }
 
     @classmethod
