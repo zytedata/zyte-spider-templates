@@ -13,29 +13,29 @@ Changes
 * :ref:`Search queries <search-queries>` support is added to the
   :ref:`e-commerce spider template <e-commerce>`.
   This allows to provide a list of search queries to the
-  spider; spider finds a search form on a website, and submits all the queries.
+  spider; the spider finds a search form on the target webpage, and submits all the queries.
 
 * ProductList extraction support is added to the
   :ref:`e-commerce spider template <e-commerce>`. This allows spiders to
-  extract basic product information without going to product detail pages.
+  extract basic product information without going into product detail pages.
 
 * New features are added to the :ref:`Google Search spider template <google-search>`:
 
     * An option to follow the result links and extract data
-      from the target pages (via ``extract`` argument)
+      from the target pages (via the ``extract`` argument)
     * Content Languages (lr) parameter
     * Content Countries (cr) parameter
     * User Country (gl) parameter
     * User Language (hl) parameter
     * results_per_page parameter
 
-* Scrapy addon is added. This allows to greatly simplify initial
+* Added a Scrapy add-on. This allows to greatly simplify the initial
   zyte-spider-templates configuration.
 
-* Bug fix: incorrectly extracted URLs no longer make the spiders drop
+* Bug fix: incorrectly extracted URLs no longer make spiders drop
   other requests.
 
-* Cleanup CI; improved testing suite; clean up documentation.
+* Cleaned up the CI; improved the testing suite; cleaned up the documentation.
 
 0.10.0 (2024-11-22)
 -------------------
