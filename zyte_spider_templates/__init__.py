@@ -1,3 +1,6 @@
+from importlib.metadata import version
+from logging import getLogger
+
 from ._incremental.middleware import IncrementalCrawlMiddleware
 from .middlewares import (
     AllowOffsiteMiddleware,
@@ -14,3 +17,7 @@ from .spiders.ecommerce import EcommerceSpider
 from .spiders.serp import GoogleSearchSpider
 
 from ._addon import Addon  # isort: skip
+
+logger = getLogger(__name__)
+package = "zyte-spider-templates"
+logger.info(f"Running {package} {version(package)}")
