@@ -1,8 +1,8 @@
 Changes
 =======
 
-0.11.0 (TBD)
-------------
+0.11.0 (2024-12-16)
+-------------------
 
 * New :ref:`Articles spider template <article>`, built on top of
   Zyte API’s :http:`request:article` and :http:`request:articleNavigation`.
