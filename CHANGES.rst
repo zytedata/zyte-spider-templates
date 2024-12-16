@@ -4,10 +4,10 @@ Changes
 0.11.0 (TBD)
 ------------
 
-* New ref:`Articles spider template <job-posting>`, built on top of
+* New :ref:`Articles spider template <article>`, built on top of
   Zyte API’s :http:`request:article` and :http:`request:articleNavigation`.
 
-* New ref:`Job Posting spider template <job-posting>`, built on top of
+* New :ref:`Job Posting spider template <job-posting>`, built on top of
   Zyte API’s :http:`request:jobPosting` and :http:`request:jobPostingNavigation`.
 
 * :ref:`Search queries <search-queries>` support is added to the
