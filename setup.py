@@ -20,7 +20,6 @@ setup(
         "formasaurus>=0.10.0",
         "jmespath>=0.9.5",
         "pydantic>=2.1",
-        "python-slugify>=6.0.1",
         "requests>=2.31.0",
         "scrapinghub >= 2.4.0",
         "scrapy>=2.11.0",

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple, Union
@@ -10,7 +11,6 @@ from scrapinghub.client.exceptions import Unauthorized
 from scrapy import signals
 from scrapy.crawler import Crawler
 from scrapy.http.request import Request
-from slugify import slugify
 from zyte_common_items import Item
 
 from zyte_spider_templates.utils import (
@@ -33,7 +33,7 @@ def _get_collection_name(crawler: Crawler) -> str:
     if name := crawler.settings.get("INCREMENTAL_CRAWL_COLLECTION_NAME"):
         return name
     name = get_spider_name(crawler).rstrip("_")[:_MAX_LENGTH] + INCREMENTAL_SUFFIX
-    return slugify(name, separator="_", lowercase=False, regex_pattern=r"[^a-zA-Z0-9_]")
+    return re.sub(r"[^a-zA-Z0-9_]", "_", name)
 
 
 class CollectionsFingerprintsManager:

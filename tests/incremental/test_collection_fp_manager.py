@@ -225,13 +225,13 @@ def test_spider_closed(mock_scrapinghub_client):
             {},
             {},
             "a A-1.α" + "a" * 2048,
-            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            "a_A_1__" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
         ),
         (
             {"SHUB_VIRTUAL_SPIDER": "a A-1.α" + "a" * 2048},
             {},
             "foo",
-            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            "a_A_1__" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
         ),
         (
             {"SHUB_VIRTUAL_SPIDER": "bar"},
