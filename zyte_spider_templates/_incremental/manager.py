@@ -11,6 +11,7 @@ from scrapinghub.client.exceptions import Unauthorized
 from scrapy import signals
 from scrapy.crawler import Crawler
 from scrapy.http.request import Request
+from text_unidecode import unidecode
 from zyte_common_items import Item
 
 from zyte_spider_templates.utils import (
@@ -32,7 +33,10 @@ THREAD_POOL_EXECUTOR = ThreadPoolExecutor(max_workers=10)
 def _get_collection_name(crawler: Crawler) -> str:
     if name := crawler.settings.get("INCREMENTAL_CRAWL_COLLECTION_NAME"):
         return name
-    name = get_spider_name(crawler).rstrip("_")[:_MAX_LENGTH] + INCREMENTAL_SUFFIX
+    name = (
+        unidecode(get_spider_name(crawler)).rstrip("_")[:_MAX_LENGTH]
+        + INCREMENTAL_SUFFIX
+    )
     return re.sub(r"[^a-zA-Z0-9_]", "_", name)
 
 
