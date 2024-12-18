@@ -32,3 +32,6 @@ Spider template list
 
 :ref:`Google Search <google-search>`
     Get Google search results.
+
+:ref:`Article <article>`
+    Get articles from websites.

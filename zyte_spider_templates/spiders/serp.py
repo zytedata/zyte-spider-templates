@@ -27,7 +27,7 @@ from .base import BaseSpider
 
 class GoogleCrParam(BaseModel):
     cr: Optional[str] = Field(
-        title="Content Countries",
+        title="Content Countries (cr)",
         description=(
             "Restricts search results to documents originating in "
             "particular countries. See "
@@ -39,7 +39,7 @@ class GoogleCrParam(BaseModel):
 
 class GoogleGlParam(BaseModel):
     gl: Optional[GoogleGl] = Field(
-        title="User Country",
+        title="User Country (gl)",
         description=(
             "Boosts results relevant to this country. See "
             "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.gl"
@@ -58,7 +58,7 @@ class GoogleGlParam(BaseModel):
 
 class GoogleHlParam(BaseModel):
     hl: Optional[GoogleHl] = Field(
-        title="User Language",
+        title="User Language (hl)",
         description=(
             "User interface language, which can affect search results. See "
             "https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list#body.QUERY_PARAMETERS.hl"
@@ -77,7 +77,7 @@ class GoogleHlParam(BaseModel):
 
 class GoogleLrParam(BaseModel):
     lr: Optional[str] = Field(
-        title="Content Languages",
+        title="Content Languages (lr)",
         description=(
             "Restricts search results to documents written in the specified "
             "languages. See "
@@ -170,6 +170,11 @@ class SerpResultsPerPageParam(BaseModel):
 
 @document_enum
 class SerpItemType(str, Enum):
+    off: str = "off"
+    """
+    Do not follow result links.
+    """
+
     article: str = "article"
     """
     Article data.
@@ -212,7 +217,7 @@ ITEM_TYPE_CLASSES = {
 
 
 class SerpItemTypeParam(BaseModel):
-    item_type: Optional[SerpItemType] = Field(
+    item_type: SerpItemType = Field(
         title="Follow and Extract",
         description=(
             "If specified, follow organic search result links, and extract "
@@ -220,7 +225,7 @@ class SerpItemTypeParam(BaseModel):
             "items will be of the specified data type, not search engine "
             "results page items."
         ),
-        default=None,
+        default=SerpItemType.off,
     )
 
 
@@ -318,7 +323,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         url = f"https://www.{self.args.domain.value}/search"
         for search_query in search_queries:
             search_url = add_or_replace_parameter(url, "q", search_query)
-            yield self.get_serp_request(search_url, page_number=1)
+            with self._log_request_exception:
+                yield self.get_serp_request(search_url, page_number=1)
 
     def parse_serp(self, response, page_number) -> Iterable[Union[Request, Serp]]:
         serp = Serp.from_dict(response.raw_api_response["serp"])
@@ -332,21 +338,23 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
                 or serp.metadata.totalOrganicResults > next_start
             ):
                 next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
-                yield self.get_serp_request(next_url, page_number=page_number + 1)
+                with self._log_request_exception:
+                    yield self.get_serp_request(next_url, page_number=page_number + 1)
 
-        if self.args.item_type is None:
+        if self.args.item_type == SerpItemType.off:
             yield serp
             return
 
         for result in serp.organicResults:
-            yield response.follow(
-                result.url,
-                callback=self.parse_result,
-                meta={
-                    "crawling_logs": {"page_type": self.args.item_type.value},
-                    "inject": [ITEM_TYPE_CLASSES[self.args.item_type]],
-                },
-            )
+            with self._log_request_exception:
+                yield response.follow(
+                    result.url,
+                    callback=self.parse_result,
+                    meta={
+                        "crawling_logs": {"page_type": self.args.item_type.value},
+                        "inject": [ITEM_TYPE_CLASSES[self.args.item_type]],
+                    },
+                )
 
     def parse_result(
         self, response: DummyResponse, dynamic: DynamicDeps

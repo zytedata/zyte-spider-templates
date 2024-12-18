@@ -4,7 +4,7 @@ from pathlib import Path
 project = "zyte-spider-templates"
 copyright = "2023, Zyte Group Ltd"
 author = "Zyte Group Ltd"
-release = "0.10.0"
+release = "0.11.0"
 
 sys.path.insert(0, str(Path(__file__).parent.absolute()))  # _ext
 extensions = [
@@ -70,8 +70,12 @@ autodoc_pydantic_model_show_json = False
 autodoc_pydantic_model_show_validator_members = False
 autodoc_pydantic_model_show_validator_summary = False
 autodoc_pydantic_field_list_validators = False
+autodoc_pydantic_field_show_constraints = False
 
 # sphinx-reredirects
 redirects = {
     "customization/page-objects": "pages.html",
 }
+
+# workaround for https://github.com/pydantic/pydantic/discussions/7763
+import zyte_spider_templates.spiders.job_posting  # noqa: F401, E402

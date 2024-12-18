@@ -128,6 +128,7 @@ async def test_crawl_nofollow_links():
     assert [req.url for req in page.subCategories] == ["https://example.com/can-follow"]
 
 
+@pytest.mark.deprication_warning
 def test_deprecated_page_objects():
     with pytest.warns(DeprecationWarning, match="page_objects"):
         from zyte_spider_templates.page_objects import (  # noqa: F401

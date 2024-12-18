@@ -18,7 +18,9 @@ zyte-spider-templates documentation
 
    templates/index
    E-commerce <templates/e-commerce>
+   Article <templates/article>
    Google search <templates/google-search>
+   Job posting <templates/job-posting>
 
 .. toctree::
    :caption: Features
@@ -35,8 +37,15 @@ zyte-spider-templates documentation
    customization/pages
 
 .. toctree::
+   :caption: Reference
+   :hidden:
+
+   reference/settings
+   reference/reqmeta
+   reference/api
+
+.. toctree::
    :caption: All the rest
    :hidden:
 
-   reference/index
    changes
