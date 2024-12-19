@@ -52,11 +52,11 @@ def _replace_builtin(
 
     builtin_entry: Optional[Any] = None
     for _setting_value in (setting_value, settings[f"{setting}_BASE"]):
-        if builtin_cls in setting_value:
+        if builtin_cls in _setting_value:
             builtin_entry = builtin_cls
             pos = _setting_value[builtin_entry]
             break
-        for cls_or_path in setting_value:
+        for cls_or_path in _setting_value:
             if isinstance(cls_or_path, str):
                 _cls = load_object(cls_or_path)
                 if _cls == builtin_cls:
@@ -151,7 +151,6 @@ class Addon:
                 OffsiteMiddleware,
             )
 
-            # _setdefault(settings, "SPIDER_MIDDLEWARES", OffsiteMiddleware, 500)
             _replace_builtin(
                 settings,
                 "SPIDER_MIDDLEWARES",
@@ -159,7 +158,6 @@ class Addon:
                 AllowOffsiteMiddleware,
             )
         else:
-            # _setdefault(settings, "DOWNLOADER_MIDDLEWARES", OffsiteMiddleware, 500)
             _replace_builtin(
                 settings,
                 "DOWNLOADER_MIDDLEWARES",
