@@ -19,10 +19,14 @@ _crawler = get_crawler()
 BASELINE_SETTINGS = _crawler.settings.copy_to_dict()
 
 try:
-    from scrapy.downloadermiddlewares.offsite import OffsiteMiddleware
+    from scrapy.downloadermiddlewares.offsite import OffsiteMiddleware  # noqa: F401
 except ImportError:
-    from scrapy.spidermiddlewares.offsite import (  # type: ignore[assignment]
-        OffsiteMiddleware,
+    BUILTIN_OFFSITE_MIDDLEWARE_IMPORT_PATH = (
+        "scrapy.spidermiddlewares.offsite.OffsiteMiddleware"
+    )
+else:
+    BUILTIN_OFFSITE_MIDDLEWARE_IMPORT_PATH = (
+        "scrapy.downloadermiddlewares.offsite.OffsiteMiddleware"
     )
 
 
@@ -67,7 +71,7 @@ def _test_setting_changes(initial_settings, expected_settings):
                 "CLOSESPIDER_TIMEOUT_NO_ITEM": 600,
                 "DOWNLOADER_MIDDLEWARES": {
                     MaxRequestsPerSeedDownloaderMiddleware: 100,
-                    OffsiteMiddleware: None,
+                    BUILTIN_OFFSITE_MIDDLEWARE_IMPORT_PATH: None,
                     AllowOffsiteMiddleware: 500,
                 },
                 "SCHEDULER_DISK_QUEUE": "scrapy.squeues.PickleFifoDiskQueue",
@@ -128,7 +132,7 @@ def test_poet_setting_changes_since_scrapy_2_11_2(initial_settings, expected_set
                     OffsiteRequestsPerSeedMiddleware: 49,
                     OnlyFeedsMiddleware: 108,
                     TrackNavigationDepthSpiderMiddleware: 110,
-                    OffsiteMiddleware: None,
+                    BUILTIN_OFFSITE_MIDDLEWARE_IMPORT_PATH: None,
                     AllowOffsiteMiddleware: 500,
                     TrackSeedsSpiderMiddleware: 550,
                     CrawlingLogsMiddleware: 1000,
