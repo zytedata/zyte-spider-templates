@@ -151,7 +151,7 @@ class Addon:
                 OffsiteMiddleware,
             )
 
-            _setdefault(settings, "SPIDER_MIDDLEWARES", OffsiteMiddleware, 500)
+            # _setdefault(settings, "SPIDER_MIDDLEWARES", OffsiteMiddleware, 500)
             _replace_builtin(
                 settings,
                 "SPIDER_MIDDLEWARES",
@@ -159,7 +159,7 @@ class Addon:
                 AllowOffsiteMiddleware,
             )
         else:
-            _setdefault(settings, "DOWNLOADER_MIDDLEWARES", OffsiteMiddleware, 500)
+            # _setdefault(settings, "DOWNLOADER_MIDDLEWARES", OffsiteMiddleware, 500)
             _replace_builtin(
                 settings,
                 "DOWNLOADER_MIDDLEWARES",
