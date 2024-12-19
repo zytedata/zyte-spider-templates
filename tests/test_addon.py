@@ -72,7 +72,7 @@ def _test_setting_changes(initial_settings, expected_settings):
                 "DOWNLOADER_MIDDLEWARES": {
                     MaxRequestsPerSeedDownloaderMiddleware: 100,
                     BUILTIN_OFFSITE_MIDDLEWARE_IMPORT_PATH: None,
-                    AllowOffsiteMiddleware: 500,
+                    AllowOffsiteMiddleware: 50,
                 },
                 "SCHEDULER_DISK_QUEUE": "scrapy.squeues.PickleFifoDiskQueue",
                 "SCHEDULER_MEMORY_QUEUE": "scrapy.squeues.FifoMemoryQueue",
