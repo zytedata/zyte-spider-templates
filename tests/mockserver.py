@@ -26,30 +26,41 @@ class DefaultResource(Resource):
     point the ZYTE_API_URL setting to the mock server. See
     ``tests/test_ecommerce.py::test_crawl_strategies`` for an example.
 
-    This mock server is designed to fake a website with the following pages:
+    This mock server is designed to fake the following:
 
-    ```
-    https://example.com/
-    https://example.com/page/2
-    https://example.com/category/1
-    https://example.com/category/1/page/2
-    https://example.com/non-navigation
-    ```
+    -   An e-commerce website with the following pages:
 
-    When browserHtml is requested (for any URL, listed above or not), it is
-    a minimal HTML with an anchor tag pointing to
-    https://example.com/non-navigation.
+        ```
+        https://example.com/
+        https://example.com/page/2
+        https://example.com/category/1
+        https://example.com/category/1/page/2
+        https://example.com/non-navigation
+        ```
 
-    When productNavigation is requested, nextPage and subCategories are filled
-    accordingly. productNavigation.items always has 2 product URLs, which are
-    the result of appending ``/product/<n>`` to the request URL.
-    https://example.com/non-navigation is not reachable through
-    productNavigation.
+        When browserHtml is requested (for any URL, listed above or not), it is
+        a minimal HTML with an anchor tag pointing to
+        https://example.com/non-navigation.
 
-    When product or productList is requested, an item with the current URL is
-    always returned.
+        When productNavigation is requested, nextPage and subCategories are filled
+        accordingly. productNavigation.items always has 2 product URLs, which are
+        the result of appending ``/product/<n>`` to the request URL.
+        https://example.com/non-navigation is not reachable through
+        productNavigation.
 
-    All output also includes unsupported links (mailto:…).
+        When product or productList is requested, an item with the current URL is
+        always returned.
+
+        All output also includes unsupported links (mailto:…).
+
+    -   Job-posting websites with the following endpoints:
+
+        -   https://jobs.example (jobPostingNavigation pointing to the 2 items
+            below).
+
+        -   https://jobs.offsite.example/jobs/1 (jobPosting)
+
+        -   https://jobs.offsite.example/jobs/2 (jobPosting)
     """
 
     def getChild(self, path, request):
@@ -69,6 +80,24 @@ class DefaultResource(Resource):
         response_data: _API_RESPONSE = {}
 
         response_data["url"] = request_data["url"]
+
+        if request_data["url"] == "https://jobs.example":
+            assert request_data["jobPostingNavigation"] is True
+            response_data["jobPostingNavigation"] = {
+                "url": request_data["url"],
+                "items": [
+                    {"url": "https://jobs.offsite.example/jobs/1"},
+                    {"url": "https://jobs.offsite.example/jobs/2"},
+                ],
+            }
+            return json.dumps(response_data).encode()
+
+        if request_data["url"].startswith("https://jobs.offsite.example/"):
+            assert request_data["jobPosting"] is True
+            response_data["jobPosting"] = {
+                "url": request_data["url"],
+            }
+            return json.dumps(response_data).encode()
 
         non_navigation_url = "https://example.com/non-navigation"
         html = f"""<html><body><a href="{non_navigation_url}"></a><a href="mailto:jane@example.com"></a></body></html>"""
