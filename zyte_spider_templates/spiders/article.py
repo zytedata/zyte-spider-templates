@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Union
 
 import attrs
 import requests
@@ -16,6 +16,7 @@ from web_poet import BrowserResponse, HttpResponse
 from zyte_common_items import (
     Article,
     ArticleNavigation,
+    CustomAttributes,
     ProbabilityMetadata,
     ProbabilityRequest,
 )
@@ -25,6 +26,8 @@ from zyte_spider_templates.documentation import document_enum
 from zyte_spider_templates.pages.article_heuristics import is_feed_request
 from zyte_spider_templates.params import (
     INPUT_GROUP,
+    CustomAttrsInputParam,
+    CustomAttrsMethodParam,
     ExtractFrom,
     ExtractFromParam,
     GeolocationParam,
@@ -141,6 +144,8 @@ class ArticleCrawlStrategyParam(BaseModel):
 
 
 class ArticleSpiderParams(
+    CustomAttrsMethodParam,
+    CustomAttrsInputParam,
     ExtractFromParam,
     MaxRequestsPerSeedParam,
     MaxRequestsParam,
@@ -248,7 +253,9 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
                     f"INCREMENTAL_CRAWL_COLLECTION_NAME={self.args.incremental_collection_name} "
                 )
 
-    def _update_inject_meta(self, meta: Dict[str, Any], is_feed: bool) -> None:
+    def _update_inject_meta(
+        self, meta: Dict[str, Any], is_feed: bool, request_type: RequestType
+    ) -> None:
         """
         The issue: `HeuristicsArticleNavigationPage` has only `AnyResponse` as a dependency, so
         the current implementation of `ScrapyZyteApiProvider` always uses `HttpResponse`
@@ -257,19 +264,24 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
         This function forces `browserHtml` extraction when `extract_from=browserHtml`
         for Article and ArticleNavigation pages, while continuing to use
         `HttpResponse` for feeds.
+
+        It also adds the `CustomAttributes` dep when needed.
         """
 
-        if is_feed:
-            inject = meta["inject"].copy()
-            inject.append(HttpResponse)
-            meta["inject"] = inject
-            return None
+        inject = meta["inject"].copy()
 
-        if self.args.extract_from == ExtractFrom.browserHtml:
-            inject = meta["inject"].copy()
+        if is_feed:
+            inject.append(HttpResponse)
+        elif self.args.extract_from == ExtractFrom.browserHtml:
             inject.append(BrowserResponse)
-            meta["inject"] = inject
-        return None
+
+        if self._custom_attrs_dep and request_type in (
+            RequestType.ARTICLE.value,
+            RequestType.ARTICLE_AND_NAVIGATION.value,
+        ):
+            inject.append(self._custom_attrs_dep)
+
+        meta["inject"] = inject
 
     def _update_request_name(self, req: ProbabilityRequest) -> None:
         replacements = {
@@ -310,7 +322,13 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
         self,
         response: DummyResponse,
         dynamic: DynamicDeps,
-    ) -> Iterable[scrapy.Request]:
+    ) -> Iterable[
+        Union[
+            scrapy.Request,
+            Article,
+            Dict[str, Union[Article, Optional[CustomAttributes]]],
+        ]
+    ]:
         if Article in dynamic:
             yield from self._parse_as_article(response, dynamic)
 
@@ -319,8 +337,17 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
 
     def _parse_as_article(
         self, response: DummyResponse, dynamic: DynamicDeps
-    ) -> Iterable[scrapy.Request]:
-        yield dynamic[Article]
+    ) -> Iterable[
+        Union[Article, Dict[str, Union[Article, Optional[CustomAttributes]]]]
+    ]:
+        article = dynamic[Article]
+        if self.args.custom_attrs_input:
+            yield {
+                "article": article,
+                "customAttributes": dynamic.get(CustomAttributes),
+            }
+        else:
+            yield article
 
     def _parse_as_navigation(
         self, response: DummyResponse, dynamic: DynamicDeps
@@ -408,7 +435,7 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
                 "inject": request_type.inject,
             },
         )
-        self._update_inject_meta(meta, is_feed)
+        self._update_inject_meta(meta, is_feed, request_type)
 
         return request.to_scrapy(
             callback=self.parse_dynamic,
