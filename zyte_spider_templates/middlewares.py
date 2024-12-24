@@ -142,7 +142,12 @@ class CrawlingLogsMiddleware:
 
 class AllowOffsiteMiddleware(OffsiteMiddleware):
     def should_follow(self, request: Request, spider: Spider) -> bool:
-        if request.meta.get("allow_offsite"):
+        if "zyte_api" in request.meta:
+            # The request looks like a dependency injection request, and any
+            # domain-based filtering should have been handled in the original
+            # request handling, before dependency injection.
+            return True
+        if request.meta.get("allow_offsite") is True:
             return True
         return super().should_follow(request, spider)
 
