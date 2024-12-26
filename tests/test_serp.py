@@ -1,6 +1,7 @@
 from urllib.parse import quote_plus
 
 import pytest
+from pydantic import ValidationError
 from scrapy import Request
 from scrapy_spider_metadata import get_spider_metadata
 from scrapy_zyte_api.responses import ZyteAPITextResponse
@@ -288,6 +289,7 @@ def test_metadata():
                         {"type": "null"},
                     ],
                     "description": "Input 1 search query per line (e.g. foo bar).",
+                    "pattern": r"(.|\r?\n)*\S+(.|\r?\n)*",
                     "title": "Search Queries",
                     "widget": "textarea",
                 },
@@ -764,3 +766,29 @@ def test_item_type_mappings():
 
     # Also ensure that no dict value is repeated.
     assert len(actual_keys) == len(set(ITEM_TYPE_CLASSES.values()))
+
+
+@pytest.mark.parametrize(
+    "input_data,raises",
+    [
+        ({"search_queries": "foo"}, False),
+        ({"search_queries": "foo "}, False),
+        ({"search_queries": " foo "}, False),
+        ({"search_queries": " fo o "}, False),
+        ({"search_queries": "fo o"}, False),
+        ({"search_queries": "fo\n o "}, False),
+        ({"search_queries": ["fo", " o "]}, False),
+        ({"search_queries": ["fo", "  "]}, False),
+        ({"search_queries": " "}, True),
+        ({"search_queries": ""}, True),
+        ({"search_queries": "   "}, True),
+        ({"search_queries": " \n  "}, True),
+        ({"search_queries": [" ", "  "]}, True),
+    ],
+)
+def test_query_validation(input_data, raises):
+    if raises:
+        with pytest.raises(ValidationError):
+            GoogleSearchSpider(**input_data)
+    else:
+        GoogleSearchSpider(**input_data)
