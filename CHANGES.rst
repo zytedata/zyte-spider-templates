@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.11.1 (YYYY-MM-DD)
+0.11.1 (2024-12-26)
 -------------------
 
 * The :ref:`e-commerce <e-commerce>` and :ref:`job posting <job-posting>`
