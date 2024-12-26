@@ -1,6 +1,13 @@
 Changes
 =======
 
+0.11.1 (YYYY-MM-DD)
+-------------------
+
+* The :ref:`e-commerce <e-commerce>` and :ref:`job posting <job-posting>`
+  spider templates no longer ignore item requests for a different domain.
+
+
 0.11.0 (2024-12-16)
 -------------------
 
