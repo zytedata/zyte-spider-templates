@@ -172,10 +172,7 @@ class MaxRequestsPerSeedDownloaderMiddleware:
             0, crawler.spider.settings.getint("MAX_REQUESTS_PER_SEED", 0)
         )
         if not max_requests_per_seed:
-            raise NotConfigured(
-                "MaxRequestsPerSeedDownloaderMiddleware is not configured. "
-                "Set MAX_REQUESTS_PER_SEED to enable it."
-            )
+            raise NotConfigured
         self.crawler = crawler
         self.requests_per_seed: defaultdict = defaultdict(int)
         self.seeds_reached_limit: Set[str] = set()
@@ -326,10 +323,7 @@ class TrackNavigationDepthSpiderMiddleware(PageParamsMiddlewareBase):
             self.max_navigation_depth = max_navigation_depth
             self.stats = crawler.stats
         else:
-            raise NotConfigured(
-                "TrackNavigationDepthSpiderMiddleware is not configured. "
-                "Set `NAVIGATION_DEPTH_LIMIT` to 1 or more to enable it."
-            )
+            raise NotConfigured
 
     def update_page_params(self, request, page_params) -> None:
         page_params["skip_subcategories"] = request.meta.get(
@@ -414,10 +408,7 @@ class OnlyFeedsMiddleware(PageParamsMiddlewareBase):
         super().__init__(crawler)
         assert crawler.spider
         if not crawler.spider.settings.getbool("ONLY_FEEDS_ENABLED"):  # type: ignore[union-attr]
-            raise NotConfigured(
-                "OnlyFeedsMiddleware is not configured. Set "
-                "ONLY_FEEDS_ENABLED to True to enable it."
-            )
+            raise NotConfigured
 
     def update_page_params(self, request, page_params) -> None:
         page_params["only_feeds"] = request.meta.get(
@@ -460,11 +451,7 @@ class OffsiteRequestsPerSeedMiddleware:
         if not crawler.spider.settings.getbool(  # type: ignore[union-attr]
             "OFFSITE_REQUESTS_PER_SEED_ENABLED", True
         ):
-            raise NotConfigured(
-                "OffsiteRequestsPerSeedMiddleware is not enabled. Set the "
-                "OFFSITE_REQUESTS_PER_SEED_ENABLED setting to True to enable "
-                "it."
-            )
+            raise NotConfigured
 
         self.stats = crawler.stats
         self.allowed_domains_per_seed: Dict[str, Set[str]] = defaultdict(set)

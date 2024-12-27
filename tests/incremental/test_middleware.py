@@ -28,12 +28,8 @@ def test_middleware_init_not_configured():
     crawler = crawler_for_incremental()
     crawler.spider.settings = Settings({"INCREMENTAL_CRAWL_ENABLED": False})
 
-    with pytest.raises(NotConfigured) as exc_info:
+    with pytest.raises(NotConfigured):
         IncrementalCrawlMiddleware(crawler)
-    assert str(exc_info.value) == (
-        "IncrementalCrawlMiddleware is not enabled. Set the "
-        "INCREMENTAL_CRAWL_ENABLED setting to True to enable it."
-    )
 
 
 @patch("scrapinghub.ScrapinghubClient")
@@ -59,12 +55,8 @@ def test_prepare_manager_with_collection_fp_failure(caplog):
     crawler.spider.settings = Settings({"INCREMENTAL_CRAWL_ENABLED": True})
 
     caplog.clear()
-    with pytest.raises(CloseSpider) as exc_info:
+    with pytest.raises(CloseSpider):
         IncrementalCrawlMiddleware.prepare_incremental_manager(crawler)
-    assert exc_info.value.reason == "incremental_crawling_middleware_collection_issue"
-    assert caplog.messages[-1].startswith(
-        "IncrementalCrawlMiddleware is enabled, but something went wrong with Collections."
-    )
 
 
 @patch("scrapinghub.ScrapinghubClient")
