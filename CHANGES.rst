@@ -1,12 +1,16 @@
 Changes
 =======
 
+0.11.2 (YYYY-MM-DD)
+-------------------
+
+* Do not log warning about disabled components.
+
 0.11.1 (2024-12-26)
 -------------------
 
 * The :ref:`e-commerce <e-commerce>` and :ref:`job posting <job-posting>`
   spider templates no longer ignore item requests for a different domain.
-
 
 0.11.0 (2024-12-16)
 -------------------
