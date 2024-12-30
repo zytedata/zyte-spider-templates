@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Optional, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Union,
+    cast,
+)
 
 import requests
 import scrapy
@@ -9,11 +19,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from scrapy.crawler import Crawler
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
+from web_poet import BrowserResponse
 from zyte_common_items import (
     CustomAttributes,
     JobPosting,
     JobPostingNavigation,
     ProbabilityRequest,
+    SearchRequestTemplate,
 )
 
 from zyte_spider_templates.spiders.base import (
@@ -27,9 +39,11 @@ from ..documentation import document_enum
 from ..params import (
     CustomAttrsInputParam,
     CustomAttrsMethodParam,
+    ExtractFrom,
     ExtractFromParam,
     GeolocationParam,
     MaxRequestsParam,
+    SearchQueriesParam,
     UrlParam,
     UrlsFileParam,
     UrlsParam,
@@ -74,6 +88,22 @@ class JobPostingCrawlStrategyParam(BaseModel):
     )
 
 
+class JobPostingSearchQueriesParam(SearchQueriesParam):
+    search_queries: List[str] = Field(
+        title="Search Queries",
+        description=(
+            "A list of search queries, one per line, to submit using the "
+            "search form found on each input URL. Only works for input URLs "
+            "that support search. May not work on every website."
+        ),
+        default_factory=list,
+        json_schema_extra={
+            "default": [],
+            "widget": "textarea",
+        },
+    )
+
+
 class JobPostingSpiderParams(
     CustomAttrsMethodParam,
     CustomAttrsInputParam,
@@ -81,6 +111,7 @@ class JobPostingSpiderParams(
     MaxRequestsParam,
     GeolocationParam,
     JobPostingCrawlStrategyParam,
+    JobPostingSearchQueriesParam,
     UrlsFileParam,
     UrlsParam,
     UrlParam,
@@ -173,9 +204,42 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
         )
 
     def start_requests(self) -> Iterable[scrapy.Request]:
-        for url in self.start_urls:
+        if self.args.search_queries:
+            for url in self.start_urls:
+                meta: Dict[str, Any] = {
+                    "crawling_logs": {"page_type": "searchRequestTemplate"},
+                }
+                if self.args.extract_from == ExtractFrom.browserHtml:
+                    meta["inject"] = [BrowserResponse]
+                with self._log_request_exception:
+                    yield scrapy.Request(
+                        url=url,
+                        callback=self.parse_search_request_template,
+                        meta=meta,
+                    )
+        else:
+            for url in self.start_urls:
+                with self._log_request_exception:
+                    yield self.get_start_request(url)
+
+    def parse_search_request_template(
+        self,
+        response: DummyResponse,
+        search_request_template: SearchRequestTemplate,
+        dynamic: DynamicDeps,
+    ) -> Iterable[scrapy.Request]:
+        probability = search_request_template.get_probability()
+        if probability is not None and probability <= 0:
+            return
+        for query in self.args.search_queries:
+            meta: Dict[str, Any] = {
+                "crawling_logs": {"page_type": "jobPostingNavigation"},
+            }
             with self._log_request_exception:
-                yield self.get_start_request(url)
+                yield search_request_template.request(query=query).to_scrapy(
+                    callback=self.parse_navigation,
+                    meta=meta,
+                )
 
     def parse_navigation(
         self, response: DummyResponse, navigation: JobPostingNavigation
