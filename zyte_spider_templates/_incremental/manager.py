@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple, Union
@@ -10,6 +11,7 @@ from scrapinghub.client.exceptions import Unauthorized
 from scrapy import signals
 from scrapy.crawler import Crawler
 from scrapy.http.request import Request
+from text_unidecode import unidecode
 from zyte_common_items import Item
 
 from zyte_spider_templates.utils import (
@@ -22,9 +24,20 @@ from zyte_spider_templates.utils import (
 logger = logging.getLogger(__name__)
 
 INCREMENTAL_SUFFIX = "_incremental"
+_MAX_LENGTH = 2048 - len(INCREMENTAL_SUFFIX)
 COLLECTION_API_URL = "https://storage.scrapinghub.com/collections"
 
 THREAD_POOL_EXECUTOR = ThreadPoolExecutor(max_workers=10)
+
+
+def _get_collection_name(crawler: Crawler) -> str:
+    if name := crawler.settings.get("INCREMENTAL_CRAWL_COLLECTION_NAME"):
+        return name
+    name = (
+        unidecode(get_spider_name(crawler)).rstrip("_")[:_MAX_LENGTH]
+        + INCREMENTAL_SUFFIX
+    )
+    return re.sub(r"[^a-zA-Z0-9_]", "_", name)
 
 
 class CollectionsFingerprintsManager:
@@ -37,7 +50,7 @@ class CollectionsFingerprintsManager:
         self.batch_size = crawler.settings.getint("INCREMENTAL_CRAWL_BATCH_SIZE", 50)
 
         project_id = get_project_id(crawler)
-        collection_name = self.get_collection_name(crawler)
+        collection_name = _get_collection_name(crawler)
 
         self.init_collection(project_id, collection_name)
         self.api_url = f"{COLLECTION_API_URL}/{project_id}/s/{collection_name}"
@@ -50,12 +63,6 @@ class CollectionsFingerprintsManager:
         )
 
         crawler.signals.connect(self.spider_closed, signal=signals.spider_closed)
-
-    def get_collection_name(self, crawler):
-        return (
-            crawler.settings.get("INCREMENTAL_CRAWL_COLLECTION_NAME")
-            or f"{get_spider_name(crawler)}{INCREMENTAL_SUFFIX}"
-        )
 
     def init_collection(self, project_id, collection_name) -> None:
         client = get_client()
