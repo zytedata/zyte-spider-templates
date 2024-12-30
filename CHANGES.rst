@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.11.2 (YYYY-MM-DD)
+0.11.2 (2024-12-30)
 -------------------
 
 * Do not log warning about disabled components.
