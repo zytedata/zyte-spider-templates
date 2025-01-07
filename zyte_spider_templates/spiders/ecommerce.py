@@ -13,10 +13,13 @@ from typing import (
     Union,
     cast,
 )
+from urllib.parse import urlparse
 
 import scrapy
+from protego import Protego
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scrapy.crawler import Crawler
+from scrapy.utils.sitemap import Sitemap
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import Args
 from web_poet.page_inputs.browser import BrowserResponse
@@ -55,6 +58,48 @@ from ..params import (
 if TYPE_CHECKING:
     # typing.Self requires Python 3.11
     from typing_extensions import Self
+
+
+_SKIP_KEYWORDS = {
+    "blog",
+    "news",
+    "magazine",
+    "image",
+    "media",
+}
+
+
+def _is_ecommerce_sitemap(url: str) -> bool:
+    return all(keyword not in url for keyword in _SKIP_KEYWORDS)
+
+
+_is_ecommerce_url = _is_ecommerce_sitemap
+
+
+_PRODUCT_KEYWORDS = {
+    "product",
+    "produkt",
+    "pdp",
+}
+_NAVIGATION_KEYWORDS = {
+    "search",
+    "filter",
+    "tag",
+    "cat",
+    "section",
+    "listing",
+}
+
+
+def _is_product_sitemap(url: str) -> bool:
+    return (
+        not is_homepage(url)
+        and any(keyword in url for keyword in _PRODUCT_KEYWORDS)
+        and not any(keyword in url for keyword in _NAVIGATION_KEYWORDS)
+    )
+
+
+_is_product_url = _is_product_sitemap
 
 
 ItemTV = TypeVar("ItemTV", bound=Item)
@@ -290,23 +335,25 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 priority=ARG_SETTING_PRIORITY,
             )
 
-    def get_start_request(self, url):
-        callback = (
-            self.parse_product
-            if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
-            and self.args.extract == EcommerceExtract.product
-            else self.parse_navigation
+    def get_start_request(self, url: str) -> scrapy.Request:
+        targets_product = self.args.extract == EcommerceExtract.product and (
+            self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
+            or (
+                self.args.crawl_strategy == EcommerceCrawlStrategy.automatic
+                and _is_product_url(url)
+            )
         )
+        callback = self.parse_product if targets_product else self.parse_navigation
         meta: Dict[str, Any] = {
             "crawling_logs": {
                 "page_type": self.args.extract.value
                 if self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
+                or targets_product
                 else "productNavigation"
             },
         }
         if (
-            self.args.crawl_strategy == EcommerceCrawlStrategy.direct_item
-            or self.args.extract == EcommerceExtract.productList
+            targets_product or self.args.extract == EcommerceExtract.productList
         ) and self._custom_attrs_dep:
             meta.setdefault("inject", []).append(self._custom_attrs_dep)
         if self.args.extract == EcommerceExtract.productList:
@@ -347,10 +394,126 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                         callback=self.parse_search_request_template,
                         meta=meta,
                     )
-        else:
-            for url in self.start_urls:
+            return
+        yield from self.robotstxt_requests()
+        for url in self.start_urls:
+            with self._log_request_exception:
+                yield self.get_start_request(url)
+
+    def robotstxt_requests(self) -> Iterable[scrapy.Request]:
+        if self.args.crawl_strategy not in {
+            EcommerceCrawlStrategy.full,
+            EcommerceCrawlStrategy.automatic,
+        }:
+            return
+        domains: dict[str, str] = {}  # domain: scheme, e.g. {"example.com": "https"}
+        for url in self.start_urls:
+            if (
+                self.args.crawl_strategy == EcommerceCrawlStrategy.automatic
+                and not is_homepage(url)
+            ):
+                continue
+            parsed_url = urlparse(url)
+            domain = parsed_url.netloc
+            scheme = parsed_url.scheme
+            if domain not in domains:
+                domains[domain] = scheme
+            elif scheme == "https":
+                # If both http and https URLs are found for the same domain,
+                # prefer https.
+                domains[domain] = scheme
+        for domain, scheme in domains.items():
+            with self._log_request_exception:
+                yield scrapy.Request(
+                    url=f"{scheme}://{domain}/robots.txt",
+                    callback=self.parse_robotstxt,
+                    meta={
+                        "crawling_logs": {
+                            "page_type": "robots.txt",
+                        },
+                    },
+                )
+
+    def get_sitemap_request(
+        self, url: str, likely_leaf_type: str | None = None
+    ) -> scrapy.Request:
+        return scrapy.Request(
+            url=url,
+            callback=self.parse_sitemap,
+            cb_kwargs={
+                "likely_leaf_type": likely_leaf_type,
+            },
+            meta={
+                "crawling_logs": {
+                    "page_type": "sitemap",
+                },
+            },
+        )
+
+    def parse_robotstxt(self, response) -> Iterable[scrapy.Request]:
+        rp = Protego.parse(response.body.decode())
+        for url in rp.sitemaps:
+            if _is_ecommerce_sitemap(url):
                 with self._log_request_exception:
-                    yield self.get_start_request(url)
+                    yield self.get_sitemap_request(url)
+
+    def parse_sitemap(
+        self, response, likely_leaf_type: str | None = None
+    ) -> Iterable[scrapy.Request]:
+        if not likely_leaf_type and _is_product_sitemap(response.url):
+            likely_leaf_type = "product"
+        sitemap = Sitemap(response.body)
+        if sitemap.type == "sitemapindex":
+            for entry in sitemap:
+                url = entry["loc"]
+                if _is_ecommerce_sitemap(url):
+                    with self._log_request_exception:
+                        yield self.get_sitemap_request(url, likely_leaf_type)
+        elif sitemap.type == "urlset":
+            for entry in sitemap:
+                url = entry["loc"]
+                if not _is_ecommerce_url(url):
+                    continue
+                if likely_leaf_type == "product" or _is_product_url(url):
+                    if self.args.extract != EcommerceExtract.product:
+                        continue
+                    with self._log_request_exception:
+                        yield self.get_sitemap_product_request(url)
+                else:
+                    with self._log_request_exception:
+                        yield self.get_sitemap_navigation_request(url)
+
+    def get_sitemap_product_request(self, url: str) -> scrapy.Request:
+        meta: dict[str, Any] = {
+            "crawling_logs": {
+                "page_type": "product",
+            },
+            "page_params": {"full_domain": get_domain(url)},
+        }
+        if self._custom_attrs_dep:
+            meta.setdefault("inject", []).append(self._custom_attrs_dep)
+        return scrapy.Request(
+            url=url,
+            callback=self.parse_product,
+            meta=meta,
+        )
+
+    def get_sitemap_navigation_request(self, url: str) -> scrapy.Request:
+        meta: Dict[str, Any] = {
+            "crawling_logs": {
+                "page_type": "productNavigation",
+            },
+            "page_params": {"full_domain": get_domain(url)},
+        }
+        if self.args.extract == EcommerceExtract.productList:
+            meta.setdefault("inject", []).append(ProductList)
+            if self._custom_attrs_dep:
+                meta["inject"].append(self._custom_attrs_dep)
+        return scrapy.Request(
+            url=url,
+            callback=self.parse_navigation,
+            meta=meta,
+        )
 
     def parse_search_request_template(
         self,
