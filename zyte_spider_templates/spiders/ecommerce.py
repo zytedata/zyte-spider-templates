@@ -435,7 +435,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 )
 
     def get_sitemap_request(
-        self, url: str, likely_leaf_type: str | None = None
+        self, url: str, likely_leaf_type: Optional[str] = None
     ) -> scrapy.Request:
         return scrapy.Request(
             url=url,
@@ -458,7 +458,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                     yield self.get_sitemap_request(url)
 
     def parse_sitemap(
-        self, response, likely_leaf_type: str | None = None
+        self, response, likely_leaf_type: Optional[str] = None
     ) -> Iterable[scrapy.Request]:
         if not likely_leaf_type and _is_product_sitemap(response.url):
             likely_leaf_type = "product"
