@@ -25,10 +25,11 @@ setup(
         "scrapy>=2.11.0",
         "scrapy-poet>=0.24.0",
         "scrapy-spider-metadata>=0.2.0",
-        "scrapy-zyte-api[provider]>=0.24.0",
+        # "scrapy-zyte-api[provider]>=0.24.0",
+        "scrapy-zyte-api[provider] @ git+https://github.com/Gallaecio/scrapy-zyte-api.git@serp-provider",
         "web-poet>=0.17.1",
         "xtractmime>=0.2.1",
-        "zyte-common-items>=0.26.2",
+        "zyte-common-items>=0.27.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

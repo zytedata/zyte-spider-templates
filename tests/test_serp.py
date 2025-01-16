@@ -2,11 +2,12 @@ from urllib.parse import quote_plus
 
 import pytest
 from pydantic import ValidationError
-from scrapy import Request
+from pytest_twisted import ensureDeferred
+from scrapy import Request, signals
 from scrapy_spider_metadata import get_spider_metadata
 from scrapy_zyte_api.responses import ZyteAPITextResponse
 from w3lib.url import add_or_replace_parameter
-from zyte_common_items import Product
+from zyte_common_items import CustomAttributes, Product, Serp
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS,
@@ -346,6 +347,42 @@ def test_metadata():
                         "productList",
                     ],
                     "title": "Follow and Extract",
+                    "type": "string",
+                },
+                "custom_attrs_input": {
+                    "anyOf": [
+                        {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"type": "object"},
+                            "type": "string",
+                        },
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": "Custom attributes to extract.",
+                    "title": "Custom attributes schema",
+                    "widget": "custom-attrs",
+                },
+                "custom_attrs_method": {
+                    "default": "generate",
+                    "description": "Which model to use for custom attribute extraction.",
+                    "enum": ["generate", "extract"],
+                    "enumMeta": {
+                        "extract": {
+                            "description": "Use an extractive model (BERT). Supports only a "
+                            "subset of the schema (string, integer and "
+                            "number), suited for extraction of short and clear "
+                            "fields, with a fixed per-request cost.",
+                            "title": "extract",
+                        },
+                        "generate": {
+                            "description": "Use a generative model (LLM). The most powerful "
+                            "and versatile, but more expensive, with variable "
+                            "per-request cost.",
+                            "title": "generate",
+                        },
+                    },
+                    "title": "Custom attributes extraction method",
                     "type": "string",
                 },
                 "gl": {
@@ -792,3 +829,90 @@ def test_query_validation(input_data, raises):
             GoogleSearchSpider(**input_data)
     else:
         GoogleSearchSpider(**input_data)
+
+
+class TestGoogleSearchSpider(GoogleSearchSpider):
+    URL_TEMPLATE = "https://search.example/"
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected_result"),
+    (
+        (
+            {"search_queries": "foo"},
+            Serp.from_dict(
+                {
+                    "url": "https://search.example/?q=foo",
+                    "organicResults": [
+                        {
+                            "url": "https://ecommerce.example/p/foo",
+                        },
+                    ],
+                }
+            ),
+        ),
+        (
+            {
+                "search_queries": "foo",
+                "item_type": "product",
+            },
+            Product.from_dict(
+                {
+                    "url": "https://ecommerce.example/p/foo",
+                }
+            ),
+        ),
+        (
+            {
+                "search_queries": "foo",
+                "item_type": "product",
+                "custom_attrs_input": '{"warranty": {"type": "string", "description": "Warranty duration"}}',
+            },
+            {
+                "product": Product.from_dict(
+                    {
+                        "url": "https://ecommerce.example/p/foo",
+                    }
+                ),
+                "customAttributes": CustomAttributes.from_dict(
+                    {
+                        "values": {"warranty": "5 years"},
+                    }
+                ),
+            },
+        ),
+        (
+            {
+                "search_queries": "foo",
+                "custom_attrs_input": '{"warranty": {"type": "string", "description": "Warranty duration"}}',
+            },
+            ValueError,
+        ),
+    ),
+)
+@ensureDeferred
+async def test_crawl(kwargs, expected_result, mockserver):
+    settings = {
+        "ZYTE_API_URL": mockserver.urljoin("/"),
+        "ZYTE_API_KEY": "a",
+        "ADDONS": {
+            "scrapy_zyte_api.Addon": 500,
+            "zyte_spider_templates.Addon": 1000,
+        },
+    }
+    crawler = get_crawler(settings=settings, spider_cls=TestGoogleSearchSpider)
+
+    if isinstance(expected_result, type) and issubclass(expected_result, Exception):
+        with pytest.raises(expected_result):
+            await crawler.crawl(**kwargs)
+        return
+
+    actual_result = []
+
+    def track_item(item, response, spider):
+        actual_result.append(item)
+
+    crawler.signals.connect(track_item, signal=signals.item_scraped)
+    await crawler.crawl(url="https://search.example", **kwargs)
+    assert len(actual_result) == 1
+    assert actual_result[0] == expected_result
