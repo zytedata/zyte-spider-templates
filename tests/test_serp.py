@@ -4,8 +4,8 @@ import pytest
 from pydantic import ValidationError
 from pytest_twisted import ensureDeferred
 from scrapy import Request, signals
+from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import get_spider_metadata
-from scrapy_zyte_api.responses import ZyteAPITextResponse
 from w3lib.url import add_or_replace_parameter
 from zyte_common_items import CustomAttributes, Product, Serp
 
@@ -38,33 +38,31 @@ def run_parse_serp(spider, total_results=99999, page=1, query="foo", results=10)
     url = f"https://www.google.com/search?q={quote_plus(query)}"
     if page > 1:
         url = add_or_replace_parameter(url, "start", (page - 1) * 10)
-    response = ZyteAPITextResponse.from_api_response(
-        api_response={
-            "serp": {
-                "organicResults": [
-                    {
-                        "description": "…",
-                        "name": "…",
-                        "url": f"https://example.com/{rank}",
-                        "rank": rank,
-                    }
-                    for rank in range(1, results + 1)
-                ],
-                "metadata": {
-                    "dateDownloaded": "2024-10-25T08:59:45Z",
-                    "displayedQuery": query,
-                    "searchedQuery": query,
-                    "totalOrganicResults": total_results,
-                },
-                "pageNumber": page,
-                "url": url,
+    response = DummyResponse(url=url)
+    serp = Serp.from_dict(
+        {
+            "organicResults": [
+                {
+                    "description": "…",
+                    "name": "…",
+                    "url": f"https://example.com/{rank}",
+                    "rank": rank,
+                }
+                for rank in range(1, results + 1)
+            ],
+            "metadata": {
+                "dateDownloaded": "2024-10-25T08:59:45Z",
+                "displayedQuery": query,
+                "searchedQuery": query,
+                "totalOrganicResults": total_results,
             },
+            "pageNumber": page,
             "url": url,
-        },
+        }
     )
     items = []
     requests = []
-    for item_or_request in spider.parse_serp(response, page_number=page):
+    for item_or_request in spider.parse_serp(response, page_number=page, serp=serp):
         if isinstance(item_or_request, Request):
             requests.append(item_or_request)
         else:
@@ -614,33 +612,31 @@ def test_parse_serp():
         crawler, search_queries="foo bar", max_pages=43
     )
     url = "https://www.google.com/search?q=foo+bar"
-    response = ZyteAPITextResponse.from_api_response(
-        api_response={
-            "serp": {
-                "organicResults": [
-                    {
-                        "description": "…",
-                        "name": "…",
-                        "url": f"https://example.com/{rank}",
-                        "rank": rank,
-                    }
-                    for rank in range(1, 11)
-                ],
-                "metadata": {
-                    "dateDownloaded": "2024-10-25T08:59:45Z",
-                    "displayedQuery": "foo bar",
-                    "searchedQuery": "foo bar",
-                    "totalOrganicResults": 99999,
-                },
-                "pageNumber": 1,
-                "url": url,
-            },
-            "url": url,
-        },
-    )
+    response = DummyResponse(url=url)
     items = []
     requests = []
-    for item_or_request in spider.parse_serp(response, page_number=42):
+    serp = Serp.from_dict(
+        {
+            "organicResults": [
+                {
+                    "description": "…",
+                    "name": "…",
+                    "url": f"https://example.com/{rank}",
+                    "rank": rank,
+                }
+                for rank in range(1, 11)
+            ],
+            "metadata": {
+                "dateDownloaded": "2024-10-25T08:59:45Z",
+                "displayedQuery": "foo bar",
+                "searchedQuery": "foo bar",
+                "totalOrganicResults": 99999,
+            },
+            "pageNumber": 1,
+            "url": url,
+        }
+    )
+    for item_or_request in spider.parse_serp(response, page_number=42, serp=serp):
         if isinstance(item_or_request, Request):
             requests.append(item_or_request)
         else:
@@ -652,7 +648,7 @@ def test_parse_serp():
 
     # The page_number parameter is required.
     with pytest.raises(TypeError):
-        spider.parse_serp(response)  # type: ignore[call-arg]
+        spider.parse_serp(response, serp=serp)  # type: ignore[call-arg]
 
 
 def test_hl():
@@ -742,33 +738,31 @@ def test_item_type():
         crawler, search_queries="foo bar", max_pages=43, item_type="product"
     )
     url = "https://www.google.com/search?q=foo+bar"
-    response = ZyteAPITextResponse.from_api_response(
-        api_response={
-            "serp": {
-                "organicResults": [
-                    {
-                        "description": "…",
-                        "name": "…",
-                        "url": f"https://example.com/{rank}",
-                        "rank": rank,
-                    }
-                    for rank in range(1, 11)
-                ],
-                "metadata": {
-                    "dateDownloaded": "2024-10-25T08:59:45Z",
-                    "displayedQuery": "foo bar",
-                    "searchedQuery": "foo bar",
-                    "totalOrganicResults": 99999,
-                },
-                "pageNumber": 1,
-                "url": url,
-            },
-            "url": url,
-        },
-    )
+    response = DummyResponse(url=url)
     items = []
     requests = []
-    for item_or_request in spider.parse_serp(response, page_number=42):
+    serp = Serp.from_dict(
+        {
+            "organicResults": [
+                {
+                    "description": "…",
+                    "name": "…",
+                    "url": f"https://example.com/{rank}",
+                    "rank": rank,
+                }
+                for rank in range(1, 11)
+            ],
+            "metadata": {
+                "dateDownloaded": "2024-10-25T08:59:45Z",
+                "displayedQuery": "foo bar",
+                "searchedQuery": "foo bar",
+                "totalOrganicResults": 99999,
+            },
+            "pageNumber": 1,
+            "url": url,
+        }
+    )
+    for item_or_request in spider.parse_serp(response, page_number=42, serp=serp):
         if isinstance(item_or_request, Request):
             requests.append(item_or_request)
         else:
