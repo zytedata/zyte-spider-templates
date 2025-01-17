@@ -347,7 +347,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
                 self.args.results_per_page or self._default_results_per_page
             )
             if serp.organicResults and (
-                serp.metadata.totalOrganicResults is None
+                serp.metadata is None
+                or serp.metadata.totalOrganicResults is None
                 or serp.metadata.totalOrganicResults > next_start
             ):
                 next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
@@ -358,7 +359,7 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             yield serp
             return
 
-        for result in serp.organicResults:
+        for result in serp.organicResults or []:
             inject: list[type] = [ITEM_TYPE_CLASSES[self.args.item_type]]
             if self._custom_attrs_dep:
                 inject.append(self._custom_attrs_dep)  # type: ignore[arg-type]
