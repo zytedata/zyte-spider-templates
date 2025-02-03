@@ -35,3 +35,6 @@ Spider template list
 
 :ref:`Article <article>`
     Get articles from websites.
+
+:ref:`Job posting <job-posting>`
+    Get job postings from job websites.
