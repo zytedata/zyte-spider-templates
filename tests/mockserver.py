@@ -3,9 +3,12 @@ import json
 import socket
 import sys
 import time
+from base64 import b64encode
 from importlib import import_module
+from pathlib import Path
 from subprocess import PIPE, Popen
 from typing import Any, Dict
+from urllib.parse import urlparse
 
 from scrapy_zyte_api.responses import _API_RESPONSE
 from twisted.internet import reactor
@@ -36,20 +39,30 @@ class DefaultResource(Resource):
         https://example.com/category/1
         https://example.com/category/1/page/2
         https://example.com/non-navigation
+        https://example.com/sitemap-category
+        https://example.com/sitemap-product/1
+        https://example.com/sitemap-product/2
         ```
 
         When browserHtml is requested (for any URL, listed above or not), it is
         a minimal HTML with an anchor tag pointing to
         https://example.com/non-navigation.
 
-        When productNavigation is requested, nextPage and subCategories are filled
-        accordingly. productNavigation.items always has 2 product URLs, which are
-        the result of appending ``/product/<n>`` to the request URL.
-        https://example.com/non-navigation is not reachable through
-        productNavigation.
+        When productNavigation is requested, nextPage and subCategories are
+        filled accordingly. productNavigation.items always has 2 product URLs,
+        which are the result of appending ``/product/<n>`` to the request URL.
 
-        When product or productList is requested, an item with the current URL is
-        always returned.
+        The following pages are not reachable through productNavigation:
+
+        -   https://example.com/non-navigation is in an a element of the HTML
+            of every page.
+
+        -   https://example.com/sitemap-* URLs are linked from
+            https://example.com/sitemap*.xml, which are linked from
+            https://example.com/robots.txt.
+
+        When product or productList is requested, an item with the current URL
+        is always returned.
 
         All output also includes unsupported links (mailto:…).
 
@@ -61,6 +74,16 @@ class DefaultResource(Resource):
         -   https://jobs.offsite.example/jobs/1 (jobPosting)
 
         -   https://jobs.offsite.example/jobs/2 (jobPosting)
+
+    -   For fs.example subdomains, a matching file is looked for in the file
+        system. If found, its content is base64-encoded and returned as
+        httpResponseBody. Else, a product response is returned.
+
+        For example, for the URL https://abcdefg.fs.example/foo, if a file
+        exists at tests/fs.example/abcdefg/foo, its content is returned as
+        httpResponseBody. Otherwise, the response is as empty as possible based
+        on input parameters, except when requesting productNavigation, which
+        always includes an item at <url>/p.
     """
 
     def getChild(self, path, request):
@@ -99,6 +122,82 @@ class DefaultResource(Resource):
             }
             return json.dumps(response_data).encode()
 
+        if request_data["url"] == "https://example.com/robots.txt":
+            assert request_data["httpResponseBody"] is True
+            body = b"""
+                Sitemap: https://example.com/sitemap.xml  # Link to category
+                SiTeMaP: https://example.com/sitemap-index.xml  # Links to products
+            """
+            response_data["httpResponseBody"] = b64encode(body).decode()
+            return json.dumps(response_data).encode()
+
+        if request_data["url"] == "https://example.com/sitemap.xml":
+            assert request_data["httpResponseBody"] is True
+            body = b"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                    <url>
+                        <loc>https://example.com/sitemap-category</loc>
+                    </url>
+                </urlset>
+            """
+            response_data["httpResponseBody"] = b64encode(body).decode()
+            return json.dumps(response_data).encode()
+
+        if request_data["url"] == "https://example.com/sitemap-index.xml":
+            assert request_data["httpResponseBody"] is True
+            body = b"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                    <sitemap>
+                        <loc>https://example.com/sitemap-products.xml</loc>
+                    </sitemap>
+                </sitemapindex>
+            """
+            response_data["httpResponseBody"] = b64encode(body).decode()
+            return json.dumps(response_data).encode()
+
+        if request_data["url"] == "https://example.com/sitemap-products.xml":
+            assert request_data["httpResponseBody"] is True
+            body = b"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                    <url>
+                        <loc>https://example.com/sitemap-product/1</loc>
+                    </url>
+                    <url>
+                        <loc>https://example.com/sitemap-product/2</loc>
+                    </url>
+                </urlset>
+            """
+            response_data["httpResponseBody"] = b64encode(body).decode()
+            return json.dumps(response_data).encode()
+
+        if "fs.example" in request_data["url"]:
+            parsed_url = urlparse(request_data["url"])
+            subdir_name = parsed_url.netloc[: -len(".fs.example")]
+            root_dir = Path(__file__).parent / "fs.example"
+            subdir = root_dir / subdir_name
+            filepath = subdir / parsed_url.path.lstrip("/")
+            if filepath != subdir and filepath.exists():
+                response_data["httpResponseBody"] = b64encode(
+                    filepath.read_bytes()
+                ).decode()
+            else:
+                if request_data.get("browserHtml", False) is True:
+                    response_data["browserHtml"] = "<!doctype html><title>a</title>"
+                if request_data.get("product", False) is True:
+                    response_data["product"] = {"url": response_data["url"]}
+                if request_data.get("productNavigation", False) is True:
+                    items = []
+                    if filepath != subdir:
+                        items = [{"url": f"{request_data['url'].rstrip('/')}/p"}]
+                    response_data["productNavigation"] = {
+                        "url": response_data["url"],
+                        "items": items,
+                    }
+            return json.dumps(response_data).encode()
+
         non_navigation_url = "https://example.com/non-navigation"
         html = f"""<html><body><a href="{non_navigation_url}"></a><a href="mailto:jane@example.com"></a></body></html>"""
         if request_data.get("browserHtml", False) is True:
@@ -119,6 +218,7 @@ class DefaultResource(Resource):
             if (
                 "/page/" not in request_data["url"]
                 and "/non-navigation" not in request_data["url"]
+                and "/sitemap" not in request_data["url"]
             ):
                 kwargs["nextPage"] = {
                     "url": f"{request_data['url'].rstrip('/')}/page/2"

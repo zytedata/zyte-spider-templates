@@ -1,6 +1,11 @@
 import logging
+from pathlib import Path
+from random import choice
+from shutil import rmtree
+from string import ascii_lowercase
 from typing import Iterable, List, cast
 from unittest.mock import MagicMock, call, patch
+from urllib.parse import urlparse
 
 import pytest
 import requests
@@ -35,9 +40,11 @@ def test_start_requests():
     crawler = get_crawler()
     spider = EcommerceSpider.from_crawler(crawler, url=url)
     requests = list(spider.start_requests())
-    assert len(requests) == 1
-    assert requests[0].url == url
-    assert requests[0].callback == spider.parse_navigation
+    assert len(requests) == 2
+    assert requests[0].url == "https://example.com/robots.txt"
+    assert requests[0].callback == spider.parse_robotstxt
+    assert requests[1].url == url
+    assert requests[1].callback == spider.parse_navigation
 
 
 def test_start_requests_crawling_logs_page_type():
@@ -46,7 +53,8 @@ def test_start_requests_crawling_logs_page_type():
 
     spider = EcommerceSpider.from_crawler(crawler, url=url)
     requests = list(spider.start_requests())
-    assert requests[0].meta["crawling_logs"]["page_type"] == "productNavigation"
+    assert requests[0].meta["crawling_logs"]["page_type"] == "robots.txt"
+    assert requests[1].meta["crawling_logs"]["page_type"] == "productNavigation"
 
     spider = EcommerceSpider.from_crawler(
         crawler, url=url, crawl_strategy="direct_item"
@@ -261,6 +269,10 @@ def test_crawl():
                     "https://example.com/category/1/page/2/product/2",
                     "https://example.com/non-navigation/product/1",
                     "https://example.com/non-navigation/product/2",
+                    "https://example.com/sitemap-category/product/1",
+                    "https://example.com/sitemap-category/product/2",
+                    "https://example.com/sitemap-product/1",
+                    "https://example.com/sitemap-product/2",
                 },
             )
             for crawl_strategy_args in ({}, {"crawl_strategy": "automatic"})
@@ -278,6 +290,22 @@ def test_crawl():
                     "https://example.com/category/1/product/2",
                     "https://example.com/category/1/page/2/product/1",
                     "https://example.com/category/1/page/2/product/2",
+                },
+            )
+            for crawl_strategy_args in ({}, {"crawl_strategy": "automatic"})
+            for extract_args in ({}, {"extract": "product"})
+        ),
+        # automatic works like direct_item for product-like URLs when
+        # extracting products.
+        *(
+            (
+                {
+                    "url": "https://example.com/product/1",
+                    **crawl_strategy_args,
+                    **extract_args,
+                },
+                {
+                    "https://example.com/product/1",
                 },
             )
             for crawl_strategy_args in ({}, {"crawl_strategy": "automatic"})
@@ -301,6 +329,10 @@ def test_crawl():
                     "https://example.com/category/1/page/2/product/2",
                     "https://example.com/non-navigation/product/1",
                     "https://example.com/non-navigation/product/2",
+                    "https://example.com/sitemap-category/product/1",
+                    "https://example.com/sitemap-category/product/2",
+                    "https://example.com/sitemap-product/1",
+                    "https://example.com/sitemap-product/2",
                 },
             )
             for extract_args in ({}, {"extract": "product"})
@@ -319,6 +351,10 @@ def test_crawl():
                     "https://example.com/category/1/page/2/product/2",
                     "https://example.com/non-navigation/product/1",
                     "https://example.com/non-navigation/product/2",
+                    "https://example.com/sitemap-category/product/1",
+                    "https://example.com/sitemap-category/product/2",
+                    "https://example.com/sitemap-product/1",
+                    "https://example.com/sitemap-product/2",
                 },
             )
             for extract_args in ({}, {"extract": "product"})
@@ -416,6 +452,15 @@ def test_crawl():
                 },
             )
             for extract_args in ({}, {"extract": "product"})
+        ),
+        # automatic = direct_item for product-like URLs
+        (
+            {
+                "url": "https://example.com/product/1",
+            },
+            {
+                "https://example.com/product/1",
+            },
         ),
         *(
             (
@@ -430,6 +475,7 @@ def test_crawl():
                     "https://example.com/category/1",
                     "https://example.com/category/1/page/2",
                     "https://example.com/non-navigation",
+                    "https://example.com/sitemap-category",
                 },
             )
             for crawl_strategy_args in ({}, {"crawl_strategy": "automatic"})
@@ -460,6 +506,7 @@ def test_crawl():
                 "https://example.com/category/1",
                 "https://example.com/category/1/page/2",
                 "https://example.com/non-navigation",
+                "https://example.com/sitemap-category",
             },
         ),
         (
@@ -472,6 +519,7 @@ def test_crawl():
                 "https://example.com/category/1",
                 "https://example.com/category/1/page/2",
                 "https://example.com/non-navigation",
+                "https://example.com/sitemap-category",
             },
         ),
         (
@@ -1046,13 +1094,17 @@ def test_urls(caplog):
     crawler = get_crawler()
     url = "https://example.com"
 
-    spider = EcommerceSpider.from_crawler(crawler, urls=[url])
+    spider = EcommerceSpider.from_crawler(
+        crawler, urls=[url], crawl_strategy="navigation"
+    )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].url == url
     assert start_requests[0].callback == spider.parse_navigation
 
-    spider = EcommerceSpider.from_crawler(crawler, urls=url)
+    spider = EcommerceSpider.from_crawler(
+        crawler, urls=url, crawl_strategy="navigation"
+    )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].url == url
@@ -1062,6 +1114,7 @@ def test_urls(caplog):
     spider = EcommerceSpider.from_crawler(
         crawler,
         urls="https://a.example\n \nhttps://b.example\nhttps://c.example\nfoo\n\n",
+        crawl_strategy="navigation",
     )
     assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
     start_requests = list(spider.start_requests())
@@ -1093,7 +1146,9 @@ def test_urls_file():
             b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
         )
         mock_get.return_value = response
-        spider = EcommerceSpider.from_crawler(crawler, urls_file=url)
+        spider = EcommerceSpider.from_crawler(
+            crawler, urls_file=url, crawl_strategy="navigation"
+        )
         mock_get.assert_called_with(url)
 
     start_requests = list(spider.start_requests())
@@ -1205,3 +1260,182 @@ def test_modify_page_params_for_heuristics(crawl_strategy, expected_page_params)
     )
     page_params = spider._modify_page_params_for_heuristics(page_params)
     assert page_params == expected_page_params
+
+
+@pytest.mark.parametrize(
+    "tree,output",
+    (
+        (
+            {"sitemap.xml": ["product/1"]},
+            {"product/1"},
+        ),
+        (
+            {"blog-sitemap.xml": ["product/1"]},
+            set(),
+        ),
+        (
+            {
+                "sitemap.xml": {
+                    "news-sitemap.xml": ["product/1"],
+                    "foo-sitemap.xml": ["product/2"],
+                },
+            },
+            {"product/2"},
+        ),
+        (
+            {
+                "sitemap.xml": ["a"],
+            },
+            {"a/p"},
+        ),
+        (
+            {
+                "listing.xml": ["a"],
+            },
+            {"a/p"},
+        ),
+        (
+            {
+                "products.xml": ["a"],
+            },
+            {"a"},
+        ),
+        (
+            {
+                "foo.xml": {"products.xml": ["a"]},
+            },
+            {"a"},
+        ),
+        (
+            {
+                "category.xml": {"products.xml": ["a"]},
+            },
+            {"a"},
+        ),
+        (
+            {
+                "products.xml": {"foo.xml": ["a"]},
+            },
+            {"a"},
+        ),
+        (
+            {
+                "products.xml": {"category.xml": ["a"]},
+            },
+            {"a"},
+        ),
+    ),
+)
+@ensureDeferred
+async def test_sitemap_filtering(tree, output, mockserver):
+    root_dir = Path(__file__).parent / "fs.example"
+    subdir_name = "".join(choice(ascii_lowercase) for _ in range(7))
+    base_url = f"https://{subdir_name}.fs.example"
+    subdir = root_dir / subdir_name
+    subdir.mkdir(parents=True, exist_ok=True)
+
+    def write_sitemap(sitemap, paths):
+        urls = "".join(f"<url><loc>{base_url}/{path}</loc></url>" for path in paths)
+        body = f"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>
+        """
+        with (subdir / sitemap).open("w") as f:
+            f.write(body)
+
+    try:
+        with (subdir / "robots.txt").open("w") as f:
+            f.write("\n".join(f"sitemap: {base_url}/{sitemap}" for sitemap in tree))
+        for sitemap, content in tree.items():
+            if isinstance(content, list):
+                write_sitemap(sitemap, content)
+            else:
+                assert isinstance(content, dict)
+                urls = "".join(
+                    f"<sitemap><loc>{base_url}/{nested_sitemap}</loc></sitemap>"
+                    for nested_sitemap in content
+                )
+                body = f"""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</sitemapindex>
+                """
+                with (subdir / sitemap).open("w") as f:
+                    f.write(body)
+                for nested_sitemap, urls in content.items():
+                    assert isinstance(urls, list)
+                    write_sitemap(nested_sitemap, urls)
+
+        settings = {
+            "ZYTE_API_URL": mockserver.urljoin("/"),
+            "ZYTE_API_KEY": "a",
+            "ADDONS": {"scrapy_zyte_api.Addon": 500},
+        }
+        crawler = get_crawler(settings=settings, spider_cls=EcommerceSpider)
+        actual_output = set()
+
+        def track_item(item, response, spider):
+            actual_output.add(urlparse(item.url).path.lstrip("/"))
+
+        crawler.signals.connect(track_item, signal=signals.item_scraped)
+        await crawler.crawl(url=base_url)
+        assert actual_output == output
+
+    finally:
+        rmtree(subdir)
+
+
+@pytest.mark.parametrize(
+    "args,robotstxt_urls",
+    (
+        (
+            {"url": "https://example.com"},
+            {"https://example.com/robots.txt"},
+        ),
+        # A trailing / is not an issue.
+        (
+            {"url": "https://example.com/"},
+            {"https://example.com/robots.txt"},
+        ),
+        # The URL scheme is respected.
+        (
+            {"url": "http://example.com"},
+            {"http://example.com/robots.txt"},
+        ),
+        # There is de-duplication. HTTPS is preferred where both are seen in
+        # input URLs. Order does not matter.
+        # http, https → https
+        (
+            {"urls": ["http://example.com", "https://example.com"]},
+            {"https://example.com/robots.txt"},
+        ),
+        # https, http → https
+        (
+            {"urls": ["https://example.com", "http://example.com"]},
+            {"https://example.com/robots.txt"},
+        ),
+        # When using crawl_strategy=auto, only domains of homepages are
+        # targeted. When crawl_strategy=full, all domains are targeted.
+        (
+            {"urls": ["https://a.example", "https://b.example/foo"]},
+            {"https://a.example/robots.txt"},
+        ),
+        (
+            {
+                "urls": ["https://a.example", "https://b.example/foo"],
+                "crawl_strategy": "full",
+            },
+            {"https://a.example/robots.txt", "https://b.example/robots.txt"},
+        ),
+    ),
+)
+def test_robotstxt_urls(args, robotstxt_urls):
+    spider = EcommerceSpider.from_crawler(get_crawler(), **args)
+    requests = list(spider.start_requests())
+    start_urls = args.get("urls") or [args["url"]]
+    actual_robotstxt_url_list = [
+        request.url for request in requests if request.url not in start_urls
+    ]
+    count = len(actual_robotstxt_url_list)
+    actual_robotstxt_urls = set(actual_robotstxt_url_list)
+    assert len(actual_robotstxt_urls) == count
+    assert actual_robotstxt_urls == robotstxt_urls
