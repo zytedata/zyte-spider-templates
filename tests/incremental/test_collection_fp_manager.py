@@ -1,14 +1,21 @@
 from asyncio import ensure_future
+from logging import WARNING
 from unittest.mock import MagicMock, patch
 
 import pytest
+from scrapy import Spider
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.request import RequestFingerprinter
+from scrapy.utils.test import get_crawler as _get_crawler
 from twisted.internet.defer import Deferred, inlineCallbacks
 
-from tests import get_crawler
-from zyte_spider_templates._incremental.manager import CollectionsFingerprintsManager
+from zyte_spider_templates._incremental.manager import (
+    CollectionsFingerprintsManager,
+    _get_collection_name,
+)
 from zyte_spider_templates.spiders.article import ArticleSpider
+
+from .. import get_crawler, set_env
 
 
 @pytest.fixture
@@ -207,3 +214,67 @@ def test_spider_closed(mock_scrapinghub_client):
     fp_manager.save_batch = MagicMock(side_effect=fp_manager.save_batch)  # type: ignore
     fp_manager.spider_closed()
     fp_manager.save_batch.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("env_vars", "settings", "spider_name", "collection_name", "warnings"),
+    (
+        # INCREMENTAL_CRAWL_COLLECTION_NAME > SHUB_VIRTUAL_SPIDER > Spider.name
+        # INCREMENTAL_CRAWL_COLLECTION_NAME is used as is, others are
+        # slugified, length-limited and they get an “_incremental” suffix.
+        (
+            {},
+            {},
+            "a A-1.α" + "a" * 2048,
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            ["without defining a specific collection name"],
+        ),
+        (
+            {"SHUB_VIRTUAL_SPIDER": "a A-1.α" + "a" * 2048},
+            {},
+            "foo",
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            ["without defining a specific collection name"],
+        ),
+        (
+            {"SHUB_VIRTUAL_SPIDER": "bar"},
+            {"INCREMENTAL_CRAWL_COLLECTION_NAME": "a A-1.α" + "a" * 2048},
+            "foo",
+            "a A-1.α" + "a" * 2048,
+            [],
+        ),
+        (
+            {},
+            {},
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")),
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            [],
+        ),
+        (
+            {},
+            {},
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental") + 1),
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            ["without defining a specific collection name"],
+        ),
+    ),
+)
+def test_collection_name(
+    env_vars, settings, spider_name, collection_name, warnings, caplog
+):
+    class TestSpider(Spider):
+        name = spider_name
+
+    crawler = _get_crawler(settings_dict=settings, spidercls=TestSpider)
+    crawler.spider = TestSpider()
+
+    caplog.clear()
+    with caplog.at_level(WARNING):
+        with set_env(**env_vars):
+            assert _get_collection_name(crawler) == collection_name
+
+    if warnings:
+        for warning in warnings:
+            assert warning in caplog.text
+    else:
+        assert not caplog.records

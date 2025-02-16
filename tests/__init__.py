@@ -1,3 +1,5 @@
+import contextlib
+import os
 from typing import Any, Dict, Optional, Type
 
 import pytest
@@ -20,3 +22,15 @@ def get_crawler(
     runner = CrawlerRunner(settings)
     crawler = runner.create_crawler(spider_cls)
     return crawler
+
+
+# https://stackoverflow.com/a/34333710
+@contextlib.contextmanager
+def set_env(**environ):
+    old_environ = dict(os.environ)
+    os.environ.update(environ)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_environ)
