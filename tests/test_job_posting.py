@@ -5,6 +5,8 @@ import pytest
 import requests
 import scrapy
 from pydantic import ValidationError
+from pytest_twisted import ensureDeferred
+from scrapy import signals
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
 from zyte_common_items import JobPosting, JobPostingNavigation, ProbabilityRequest
@@ -602,3 +604,27 @@ def test_urls_file():
     assert start_requests[0].url == "https://a.example"
     assert start_requests[1].url == "https://b.example"
     assert start_requests[2].url == "https://c.example"
+
+
+@ensureDeferred
+async def test_offsite(mockserver):
+    settings = {
+        "ZYTE_API_URL": mockserver.urljoin("/"),
+        "ZYTE_API_KEY": "a",
+        "ADDONS": {
+            "scrapy_zyte_api.Addon": 500,
+            "zyte_spider_templates.Addon": 1000,
+        },
+    }
+    crawler = get_crawler(settings=settings, spider_cls=JobPostingSpider)
+    actual_output = set()
+
+    def track_item(item, response, spider):
+        actual_output.add(item.url)
+
+    crawler.signals.connect(track_item, signal=signals.item_scraped)
+    await crawler.crawl(url="https://jobs.example")
+    assert actual_output == {
+        "https://jobs.offsite.example/jobs/1",
+        "https://jobs.offsite.example/jobs/2",
+    }

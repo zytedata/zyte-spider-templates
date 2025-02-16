@@ -30,10 +30,7 @@ class IncrementalCrawlMiddleware:
     def __init__(self, crawler: Crawler):
         assert crawler.spider
         if not crawler.spider.settings.getbool("INCREMENTAL_CRAWL_ENABLED", False):
-            raise NotConfigured(
-                "IncrementalCrawlMiddleware is not enabled. Set the "
-                "INCREMENTAL_CRAWL_ENABLED setting to True to enable it."
-            )
+            raise NotConfigured
         self.inc_manager: IncrementalCrawlingManager = self.prepare_incremental_manager(
             crawler
         )
