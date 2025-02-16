@@ -33,11 +33,24 @@ THREAD_POOL_EXECUTOR = ThreadPoolExecutor(max_workers=10)
 def _get_collection_name(crawler: Crawler) -> str:
     if name := crawler.settings.get("INCREMENTAL_CRAWL_COLLECTION_NAME"):
         return name
-    name = (
-        unidecode(get_spider_name(crawler)).rstrip("_")[:_MAX_LENGTH]
-        + INCREMENTAL_SUFFIX
-    )
-    return re.sub(r"[^a-zA-Z0-9_]", "_", name)
+    original_spider_name = get_spider_name(crawler)
+    mangled_spider_name = unidecode(original_spider_name)
+    mangled_spider_name = re.sub(r"[^a-zA-Z0-9_]", "_", mangled_spider_name)
+    mangled_spider_name = mangled_spider_name.rstrip("_")
+    mangled_spider_name = mangled_spider_name[:_MAX_LENGTH]
+    name = mangled_spider_name + INCREMENTAL_SUFFIX
+    if mangled_spider_name != original_spider_name:
+        logger.warning(
+            f"You enabled incremental crawling without defining a specific "
+            f"collection name. As a result, the spider name "
+            f"({original_spider_name!r}) was mangled as "
+            f"{mangled_spider_name!r} to generate a name for the collection "
+            f"to use: {name!r}. Consider setting that or a different "
+            f"collection name explicitly, either through spider parameters "
+            f"(if supported) or through the INCREMENTAL_CRAWL_COLLECTION_NAME "
+            f"setting."
+        )
+    return name
 
 
 class CollectionsFingerprintsManager:

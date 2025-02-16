@@ -1,4 +1,5 @@
 from asyncio import ensure_future
+from logging import WARNING
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -216,36 +217,64 @@ def test_spider_closed(mock_scrapinghub_client):
 
 
 @pytest.mark.parametrize(
-    ("env_vars", "settings", "spider_name", "collection_name"),
+    ("env_vars", "settings", "spider_name", "collection_name", "warnings"),
     (
         # INCREMENTAL_CRAWL_COLLECTION_NAME > SHUB_VIRTUAL_SPIDER > Spider.name
         # INCREMENTAL_CRAWL_COLLECTION_NAME is used as is, others are
-        # slugified, length-limited and they and get an “_incremental” suffix.
+        # slugified, length-limited and they get an “_incremental” suffix.
         (
             {},
             {},
             "a A-1.α" + "a" * 2048,
             "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            ["without defining a specific collection name"],
         ),
         (
             {"SHUB_VIRTUAL_SPIDER": "a A-1.α" + "a" * 2048},
             {},
             "foo",
             "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            ["without defining a specific collection name"],
         ),
         (
             {"SHUB_VIRTUAL_SPIDER": "bar"},
             {"INCREMENTAL_CRAWL_COLLECTION_NAME": "a A-1.α" + "a" * 2048},
             "foo",
             "a A-1.α" + "a" * 2048,
+            [],
+        ),
+        (
+            {},
+            {},
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")),
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            [],
+        ),
+        (
+            {},
+            {},
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental") + 1),
+            "a_A_1_a" + "a" * (2048 - len("a_A_1_a_incremental")) + "_incremental",
+            ["without defining a specific collection name"],
         ),
     ),
 )
-def test_collection_name(env_vars, settings, spider_name, collection_name):
+def test_collection_name(
+    env_vars, settings, spider_name, collection_name, warnings, caplog
+):
     class TestSpider(Spider):
         name = spider_name
 
     crawler = _get_crawler(settings_dict=settings, spidercls=TestSpider)
     crawler.spider = TestSpider()
-    with set_env(**env_vars):
-        assert _get_collection_name(crawler) == collection_name
+
+    caplog.clear()
+    with caplog.at_level(WARNING):
+        with set_env(**env_vars):
+            assert _get_collection_name(crawler) == collection_name
+
+    if warnings:
+        for warning in warnings:
+            assert warning in caplog.text
+    else:
+        assert not caplog.records
