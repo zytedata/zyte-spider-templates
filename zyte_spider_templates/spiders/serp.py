@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from scrapy import Request
 from scrapy.settings import SETTINGS_PRIORITIES, BaseSettings
 from scrapy_poet import DummyResponse, DynamicDeps
@@ -10,6 +10,7 @@ from w3lib.url import add_or_replace_parameter
 from zyte_common_items import (
     Article,
     ArticleList,
+    CustomAttributes,
     ForumThread,
     JobPosting,
     Product,
@@ -19,6 +20,7 @@ from zyte_common_items import (
 
 from .._geolocations import GEOLOCATION_OPTIONS_WITH_CODE, Geolocation
 from ..documentation import document_enum
+from ..params import CustomAttrsInputParam, CustomAttrsMethodParam
 from ._google_domains import GoogleDomain
 from ._google_gl import GOOGLE_GL_OPTIONS_WITH_CODE, GoogleGl
 from ._google_hl import GOOGLE_HL_OPTIONS_WITH_CODE, GoogleHl
@@ -206,13 +208,16 @@ class SerpItemType(str, Enum):
     """
 
 
-ITEM_TYPE_CLASSES = {
+ITEM_TYPE_CLASSES: Dict[SerpItemType, type] = {
     SerpItemType.article: Article,
     SerpItemType.articleList: ArticleList,
     SerpItemType.forumThread: ForumThread,
     SerpItemType.jobPosting: JobPosting,
     SerpItemType.product: Product,
     SerpItemType.productList: ProductList,
+}
+CLASS_ITEM_TYPES: Dict[type, SerpItemType] = {
+    v: k for k, v in ITEM_TYPE_CLASSES.items()
 }
 
 
@@ -243,6 +248,8 @@ class GoogleSearchSpiderParams(
     SerpGeolocationParam,
     GoogleCrParam,
     GoogleGlParam,
+    CustomAttrsMethodParam,
+    CustomAttrsInputParam,
     SerpItemTypeParam,
     SerpResultsPerPageParam,
     SerpMaxPagesParam,
@@ -251,7 +258,14 @@ class GoogleSearchSpiderParams(
     GoogleDomainParam,
     BaseModel,
 ):
-    pass
+    @model_validator(mode="after")
+    def validate_custom_attributes(self):
+        if self.custom_attrs_input and self.item_type == SerpItemType.off:
+            raise ValueError(
+                "Cannot extract custom attributes if Follow And Extract "
+                "(item_type) is disabled."
+            )
+        return self
 
 
 class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
@@ -271,6 +285,8 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         "title": "Google Search Results",
         "description": "Template for spiders that extract Google search results.",
     }
+
+    URL_TEMPLATE = "https://www.{domain}/search"
 
     @classmethod
     def update_settings(cls, settings: BaseSettings) -> None:
@@ -309,9 +325,6 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             },
             meta={
                 "crawling_logs": {"page_type": "serp"},
-                "zyte_api": {
-                    "serp": True,
-                },
             },
         )
 
@@ -320,21 +333,22 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
         if not search_queries:
             raise ValueError("No search queries specified.")
 
-        url = f"https://www.{self.args.domain.value}/search"
+        url = self.URL_TEMPLATE.format(domain=self.args.domain.value)
         for search_query in search_queries:
             search_url = add_or_replace_parameter(url, "q", search_query)
             with self._log_request_exception:
                 yield self.get_serp_request(search_url, page_number=1)
 
-    def parse_serp(self, response, page_number) -> Iterable[Union[Request, Serp]]:
-        serp = Serp.from_dict(response.raw_api_response["serp"])
-
+    def parse_serp(
+        self, response: DummyResponse, page_number, serp: Serp
+    ) -> Iterable[Union[Request, Serp]]:
         if page_number < self.args.max_pages:
             next_start = page_number * (
                 self.args.results_per_page or self._default_results_per_page
             )
             if serp.organicResults and (
-                serp.metadata.totalOrganicResults is None
+                serp.metadata is None
+                or serp.metadata.totalOrganicResults is None
                 or serp.metadata.totalOrganicResults > next_start
             ):
                 next_url = add_or_replace_parameter(serp.url, "start", str(next_start))
@@ -345,18 +359,33 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
             yield serp
             return
 
-        for result in serp.organicResults:
+        for result in serp.organicResults or []:
+            inject: list[type] = [ITEM_TYPE_CLASSES[self.args.item_type]]
+            if self._custom_attrs_dep:
+                inject.append(self._custom_attrs_dep)  # type: ignore[arg-type]
             with self._log_request_exception:
                 yield response.follow(
                     result.url,
                     callback=self.parse_result,
                     meta={
                         "crawling_logs": {"page_type": self.args.item_type.value},
-                        "inject": [ITEM_TYPE_CLASSES[self.args.item_type]],
+                        "inject": inject,
                     },
                 )
 
     def parse_result(
         self, response: DummyResponse, dynamic: DynamicDeps
     ) -> Iterable[Any]:
-        yield next(iter(dynamic.values()))
+        if len(dynamic) == 1:
+            yield next(iter(dynamic.values()))
+            return
+
+        result = {}
+        for cls, value in dynamic.items():
+            item_type_name = (
+                "customAttributes"
+                if cls is CustomAttributes
+                else CLASS_ITEM_TYPES[cls].value
+            )
+            result[item_type_name] = value
+        yield result

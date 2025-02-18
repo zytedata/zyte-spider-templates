@@ -61,6 +61,9 @@ class DefaultResource(Resource):
         -   https://jobs.offsite.example/jobs/1 (jobPosting)
 
         -   https://jobs.offsite.example/jobs/2 (jobPosting)
+
+    -   A serp domain, search.example, that always returns 1 result pointing to
+        the e-commerce website.
     """
 
     def getChild(self, path, request):
@@ -99,6 +102,14 @@ class DefaultResource(Resource):
             }
             return json.dumps(response_data).encode()
 
+        if request_data["url"].startswith("https://search.example/"):
+            assert request_data["serp"] is True
+            response_data["serp"] = {
+                "url": request_data["url"],
+                "organicResults": [{"url": "https://ecommerce.example/p/foo"}],
+            }
+            return json.dumps(response_data).encode()
+
         non_navigation_url = "https://example.com/non-navigation"
         html = f"""<html><body><a href="{non_navigation_url}"></a><a href="mailto:jane@example.com"></a></body></html>"""
         if request_data.get("browserHtml", False) is True:
@@ -107,6 +118,12 @@ class DefaultResource(Resource):
         if request_data.get("product", False) is True:
             response_data["product"] = {
                 "url": request_data["url"],
+            }
+
+        if request_data.get("customAttributes", None):
+            response_data["customAttributes"] = {
+                "values": {"warranty": "5 years"},
+                "metadata": None,
             }
 
         if request_data.get("productList", False) is True:

@@ -608,13 +608,20 @@ def test_urls_file():
 
 @ensureDeferred
 async def test_offsite(mockserver):
+    addons = {
+        "scrapy_zyte_api.Addon": 500,
+        "zyte_spider_templates.Addon": 1000,
+    }
+    try:
+        from scrapy_poet import Addon
+    except ImportError:
+        pass
+    else:
+        addons[Addon] = 300
     settings = {
         "ZYTE_API_URL": mockserver.urljoin("/"),
         "ZYTE_API_KEY": "a",
-        "ADDONS": {
-            "scrapy_zyte_api.Addon": 500,
-            "zyte_spider_templates.Addon": 1000,
-        },
+        "ADDONS": addons,
     }
     crawler = get_crawler(settings=settings, spider_cls=JobPostingSpider)
     actual_output = set()

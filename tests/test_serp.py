@@ -2,11 +2,12 @@ from urllib.parse import quote_plus
 
 import pytest
 from pydantic import ValidationError
-from scrapy import Request
+from pytest_twisted import ensureDeferred
+from scrapy import Request, signals
+from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import get_spider_metadata
-from scrapy_zyte_api.responses import ZyteAPITextResponse
 from w3lib.url import add_or_replace_parameter
-from zyte_common_items import Product
+from zyte_common_items import CustomAttributes, Product, Serp
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS,
@@ -37,33 +38,31 @@ def run_parse_serp(spider, total_results=99999, page=1, query="foo", results=10)
     url = f"https://www.google.com/search?q={quote_plus(query)}"
     if page > 1:
         url = add_or_replace_parameter(url, "start", (page - 1) * 10)
-    response = ZyteAPITextResponse.from_api_response(
-        api_response={
-            "serp": {
-                "organicResults": [
-                    {
-                        "description": "…",
-                        "name": "…",
-                        "url": f"https://example.com/{rank}",
-                        "rank": rank,
-                    }
-                    for rank in range(1, results + 1)
-                ],
-                "metadata": {
-                    "dateDownloaded": "2024-10-25T08:59:45Z",
-                    "displayedQuery": query,
-                    "searchedQuery": query,
-                    "totalOrganicResults": total_results,
-                },
-                "pageNumber": page,
-                "url": url,
+    response = DummyResponse(url=url)
+    serp = Serp.from_dict(
+        {
+            "organicResults": [
+                {
+                    "description": "…",
+                    "name": "…",
+                    "url": f"https://example.com/{rank}",
+                    "rank": rank,
+                }
+                for rank in range(1, results + 1)
+            ],
+            "metadata": {
+                "dateDownloaded": "2024-10-25T08:59:45Z",
+                "displayedQuery": query,
+                "searchedQuery": query,
+                "totalOrganicResults": total_results,
             },
+            "pageNumber": page,
             "url": url,
-        },
+        }
     )
     items = []
     requests = []
-    for item_or_request in spider.parse_serp(response, page_number=page):
+    for item_or_request in spider.parse_serp(response, page_number=page, serp=serp):
         if isinstance(item_or_request, Request):
             requests.append(item_or_request)
         else:
@@ -348,6 +347,42 @@ def test_metadata():
                     "title": "Follow and Extract",
                     "type": "string",
                 },
+                "custom_attrs_input": {
+                    "anyOf": [
+                        {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"type": "object"},
+                            "type": "string",
+                        },
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": "Custom attributes to extract.",
+                    "title": "Custom attributes schema",
+                    "widget": "custom-attrs",
+                },
+                "custom_attrs_method": {
+                    "default": "generate",
+                    "description": "Which model to use for custom attribute extraction.",
+                    "enum": ["generate", "extract"],
+                    "enumMeta": {
+                        "extract": {
+                            "description": "Use an extractive model (BERT). Supports only a "
+                            "subset of the schema (string, integer and "
+                            "number), suited for extraction of short and clear "
+                            "fields, with a fixed per-request cost.",
+                            "title": "extract",
+                        },
+                        "generate": {
+                            "description": "Use a generative model (LLM). The most powerful "
+                            "and versatile, but more expensive, with variable "
+                            "per-request cost.",
+                            "title": "generate",
+                        },
+                    },
+                    "title": "Custom attributes extraction method",
+                    "type": "string",
+                },
                 "gl": {
                     "anyOf": [
                         {"type": "string"},
@@ -577,33 +612,31 @@ def test_parse_serp():
         crawler, search_queries="foo bar", max_pages=43
     )
     url = "https://www.google.com/search?q=foo+bar"
-    response = ZyteAPITextResponse.from_api_response(
-        api_response={
-            "serp": {
-                "organicResults": [
-                    {
-                        "description": "…",
-                        "name": "…",
-                        "url": f"https://example.com/{rank}",
-                        "rank": rank,
-                    }
-                    for rank in range(1, 11)
-                ],
-                "metadata": {
-                    "dateDownloaded": "2024-10-25T08:59:45Z",
-                    "displayedQuery": "foo bar",
-                    "searchedQuery": "foo bar",
-                    "totalOrganicResults": 99999,
-                },
-                "pageNumber": 1,
-                "url": url,
-            },
-            "url": url,
-        },
-    )
+    response = DummyResponse(url=url)
     items = []
     requests = []
-    for item_or_request in spider.parse_serp(response, page_number=42):
+    serp = Serp.from_dict(
+        {
+            "organicResults": [
+                {
+                    "description": "…",
+                    "name": "…",
+                    "url": f"https://example.com/{rank}",
+                    "rank": rank,
+                }
+                for rank in range(1, 11)
+            ],
+            "metadata": {
+                "dateDownloaded": "2024-10-25T08:59:45Z",
+                "displayedQuery": "foo bar",
+                "searchedQuery": "foo bar",
+                "totalOrganicResults": 99999,
+            },
+            "pageNumber": 1,
+            "url": url,
+        }
+    )
+    for item_or_request in spider.parse_serp(response, page_number=42, serp=serp):
         if isinstance(item_or_request, Request):
             requests.append(item_or_request)
         else:
@@ -615,7 +648,7 @@ def test_parse_serp():
 
     # The page_number parameter is required.
     with pytest.raises(TypeError):
-        spider.parse_serp(response)  # type: ignore[call-arg]
+        spider.parse_serp(response, serp=serp)  # type: ignore[call-arg]
 
 
 def test_hl():
@@ -705,33 +738,31 @@ def test_item_type():
         crawler, search_queries="foo bar", max_pages=43, item_type="product"
     )
     url = "https://www.google.com/search?q=foo+bar"
-    response = ZyteAPITextResponse.from_api_response(
-        api_response={
-            "serp": {
-                "organicResults": [
-                    {
-                        "description": "…",
-                        "name": "…",
-                        "url": f"https://example.com/{rank}",
-                        "rank": rank,
-                    }
-                    for rank in range(1, 11)
-                ],
-                "metadata": {
-                    "dateDownloaded": "2024-10-25T08:59:45Z",
-                    "displayedQuery": "foo bar",
-                    "searchedQuery": "foo bar",
-                    "totalOrganicResults": 99999,
-                },
-                "pageNumber": 1,
-                "url": url,
-            },
-            "url": url,
-        },
-    )
+    response = DummyResponse(url=url)
     items = []
     requests = []
-    for item_or_request in spider.parse_serp(response, page_number=42):
+    serp = Serp.from_dict(
+        {
+            "organicResults": [
+                {
+                    "description": "…",
+                    "name": "…",
+                    "url": f"https://example.com/{rank}",
+                    "rank": rank,
+                }
+                for rank in range(1, 11)
+            ],
+            "metadata": {
+                "dateDownloaded": "2024-10-25T08:59:45Z",
+                "displayedQuery": "foo bar",
+                "searchedQuery": "foo bar",
+                "totalOrganicResults": 99999,
+            },
+            "pageNumber": 1,
+            "url": url,
+        }
+    )
+    for item_or_request in spider.parse_serp(response, page_number=42, serp=serp):
         if isinstance(item_or_request, Request):
             requests.append(item_or_request)
         else:
@@ -792,3 +823,97 @@ def test_query_validation(input_data, raises):
             GoogleSearchSpider(**input_data)
     else:
         GoogleSearchSpider(**input_data)
+
+
+class TestGoogleSearchSpider(GoogleSearchSpider):
+    URL_TEMPLATE = "https://search.example/"
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected_result"),
+    (
+        (
+            {"search_queries": "foo"},
+            Serp.from_dict(
+                {
+                    "url": "https://search.example/?q=foo",
+                    "organicResults": [
+                        {
+                            "url": "https://ecommerce.example/p/foo",
+                        },
+                    ],
+                }
+            ),
+        ),
+        (
+            {
+                "search_queries": "foo",
+                "item_type": "product",
+            },
+            Product.from_dict(
+                {
+                    "url": "https://ecommerce.example/p/foo",
+                }
+            ),
+        ),
+        (
+            {
+                "search_queries": "foo",
+                "item_type": "product",
+                "custom_attrs_input": '{"warranty": {"type": "string", "description": "Warranty duration"}}',
+            },
+            {
+                "product": Product.from_dict(
+                    {
+                        "url": "https://ecommerce.example/p/foo",
+                    }
+                ),
+                "customAttributes": CustomAttributes.from_dict(
+                    {
+                        "values": {"warranty": "5 years"},
+                    }
+                ),
+            },
+        ),
+        (
+            {
+                "search_queries": "foo",
+                "custom_attrs_input": '{"warranty": {"type": "string", "description": "Warranty duration"}}',
+            },
+            ValueError,
+        ),
+    ),
+)
+@ensureDeferred
+async def test_crawl(kwargs, expected_result, mockserver):
+    addons = {
+        "scrapy_zyte_api.Addon": 500,
+        "zyte_spider_templates.Addon": 1000,
+    }
+    try:
+        from scrapy_poet import Addon
+    except ImportError:
+        pass
+    else:
+        addons[Addon] = 300
+    settings = {
+        "ZYTE_API_URL": mockserver.urljoin("/"),
+        "ZYTE_API_KEY": "a",
+        "ADDONS": addons,
+    }
+    crawler = get_crawler(settings=settings, spider_cls=TestGoogleSearchSpider)
+
+    if isinstance(expected_result, type) and issubclass(expected_result, Exception):
+        with pytest.raises(expected_result):
+            await crawler.crawl(**kwargs)
+        return
+
+    actual_result = []
+
+    def track_item(item, response, spider):
+        actual_result.append(item)
+
+    crawler.signals.connect(track_item, signal=signals.item_scraped)
+    await crawler.crawl(url="https://search.example", **kwargs)
+    assert len(actual_result) == 1
+    assert actual_result[0] == expected_result
