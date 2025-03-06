@@ -3,7 +3,6 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Optional, Union, cast
 
-import requests
 import scrapy
 from pydantic import BaseModel, ConfigDict, Field
 from scrapy.crawler import Crawler
@@ -21,7 +20,6 @@ from zyte_spider_templates.spiders.base import (
     INPUT_GROUP,
     BaseSpider,
 )
-from zyte_spider_templates.utils import get_domain
 
 from ..documentation import document_enum
 from ..params import (
@@ -33,8 +31,8 @@ from ..params import (
     UrlParam,
     UrlsFileParam,
     UrlsParam,
+    parse_input_params,
 )
-from ..utils import load_url_list
 
 if TYPE_CHECKING:
     # typing.Self requires Python 3.11
@@ -115,22 +113,9 @@ class JobPostingSpider(Args[JobPostingSpiderParams], BaseSpider):
     @classmethod
     def from_crawler(cls, crawler: Crawler, *args, **kwargs) -> Self:
         spider = super().from_crawler(crawler, *args, **kwargs)
-        spider._init_input()
+        parse_input_params(spider)
         spider._init_extract_from()
         return spider
-
-    def _init_input(self):
-        urls_file = self.args.urls_file
-        if urls_file:
-            response = requests.get(urls_file)
-            urls = load_url_list(response.text)
-            self.logger.info(f"Loaded {len(urls)} initial URLs from {urls_file}.")
-            self.start_urls = urls
-        elif self.args.urls:
-            self.start_urls = self.args.urls
-        else:
-            self.start_urls = [self.args.url]
-        self.allowed_domains = list(set(get_domain(url) for url in self.start_urls))
 
     def _init_extract_from(self):
         if self.args.extract_from is not None:

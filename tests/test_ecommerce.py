@@ -27,7 +27,7 @@ from zyte_spider_templates.spiders.ecommerce import EcommerceSpider
 
 from . import get_crawler
 from .test_utils import URL_TO_DOMAIN
-from .utils import assertEqualSpiderMetadata
+from .utils import assertEqualSpiderMetadata, get_addons
 
 
 def test_start_requests():
@@ -547,7 +547,7 @@ async def test_crawl_strategies(args, output, mockserver):
     settings = {
         "ZYTE_API_URL": mockserver.urljoin("/"),
         "ZYTE_API_KEY": "a",
-        "ADDONS": {"scrapy_zyte_api.Addon": 500},
+        "ADDONS": get_addons(),
     }
     crawler = get_crawler(settings=settings, spider_cls=EcommerceSpider)
     actual_output = set()

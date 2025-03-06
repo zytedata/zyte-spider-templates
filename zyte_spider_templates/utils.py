@@ -15,8 +15,12 @@ logger = logging.getLogger(__name__)
 _URL_PATTERN = r"^https?://[^:/\s]+(:\d{1,5})?(/[^\s]*)*(#[^\s]*)?$"
 
 
-def get_domain(url: str) -> str:
-    return re.sub(r"^www\d*\.", "", parse_url(url).netloc)
+def get_domain(url: str, include_port: bool = True) -> str:
+    return re.sub(
+        r"^www\d*\.",
+        "",
+        parse_url(url).netloc if include_port else parse_url(url).hostname or "",
+    )
 
 
 def load_url_list(urls: str) -> List[str]:

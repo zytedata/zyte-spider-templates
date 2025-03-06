@@ -207,7 +207,9 @@ def parse_input_params(spider):
         spider.start_urls = spider.args.urls
     else:
         spider.start_urls = [spider.args.url]
-    spider.allowed_domains = list(set(get_domain(url) for url in spider.start_urls))
+    spider.allowed_domains = list(
+        set(get_domain(url, include_port=False) for url in spider.start_urls)
+    )
 
 
 URL_FIELD_KWARGS = {

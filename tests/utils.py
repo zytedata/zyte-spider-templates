@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 
 
@@ -17,3 +19,17 @@ def assertEqualSpiderMetadata(actual, expected):
     actual_json = json.dumps(actual, indent=2, sort_keys=True)
     expected_json = json.dumps(expected, indent=2, sort_keys=True)
     assert actual_json == expected_json
+
+
+def get_addons() -> dict[str | type, int]:
+    addons: dict[str | type, int] = {
+        "scrapy_zyte_api.Addon": 500,
+        "zyte_spider_templates.Addon": 1000,
+    }
+    try:
+        from scrapy_poet import Addon
+    except ImportError:
+        pass
+    else:
+        addons[Addon] = 300
+    return addons
