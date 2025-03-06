@@ -46,7 +46,7 @@ async def aiohttp_server():
 
 
 @pytest_twisted.async_fixture(scope="module")
-async def zyte_api_server(aiohttp_server):
+async def zyte_api_server(aiohttp_server) -> TestServer:
     from fake_zyte_api.main import make_app
 
     app = make_app()

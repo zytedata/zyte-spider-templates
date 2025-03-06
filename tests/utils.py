@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 import json
+from typing import Any
+
+from aiohttp.test_utils import TestServer
+from scrapy import Spider, signals
+from scrapy.utils.defer import deferred_to_future
+
+from . import get_crawler
 
 
 def assertEqualSpiderMetadata(actual, expected):
@@ -33,3 +40,29 @@ def get_addons() -> dict[str | type, int]:
     else:
         addons[Addon] = 300
     return addons
+
+
+def get_zyte_api_settings(zyte_api_server) -> dict[str, Any]:
+    return {
+        "ZYTE_API_URL": str(zyte_api_server.make_url("/")),
+        "ZYTE_API_KEY": "a",
+        "ADDONS": get_addons(),
+    }
+
+
+async def crawl_fake_zyte_api(
+    zyte_api_server: TestServer,
+    spider_cls: type[Spider],
+    spider_kwargs: dict[str, Any],
+    settings: dict[str, Any] | None = None,
+):
+    settings = {**get_zyte_api_settings(zyte_api_server), **(settings or {})}
+    crawler = get_crawler(settings=settings, spider_cls=spider_cls)
+    items = []
+
+    def track_item(item, response, spider):
+        items.append(item)
+
+    crawler.signals.connect(track_item, signal=signals.item_scraped)
+    await deferred_to_future(crawler.crawl(**spider_kwargs))
+    return items

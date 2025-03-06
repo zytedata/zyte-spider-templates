@@ -11,7 +11,7 @@ import scrapy
 from itemadapter import ItemAdapter
 from pydantic import ValidationError
 from scrapy import signals
-from scrapy.utils.defer import deferred_f_from_coro_f, deferred_to_future
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
 from zyte_common_items import JobPosting, JobPostingNavigation, ProbabilityRequest
@@ -28,7 +28,7 @@ from zyte_spider_templates.spiders.job_posting import (
 
 from . import get_crawler
 from .test_utils import URL_TO_DOMAIN
-from .utils import assertEqualSpiderMetadata, get_addons
+from .utils import assertEqualSpiderMetadata, crawl_fake_zyte_api, get_addons
 
 if TYPE_CHECKING:
     from aiohttp.pytest_plugin import AiohttpServer
@@ -645,22 +645,11 @@ async def test_offsite(mockserver):
 
 @deferred_f_from_coro_f
 async def test_extract_jobs(zyte_api_server, jobs_website):
-    settings = {
-        "ZYTE_API_URL": str(zyte_api_server.make_url("/")),
-        "ZYTE_API_KEY": "a",
-        "ADDONS": get_addons(),
-    }
-    crawler = get_crawler(settings=settings, spider_cls=JobPostingSpider)
-    items = []
-
-    def track_item(item, response, spider):
-        items.append(item)
-
-    crawler.signals.connect(track_item, signal=signals.item_scraped)
-    await deferred_to_future(
-        crawler.crawl(url=str(jobs_website.make_url("/jobs/4")), max_requests=1000)
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/jobs/4")), "max_requests": 1000},
     )
-
     assert len(items) == 109
     assert len(set(item.url for item in items)) == len(items)
     assert len(set(item.jobPostingId for item in items)) == len(items)
@@ -668,30 +657,19 @@ async def test_extract_jobs(zyte_api_server, jobs_website):
 
 @deferred_f_from_coro_f
 async def test_extract_jobs_url_list(zyte_api_server, jobs_website):
-    settings = {
-        "ZYTE_API_URL": str(zyte_api_server.make_url("/")),
-        "ZYTE_API_KEY": "a",
-        "ADDONS": get_addons(),
-    }
-    crawler = get_crawler(settings=settings, spider_cls=JobPostingSpider)
-    items = []
-
-    def track_item(item, response, spider):
-        items.append(item)
-
-    crawler.signals.connect(track_item, signal=signals.item_scraped)
-    await deferred_to_future(
-        crawler.crawl(
-            urls="\n".join(
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {
+            "urls": "\n".join(
                 [
                     str(jobs_website.make_url("/jobs/1")),
                     str(jobs_website.make_url("/jobs/4")),
                 ]
             ),
-            max_requests=1000,
-        )
+            "max_requests": 1000,
+        },
     )
-
     assert len(items) == 5 + 109
     assert len(set(item.url for item in items)) == len(items)
     assert len(set(item.jobPostingId for item in items)) == len(items)
@@ -699,42 +677,20 @@ async def test_extract_jobs_url_list(zyte_api_server, jobs_website):
 
 @deferred_f_from_coro_f
 async def test_extract_jobs_max_reqs(zyte_api_server, jobs_website):
-    settings = {
-        "ZYTE_API_URL": str(zyte_api_server.make_url("/")),
-        "ZYTE_API_KEY": "a",
-        "ADDONS": get_addons(),
-    }
-    crawler = get_crawler(settings=settings, spider_cls=JobPostingSpider)
-    items = []
-
-    def track_item(item, response, spider):
-        items.append(item)
-
-    crawler.signals.connect(track_item, signal=signals.item_scraped)
-    await deferred_to_future(
-        crawler.crawl(url=str(jobs_website.make_url("/jobs/4")), max_requests=20)
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/jobs/4")), "max_requests": 20},
     )
-
     assert len(items) < 20
 
 
 @deferred_f_from_coro_f
 async def test_extract_direct_item(zyte_api_server, jobs_website):
-    settings = {
-        "ZYTE_API_URL": str(zyte_api_server.make_url("/")),
-        "ZYTE_API_KEY": "a",
-        "ADDONS": get_addons(),
-    }
-    crawler = get_crawler(settings=settings, spider_cls=JobPostingSpider)
-    items = []
-
-    def track_item(item, response, spider):
-        items.append(item)
-
-    crawler.signals.connect(track_item, signal=signals.item_scraped)
     url = str(jobs_website.make_url("/job/1888448280485890"))
-    await deferred_to_future(crawler.crawl(url=url, crawl_strategy="direct_item"))
-
+    items = await crawl_fake_zyte_api(
+        zyte_api_server, JobPostingSpider, {"url": url, "crawl_strategy": "direct_item"}
+    )
     assert len(items) == 1
     descr = (
         "Family Law Attorneys deal with legal matters related to family"
@@ -763,17 +719,9 @@ async def test_extract_direct_item(zyte_api_server, jobs_website):
 
 @deferred_f_from_coro_f
 async def test_extract_jobs_404(zyte_api_server, jobs_website):
-    settings = {
-        "ZYTE_API_URL": str(zyte_api_server.make_url("/")),
-        "ZYTE_API_KEY": "a",
-        "ADDONS": get_addons(),
-    }
-    crawler = get_crawler(settings=settings, spider_cls=JobPostingSpider)
-    items = []
-
-    def track_item(item, response, spider):
-        items.append(item)
-
-    crawler.signals.connect(track_item, signal=signals.item_scraped)
-    await deferred_to_future(crawler.crawl(url=str(jobs_website.make_url("/jobs/foo"))))
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/jobs/foo"))},
+    )
     assert not items
