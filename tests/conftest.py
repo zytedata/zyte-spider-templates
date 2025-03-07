@@ -18,7 +18,9 @@ def mockserver():
         yield server
 
 
-# copied verbatim from pytest-aiohttp
+# Copied verbatim from pytest-aiohttp. We can't use pytest-asyncio fixtures with
+# pytest-twisted, so we need to decorate this one with a pytest-twisted decorator.
+# See also https://github.com/pytest-dev/pytest-twisted/issues/188
 @pytest_twisted.async_yield_fixture(scope="module")
 async def aiohttp_server():
     """Factory to create a TestServer instance, given an app.
