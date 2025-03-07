@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+import pytest_twisted
 import requests
 import scrapy
+from itemadapter import ItemAdapter
 from pydantic import ValidationError
-from pytest_twisted import ensureDeferred
 from scrapy import signals
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
 from web_poet import BrowserResponse
@@ -30,7 +35,18 @@ from zyte_spider_templates.spiders.job_posting import (
 
 from . import get_crawler
 from .test_utils import URL_TO_DOMAIN
-from .utils import assertEqualSpiderMetadata
+from .utils import assertEqualSpiderMetadata, crawl_fake_zyte_api, get_addons
+
+if TYPE_CHECKING:
+    from aiohttp.pytest_plugin import AiohttpServer
+
+
+@pytest_twisted.async_fixture(scope="module")
+async def jobs_website(aiohttp_server) -> AiohttpServer:
+    from zyte_test_websites.jobs.app import make_app as make_test_job_website
+
+    app = make_test_job_website()
+    return await aiohttp_server(app)
 
 
 def test_parameters():
@@ -266,7 +282,7 @@ def test_arguments():
         spider = JobPostingSpider.from_crawler(crawler, **kwargs, **base_kwargs)
         getter = getattr(crawler.settings, getter_name)
         assert getter(setting) == new_setting_value
-        assert spider.allowed_domains == ["example.com"]
+        assert spider.allowed_domains == ["example.com"]  # type: ignore[attr-defined]
 
 
 def test_metadata():
@@ -528,7 +544,7 @@ def test_set_allowed_domains(url, allowed_domain):
 
     kwargs = {"url": url}
     spider = JobPostingSpider.from_crawler(crawler, **kwargs)
-    assert spider.allowed_domains == [allowed_domain]
+    assert spider.allowed_domains == [allowed_domain]  # type: ignore[attr-defined]
 
 
 def test_input_none():
@@ -610,7 +626,7 @@ def test_urls_file():
     crawler = get_crawler()
     url = "https://example.com"
 
-    with patch("zyte_spider_templates.spiders.job_posting.requests.get") as mock_get:
+    with patch("zyte_spider_templates.params.requests.get") as mock_get:
         response = requests.Response()
         response._content = (
             b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
@@ -626,15 +642,12 @@ def test_urls_file():
     assert start_requests[2].url == "https://c.example"
 
 
-@ensureDeferred
+@pytest_twisted.ensureDeferred
 async def test_offsite(mockserver):
     settings = {
         "ZYTE_API_URL": mockserver.urljoin("/"),
         "ZYTE_API_KEY": "a",
-        "ADDONS": {
-            "scrapy_zyte_api.Addon": 500,
-            "zyte_spider_templates.Addon": 1000,
-        },
+        "ADDONS": get_addons(),
     }
     crawler = get_crawler(settings=settings, spider_cls=JobPostingSpider)
     actual_output = set()
@@ -727,3 +740,87 @@ def test_parse_search_request_template_probability(probability, yields_items):
         )
     )
     assert items if yields_items else not items
+
+
+@deferred_f_from_coro_f
+async def test_extract_jobs(zyte_api_server, jobs_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/jobs/4")), "max_requests": 1000},
+    )
+    assert len(items) == 109
+    assert len(set(item.url for item in items)) == len(items)
+    assert len(set(item.jobPostingId for item in items)) == len(items)
+
+
+@deferred_f_from_coro_f
+async def test_extract_jobs_url_list(zyte_api_server, jobs_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {
+            "urls": "\n".join(
+                [
+                    str(jobs_website.make_url("/jobs/1")),
+                    str(jobs_website.make_url("/jobs/4")),
+                ]
+            ),
+            "max_requests": 1000,
+        },
+    )
+    assert len(items) == 5 + 109
+    assert len(set(item.url for item in items)) == len(items)
+    assert len(set(item.jobPostingId for item in items)) == len(items)
+
+
+@deferred_f_from_coro_f
+async def test_extract_jobs_max_reqs(zyte_api_server, jobs_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/jobs/4")), "max_requests": 20},
+    )
+    assert len(items) < 20
+
+
+@deferred_f_from_coro_f
+async def test_extract_direct_item(zyte_api_server, jobs_website):
+    url = str(jobs_website.make_url("/job/1888448280485890"))
+    items = await crawl_fake_zyte_api(
+        zyte_api_server, JobPostingSpider, {"url": url, "crawl_strategy": "direct_item"}
+    )
+    assert len(items) == 1
+    descr = (
+        "Family Law Attorneys deal with legal matters related to family"
+        " relationships. They handle cases like divorce, child custody,"
+        " adoption, and domestic disputes to provide legal guidance."
+    )
+    assert ItemAdapter(items[0]).asdict() == {
+        "url": url,
+        "jobPostingId": "1888448280485890",
+        "datePublished": "2023-09-07T00:00:00Z",
+        "datePublishedRaw": "Sep 07, 2023",
+        "jobTitle": "Litigation Attorney",
+        "jobLocation": {"raw": "Bogotá, Colombia"},
+        "description": descr,
+        "descriptionHtml": f"<article>\n\n<p>{descr}</p>\n\n</article>",
+        "employmentType": "Contract",
+        "baseSalary": {"valueMin": "63K", "valueMax": "101K", "currency": "USD"},
+        "requirements": ["4 to 10 Years"],
+        "hiringOrganization": {"name": "Drax Group"},
+        "metadata": {
+            "dateDownloaded": items[0].metadata.dateDownloaded,
+            "probability": 1.0,
+        },
+    }
+
+
+@deferred_f_from_coro_f
+async def test_extract_jobs_404(zyte_api_server, jobs_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/jobs/foo"))},
+    )
+    assert not items
