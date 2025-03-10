@@ -14,7 +14,14 @@ from scrapy import signals
 from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
-from zyte_common_items import JobPosting, JobPostingNavigation, ProbabilityRequest
+from web_poet import BrowserResponse
+from zyte_common_items import (
+    JobPosting,
+    JobPostingNavigation,
+    ProbabilityRequest,
+    SearchRequestTemplate,
+    SearchRequestTemplateMetadata,
+)
 
 from zyte_spider_templates._geolocations import (
     GEOLOCATION_OPTIONS,
@@ -338,6 +345,19 @@ def test_metadata():
                     "title": "URLs file",
                     "type": "string",
                 },
+                "search_queries": {
+                    "default": [],
+                    "description": (
+                        "A list of search queries, one per line, to submit "
+                        "using the search form found on each input URL. Only "
+                        "works for input URLs that support search. May not "
+                        "work on every website."
+                    ),
+                    "items": {"type": "string"},
+                    "title": "Search Queries",
+                    "type": "array",
+                    "widget": "textarea",
+                },
                 "crawl_strategy": {
                     "default": "navigation",
                     "description": (
@@ -643,6 +663,85 @@ async def test_offsite(mockserver):
     }
 
 
+def test_search_queries():
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = JobPostingSpider.from_crawler(crawler, url=url, search_queries="foo bar")
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_search_request_template
+    assert spider.args.search_queries == ["foo bar"]
+
+    spider = JobPostingSpider.from_crawler(crawler, url=url, search_queries="foo\nbar")
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_search_request_template
+    assert spider.args.search_queries == ["foo", "bar"]
+
+    spider = JobPostingSpider.from_crawler(
+        crawler, url=url, search_queries=["foo", "bar"]
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].url == url
+    assert start_requests[0].callback == spider.parse_search_request_template
+    assert spider.args.search_queries == ["foo", "bar"]
+
+
+def test_search_queries_extract_from():
+    crawler = get_crawler()
+    url = "https://example.com"
+
+    spider = JobPostingSpider.from_crawler(crawler, url=url, search_queries="foo")
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert "inject" not in start_requests[0].meta
+
+    spider = JobPostingSpider.from_crawler(
+        crawler, url=url, search_queries="foo", extract_from="httpResponseBody"
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert "inject" not in start_requests[0].meta
+
+    spider = JobPostingSpider.from_crawler(
+        crawler, url=url, search_queries="foo", extract_from="browserHtml"
+    )
+    start_requests = list(spider.start_requests())
+    assert len(start_requests) == 1
+    assert start_requests[0].meta["inject"] == [BrowserResponse]
+
+
+@pytest.mark.parametrize(
+    ("probability", "yields_items"),
+    (
+        (None, True),  # Default
+        (-1.0, False),
+        (0.0, False),  # page.no_item_found()
+        (1.0, True),
+    ),
+)
+def test_parse_search_request_template_probability(probability, yields_items):
+    crawler = get_crawler()
+    spider = JobPostingSpider.from_crawler(
+        crawler, url="https://example.com", search_queries="foo"
+    )
+    search_request_template = SearchRequestTemplate(url="https://example.com")
+    if probability is not None:
+        search_request_template.metadata = SearchRequestTemplateMetadata(
+            probability=probability
+        )
+    items = list(
+        spider.parse_search_request_template(
+            DummyResponse("https://example.com"), search_request_template, DynamicDeps()
+        )
+    )
+    assert items if yields_items else not items
+
+
 @deferred_f_from_coro_f
 async def test_extract_jobs(zyte_api_server, jobs_website):
     items = await crawl_fake_zyte_api(
@@ -725,3 +824,38 @@ async def test_extract_jobs_404(zyte_api_server, jobs_website):
         {"url": str(jobs_website.make_url("/jobs/foo"))},
     )
     assert not items
+
+
+@deferred_f_from_coro_f
+async def test_extract_search(zyte_api_server, jobs_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {
+            "url": str(jobs_website.make_url("/")),
+            "search_queries": "dEsIgn",
+            "max_requests": 10000,
+        },
+    )
+    assert len(items) == 437
+
+
+@deferred_f_from_coro_f
+async def test_extract_search_empty(zyte_api_server, jobs_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/")), "search_queries": "does-not-exist"},
+    )
+    assert not items
+
+
+@deferred_f_from_coro_f
+async def test_extract_search_no_form(zyte_api_server, jobs_website, caplog):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/jobs/1")), "search_queries": "foo"},
+    )
+    assert not items
+    assert "Cannot build a search request template" in caplog.text
