@@ -824,3 +824,27 @@ async def test_extract_jobs_404(zyte_api_server, jobs_website):
         {"url": str(jobs_website.make_url("/jobs/foo"))},
     )
     assert not items
+
+
+@deferred_f_from_coro_f
+async def test_extract_search(zyte_api_server, jobs_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {
+            "url": str(jobs_website.make_url("/")),
+            "search_queries": "dEsIgn",
+            "max_requests": 10000,
+        },
+    )
+    assert len(items) == 437
+
+
+@deferred_f_from_coro_f
+async def test_extract_search_empty(zyte_api_server, jobs_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/")), "search_queries": "does-not-exist"},
+    )
+    assert not items
