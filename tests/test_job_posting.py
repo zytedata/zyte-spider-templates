@@ -848,3 +848,14 @@ async def test_extract_search_empty(zyte_api_server, jobs_website):
         {"url": str(jobs_website.make_url("/")), "search_queries": "does-not-exist"},
     )
     assert not items
+
+
+@deferred_f_from_coro_f
+async def test_extract_search_no_form(zyte_api_server, jobs_website, caplog):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        JobPostingSpider,
+        {"url": str(jobs_website.make_url("/jobs/1")), "search_queries": "foo"},
+    )
+    assert not items
+    assert "Cannot build a search request template" in caplog.text
