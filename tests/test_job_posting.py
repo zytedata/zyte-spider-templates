@@ -833,11 +833,10 @@ async def test_extract_search(zyte_api_server, jobs_website):
         JobPostingSpider,
         {
             "url": str(jobs_website.make_url("/")),
-            "search_queries": "dEsIgn",
-            "max_requests": 10000,
+            "search_queries": "cuStomer supPort",
         },
     )
-    assert len(items) == 437
+    assert len(items) == 54
 
 
 @deferred_f_from_coro_f
