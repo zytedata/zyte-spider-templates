@@ -28,7 +28,7 @@ setup(
         "scrapy-zyte-api[provider]>=0.25.0",
         "web-poet>=0.17.1",
         "xtractmime>=0.2.1",
-        "zyte-common-items>=0.26.2",
+        "zyte-common-items>=0.27.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
