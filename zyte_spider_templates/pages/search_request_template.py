@@ -17,7 +17,7 @@ from scrapy.linkextractors.lxmlhtml import LxmlLinkExtractor
 from w3lib.url import add_or_replace_parameters
 from web_poet import AnyResponse, PageParams, handle_urls
 from web_poet.pages import validates_input
-from zyte_common_items import SearchRequestTemplate, SearchRequestTemplatePage
+from zyte_common_items import Header, SearchRequestTemplate, SearchRequestTemplatePage
 
 logger = getLogger(__name__)
 
@@ -102,7 +102,7 @@ class DefaultSearchRequestTemplatePage(SearchRequestTemplatePage):
         return SearchRequestTemplate(
             url=request_data.url.replace(_PLACEHOLDER, "{{ query|quote_plus }}"),
             method=request_data.method,
-            headers=request_data.headers,
+            headers=self._headers_from_form2request(request_data.headers),
             body=request_data.body.decode().replace(
                 _PLACEHOLDER, "{{ query|quote_plus }}"
             ),
@@ -250,11 +250,15 @@ class DefaultSearchRequestTemplatePage(SearchRequestTemplatePage):
         return SearchRequestTemplate(
             url=request_data.url.replace(_PLACEHOLDER, "{{ query|quote_plus }}"),
             method=request_data.method,
-            headers=request_data.headers,
+            headers=self._headers_from_form2request(request_data.headers),
             body=request_data.body.decode().replace(
                 _PLACEHOLDER, "{{ query|quote_plus }}"
             ),
         )
+
+    @staticmethod
+    def _headers_from_form2request(headers: list[tuple[str, str]]) -> list[Header]:
+        return [Header(name=name, value=value) for name, value in headers]
 
     @validates_input
     async def to_item(self) -> SearchRequestTemplate:

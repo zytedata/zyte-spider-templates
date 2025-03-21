@@ -1,6 +1,7 @@
 import pytest
 from pytest_twisted import ensureDeferred
 from web_poet import AnyResponse, BrowserResponse, HttpResponse, PageParams
+from zyte_common_items import Header
 
 from zyte_spider_templates.pages.search_request_template import (
     DefaultSearchRequestTemplatePage,
@@ -479,6 +480,25 @@ from zyte_spider_templates.pages.search_request_template import (
                         "url": "https://example.com?q={{ query|quote_plus }}",
                     },
                 ),
+                # Basic form with POST
+                (
+                    b"""
+                    <form class="search" method="post">
+                        <input type="text" name="q"/>
+                        <input type="submit"/>
+                    </form>
+                    """,
+                    {
+                        "url": "https://example.com",
+                        "body": "q={{ query|quote_plus }}",
+                        "headers": [
+                            Header(
+                                name="Content-Type",
+                                value="application/x-www-form-urlencoded",
+                            )
+                        ],
+                    },
+                ),
                 # No form
                 (
                     b"<div></div>",
@@ -643,7 +663,8 @@ async def test_search_request_template(html, page_params, expected, caplog):
         else:
             assert isinstance(expected, dict)
             assert expected["url"] == search_request.url
-            assert expected.get("body", b"") == (search_request.body or b"")
+            assert expected.get("body", "") == (search_request.body or "")
+            assert expected.get("headers", []) == search_request.headers
 
 
 @ensureDeferred
