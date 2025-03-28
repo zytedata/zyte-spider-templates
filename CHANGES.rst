@@ -1,6 +1,15 @@
 Changes
 =======
 
+0.12.0 (YYYY-MM-DD)
+-------------------
+
+* :ref:`Search queries <search-queries>` support is added to the :ref:`job
+  posting spider template <job-posting>`.
+* Fixed support for POST requests in search queries.
+* Improved validation in the :ref:`Google search spider template
+  <google-search>`.
+
 0.11.2 (2024-12-30)
 -------------------
 
