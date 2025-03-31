@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.12.0 (YYYY-MM-DD)
+0.12.0 (2025-03-31)
 -------------------
 
 * :ref:`Search queries <search-queries>` support is added to the :ref:`job
