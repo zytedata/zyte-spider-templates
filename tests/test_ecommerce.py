@@ -1,17 +1,23 @@
+from __future__ import annotations
+
 import logging
-from typing import Iterable, List, cast
+from typing import TYPE_CHECKING, Iterable, List, cast
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+import pytest_twisted
 import requests
 import scrapy
+from itemadapter import ItemAdapter
 from packaging import version
 from pydantic.version import VERSION as PYDANTIC_VERSION
 from pytest_twisted import ensureDeferred
 from scrapy import signals
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
 from web_poet.page_inputs.browser import BrowserResponse
+from yarl import URL
 from zyte_common_items import (
     ProbabilityRequest,
     Product,
@@ -29,7 +35,18 @@ from zyte_spider_templates.spiders.ecommerce import EcommerceSpider
 
 from . import get_crawler
 from .test_utils import URL_TO_DOMAIN
-from .utils import assertEqualSpiderMetadata, get_addons
+from .utils import assertEqualSpiderMetadata, crawl_fake_zyte_api, get_addons
+
+if TYPE_CHECKING:
+    from aiohttp.pytest_plugin import AiohttpServer
+
+
+@pytest_twisted.async_fixture(scope="module")
+async def ecommerce_website(aiohttp_server) -> AiohttpServer:
+    from zyte_test_websites.ecommerce.app import make_app as make_test_ecommerce_website
+
+    app = make_test_ecommerce_website()
+    return await aiohttp_server(app)
 
 
 def test_start_requests():
@@ -1213,3 +1230,230 @@ def test_modify_page_params_for_heuristics(crawl_strategy, expected_page_params)
     )
     page_params = spider._modify_page_params_for_heuristics(page_params)
     assert page_params == expected_page_params
+
+
+@deferred_f_from_coro_f
+async def test_extract_products(zyte_api_server, ecommerce_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {"url": str(ecommerce_website.make_url("/category/4"))},
+    )
+    assert len(items) == 26
+    assert len(set(item.url for item in items)) == len(items)
+    assert len(set(item.productId for item in items)) == len(items)
+
+
+@deferred_f_from_coro_f
+async def test_extract_products_url_list(zyte_api_server, ecommerce_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {
+            "urls": "\n".join(
+                [
+                    str(ecommerce_website.make_url("/category/2")),
+                    str(ecommerce_website.make_url("/category/4")),
+                ]
+            ),
+        },
+    )
+    assert len(items) == 11 + 26
+    assert len(set(item.url for item in items)) == len(items)
+    assert len(set(item.productId for item in items)) == len(items)
+
+
+@deferred_f_from_coro_f
+async def test_extract_products_max_reqs(zyte_api_server, ecommerce_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {"url": str(ecommerce_website.make_url("/category/4")), "max_requests": 10},
+    )
+    assert len(items) < 10
+
+
+@deferred_f_from_coro_f
+async def test_extract_product_direct_item(zyte_api_server, ecommerce_website):
+    url = ecommerce_website.make_url("/product/1000")
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {"url": str(url), "crawl_strategy": "direct_item"},
+    )
+    assert len(items) == 1
+    descr = (
+        "It's hard to imagine a world without A Light in the Attic. This"
+        " now-classic collection of poetry and drawings from Shel Silverstein"
+        " celebrates its 20th anniversary with this special edition."
+        " Silverstein's humorous and creative verse can amuse the dowdiest of"
+        " readers. Lemon-faced adults and fidgety kids sit still and read"
+        " these rhythmic words and laugh and smile and love th It's hard to"
+        " imagine a world without A Light in the Attic. This now-classic"
+        " collection of poetry and drawings from Shel Silverstein celebrates"
+        " its 20th anniversary with this special edition. Silverstein's"
+        " humorous and creative verse can amuse the dowdiest of readers."
+        " Lemon-faced adults and fidgety kids sit still and read these"
+        " rhythmic words and laugh and smile and love that Silverstein. Need"
+        " proof of his genius? RockabyeRockabye baby, in the treetopDon't you"
+        " know a treetopIs no safe place to rock?And who put you up there,And"
+        " your cradle, too?Baby, I think someone down here'sGot it in for you."
+        " Shel, you never sounded so good. ...more"
+    )
+    assert ItemAdapter(items[0]).asdict() == {
+        "url": str(url),
+        "additionalProperties": [
+            {"name": "UPC", "value": "a897fe39b1053632"},
+            {"name": "Product Type", "value": "Books"},
+            {"name": "Price (excl. tax)", "value": "£51.77"},
+            {"name": "Price (incl. tax)", "value": "£51.77"},
+            {"name": "Tax", "value": "£0.00"},
+            {"name": "Availability", "value": "In stock (22 available)"},
+            {"name": "Number of reviews", "value": "0"},
+        ],
+        "aggregateRating": {"bestRating": 5.0, "ratingValue": 3},
+        "availability": "InStock",
+        "breadcrumbs": [
+            {"name": "Home", "url": str(url.join(URL("/")))},
+            {
+                "name": "Arts & Creativity",
+                "url": str(url.join(URL("/category/1000"))),
+            },
+            {"name": "Poetry", "url": str(url.join(URL("/category/23")))},
+            {"name": "A Light in the Attic"},
+        ],
+        "currencyRaw": "£",
+        "description": descr,
+        "descriptionHtml": f"<article>\n\n<p>{descr}</p>\n\n</article>",
+        "metadata": {
+            "dateDownloaded": items[0].metadata.dateDownloaded,
+            "probability": 1.0,
+        },
+        "name": "A Light in the Attic",
+        "price": "51.77",
+        "productId": "1000",
+        "sku": "a897fe39b1053632",
+    }
+
+
+@deferred_f_from_coro_f
+async def test_extract_jobs_404(zyte_api_server, ecommerce_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {"url": str(ecommerce_website.make_url("/product/foo"))},
+    )
+    assert not items
+
+
+@deferred_f_from_coro_f
+async def test_extract_search(zyte_api_server, ecommerce_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {
+            "url": str(ecommerce_website.make_url("/")),
+            "search_queries": "fIctiOn",
+        },
+    )
+    assert len(items) == 42
+
+
+@deferred_f_from_coro_f
+async def test_extract_search_empty(zyte_api_server, ecommerce_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {
+            "url": str(ecommerce_website.make_url("/")),
+            "search_queries": "does-not-exist",
+        },
+    )
+    assert not items
+
+
+@deferred_f_from_coro_f
+async def test_extract_search_no_form(zyte_api_server, ecommerce_website, caplog):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {
+            "url": str(ecommerce_website.make_url("/product/1000")),
+            "search_queries": "foo",
+        },
+    )
+    assert not items
+    assert "Cannot build a search request template" in caplog.text
+
+
+@deferred_f_from_coro_f
+async def test_extract_product_list(zyte_api_server, ecommerce_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {
+            "url": str(ecommerce_website.make_url("/category/4")),
+            "extract": "productList",
+        },
+    )
+    assert len(items) == 3
+    assert all(pl.categoryName == "Historical Fiction" for pl in items)
+    all_products = [p for pl in items for p in pl.products]
+    assert len(all_products) == 26
+    assert len(set(p.url for p in all_products)) == len(all_products)
+
+
+@deferred_f_from_coro_f
+async def test_extract_products_with_subcats(zyte_api_server, ecommerce_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {"url": str(ecommerce_website.make_url("/category/12"))},
+    )
+    assert len(items) == 7 + 3 + 6 + 6
+    assert len(set(item.url for item in items)) == len(items)
+    assert len(set(item.productId for item in items)) == len(items)
+
+
+@deferred_f_from_coro_f
+async def test_extract_products_with_subcats_pagination_only(
+    zyte_api_server, ecommerce_website
+):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {
+            "url": str(ecommerce_website.make_url("/category/12")),
+            "crawl_strategy": "pagination_only",
+        },
+    )
+    assert len(items) == 7
+    assert len(set(item.url for item in items)) == len(items)
+    assert len(set(item.productId for item in items)) == len(items)
+
+
+@deferred_f_from_coro_f
+async def test_extract_products_only_subcats(zyte_api_server, ecommerce_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {"url": str(ecommerce_website.make_url("/category/1002"))},
+    )
+    assert len(items) == 1 + 19 + 11
+    assert len(set(item.url for item in items)) == len(items)
+    assert len(set(item.productId for item in items)) == len(items)
+
+
+@deferred_f_from_coro_f
+async def test_extract_products_only_subcats_pagination_only(
+    zyte_api_server, ecommerce_website
+):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        EcommerceSpider,
+        {
+            "url": str(ecommerce_website.make_url("/category/1002")),
+            "crawl_strategy": "pagination_only",
+        },
+    )
+    assert not items
