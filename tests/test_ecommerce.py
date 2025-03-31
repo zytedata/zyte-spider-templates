@@ -9,6 +9,8 @@ import pytest_twisted
 import requests
 import scrapy
 from itemadapter import ItemAdapter
+from packaging import version
+from pydantic.version import VERSION as PYDANTIC_VERSION
 from pytest_twisted import ensureDeferred
 from scrapy import signals
 from scrapy.utils.defer import deferred_f_from_coro_f
@@ -845,7 +847,13 @@ def test_metadata():
                     "anyOf": [
                         {
                             "contentMediaType": "application/json",
-                            "contentSchema": {"type": "object"},
+                            "contentSchema": {
+                                "type": "object",
+                                "additionalProperties": True,
+                            }
+                            if version.parse(str(PYDANTIC_VERSION))
+                            >= version.parse("2.11")
+                            else {"type": "object"},
                             "type": "string",
                         },
                         {"type": "null"},
