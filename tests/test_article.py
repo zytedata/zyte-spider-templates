@@ -1,4 +1,4 @@
-from typing import Tuple, Type, cast
+from typing import Iterable, Tuple, Type, cast
 from unittest.mock import patch
 
 import pytest
@@ -106,7 +106,7 @@ def test_crawl_strategy_direct_item():
     )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
-    assert start_requests[0].callback == cast(ArticleSpider, spider).parse_dynamic
+    assert start_requests[0].callback == spider.parse_dynamic
     assert start_requests[0].url == "https://example.com"
     assert start_requests[0].meta["request_type"] == RequestType.ARTICLE
     assert start_requests[0].meta["crawling_logs"]["name"] == "[article]"
@@ -235,7 +235,7 @@ def test_init_input_without_urls_file():
     crawler = get_crawler()
     base_kwargs = {"url": "https://example.com"}
     spider = ArticleSpider.from_crawler(crawler, **base_kwargs)
-    cast(ArticleSpider, spider)._init_input()
+    spider._init_input()
 
     assert spider.start_urls == ["https://example.com"]
 
@@ -413,6 +413,42 @@ def test_metadata():
                     "title": "Extraction source",
                     "enum": ["httpResponseBody", "browserHtml"],
                 },
+                "custom_attrs_input": {
+                    "anyOf": [
+                        {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"type": "object"},
+                            "type": "string",
+                        },
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": "Custom attributes to extract.",
+                    "title": "Custom attributes schema",
+                    "widget": "custom-attrs",
+                },
+                "custom_attrs_method": {
+                    "default": "generate",
+                    "description": "Which model to use for custom attribute extraction.",
+                    "enum": ["generate", "extract"],
+                    "enumMeta": {
+                        "extract": {
+                            "description": "Use an extractive model (BERT). Supports only a "
+                            "subset of the schema (string, integer and "
+                            "number), suited for extraction of short and clear "
+                            "fields, with a fixed per-request cost.",
+                            "title": "extract",
+                        },
+                        "generate": {
+                            "description": "Use a generative model (LLM). The most powerful "
+                            "and versatile, but more expensive, with variable "
+                            "per-request cost.",
+                            "title": "generate",
+                        },
+                    },
+                    "title": "Custom attributes extraction method",
+                    "type": "string",
+                },
             },
             "title": "ArticleSpiderParams",
             "type": "object",
@@ -482,8 +518,9 @@ def test_crawl():
         subCategories=article_navigation_items["subCategories"],
     )
     requests = list(
-        cast(ArticleSpider, spider).parse_dynamic(
-            response, {ArticleNavigation: navigation}
+        cast(
+            Iterable[scrapy.Request],
+            spider.parse_dynamic(response, {ArticleNavigation: navigation}),
         )
     )
     assert requests[2].url == "https://example.com/link_4"
@@ -494,7 +531,7 @@ def test_crawl():
     )
     assert requests[2].meta["crawling_logs"]["page_type"] == "article"
     assert requests[2].meta["crawling_logs"]["probability"] == 0.99
-    assert requests[2].callback == cast(ArticleSpider, spider).parse_dynamic
+    assert requests[2].callback == spider.parse_dynamic
 
     assert requests[5].url == "https://example.com/link_3"
     assert requests[5].meta["request_type"] == RequestType.NAVIGATION
@@ -504,7 +541,7 @@ def test_crawl():
     )
     assert requests[5].meta["crawling_logs"]["page_type"] == "subCategories"
     assert requests[5].meta["crawling_logs"]["probability"] == 1.0
-    assert requests[5].callback == cast(ArticleSpider, spider).parse_dynamic
+    assert requests[5].callback == spider.parse_dynamic
 
     assert requests[0].url == "https://example.com/link_1"
     assert requests[0].meta["request_type"] == RequestType.ARTICLE_AND_NAVIGATION
@@ -515,7 +552,7 @@ def test_crawl():
         requests[0].meta["crawling_logs"]["page_type"] == "articleNavigation-heuristics"
     )
     assert requests[0].meta["crawling_logs"]["probability"] == 0.5
-    assert requests[0].callback == cast(ArticleSpider, spider).parse_dynamic
+    assert requests[0].callback == spider.parse_dynamic
 
     assert requests[1].url == "https://example.com/link_2"
     assert requests[1].meta["request_type"] == RequestType.ARTICLE_AND_NAVIGATION
@@ -526,18 +563,13 @@ def test_crawl():
         requests[1].meta["crawling_logs"]["page_type"] == "articleNavigation-heuristics"
     )
     assert requests[1].meta["crawling_logs"]["probability"] == 0.5
-    assert requests[1].callback == cast(ArticleSpider, spider).parse_dynamic
+    assert requests[1].callback == spider.parse_dynamic
 
     # parse_article
     request = scrapy.Request(url=url)
     response = DummyResponse(url=request.url, request=request)
     article = Article(url=article_url)
-    assert (
-        article
-        == list(
-            cast(ArticleSpider, spider).parse_dynamic(response, {Article: article})
-        )[0]
-    )
+    assert article == list(spider.parse_dynamic(response, {Article: article}))[0]
 
     # parse article_and_navigation
     request = scrapy.Request(url=url)
@@ -549,8 +581,11 @@ def test_crawl():
         subCategories=article_navigation_items["subCategories"],
     )
     requests = list(
-        cast(ArticleSpider, spider).parse_dynamic(
-            response, {Article: article, ArticleNavigation: navigation}
+        cast(
+            Iterable[scrapy.Request],
+            spider.parse_dynamic(
+                response, {Article: article, ArticleNavigation: navigation}
+            ),
         )
     )
 
@@ -573,8 +608,11 @@ def test_crawl():
         nextPage=Request(url="https://example.com/next_page", name="nextPage"),
     )
     requests = list(
-        cast(ArticleSpider, spider).parse_dynamic(
-            response, {Article: article, ArticleNavigation: navigation}
+        cast(
+            Iterable[scrapy.Request],
+            spider.parse_dynamic(
+                response, {Article: article, ArticleNavigation: navigation}
+            ),
         )
     )
 
@@ -599,8 +637,11 @@ def test_crawl():
         nextPage=Request(url="https://example.com/next_page", name="nextPage"),
     )
     requests = list(
-        cast(ArticleSpider, spider).parse_dynamic(
-            response, {Article: article, ArticleNavigation: navigation}
+        cast(
+            Iterable[scrapy.Request],
+            spider.parse_dynamic(
+                response, {Article: article, ArticleNavigation: navigation}
+            ),
         )
     )
 
