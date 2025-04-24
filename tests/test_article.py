@@ -1,13 +1,20 @@
+from __future__ import annotations
+
 from typing import Tuple, Type, cast
 from unittest.mock import patch
 
 import pytest
+import pytest_twisted
 import requests
 import scrapy
+from aiohttp.pytest_plugin import AiohttpServer
+from itemadapter import ItemAdapter
 from pydantic import ValidationError
 from scrapy.statscollectors import StatsCollector
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy_poet import DummyResponse
 from scrapy_spider_metadata import get_spider_metadata
+from yarl import URL
 from zyte_common_items import (
     Article,
     ArticleNavigation,
@@ -29,7 +36,15 @@ from zyte_spider_templates.spiders.article import (
 )
 
 from . import get_crawler
-from .utils import assertEqualSpiderMetadata
+from .utils import assertEqualSpiderMetadata, crawl_fake_zyte_api
+
+
+@pytest_twisted.async_fixture(scope="module")
+async def articles_website(aiohttp_server) -> AiohttpServer:
+    from zyte_test_websites.articles.app import make_app as make_test_article_website
+
+    app = make_test_article_website()
+    return await aiohttp_server(app)
 
 
 @pytest.mark.parametrize(
@@ -608,3 +623,93 @@ def test_crawl():
     assert requests[1].url == "https://example.com/link_1"
     assert requests[2].url == "https://example.com/link_2"
     assert requests[3].url == "https://example.com/link_3"
+
+
+@deferred_f_from_coro_f
+async def test_extract_jobs(zyte_api_server, articles_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        ArticleSpider,
+        {"url": str(articles_website.make_url("/articles/2"))},
+    )
+    assert len(items) < 100
+    assert len(set(item.url for item in items)) == len(items)
+
+
+@deferred_f_from_coro_f
+async def test_extract_jobs_max_reqs(zyte_api_server, articles_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        ArticleSpider,
+        {"url": str(articles_website.make_url("/articles/2")), "max_requests": 20},
+    )
+    assert len(items) < 20
+
+
+@deferred_f_from_coro_f
+async def test_extract_direct_item(zyte_api_server, articles_website):
+    url = articles_website.make_url("/article/119")
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        ArticleSpider,
+        {"url": str(url), "crawl_strategy": "direct_item"},
+    )
+    assert len(items) == 1
+    body = (
+        "The government of Nigeria is hoping to triple cocoa production over"
+        " the next three years with the launch of an ambitious development"
+        " programme.  Agriculture Minister Adamu Bello said the scheme aimed"
+        " to boost production from an expected 180,000 tonnes this year to"
+        " 600,000 tonnes by 2008. The government will pump 154m naira ($1.1m;"
+        " £591,000) into subsidies for farming chemicals and seedlings."
+        " Nigeria is currently the world's fourth-largest cocoa producer."
+        "  Cocoa was the main export product in Nigeria during the 1960s. But"
+        " with the coming of oil, the government began to pay less attention"
+        " to the cocoa sector and production began to fall from a peak of"
+        " about 400,000 tonnes a year in 1970. At the launch of the programme"
+        " in the south-western city of Ibadan, Mr Bello explained that an"
+        " additional aim of the project is to encourage the processing of"
+        " cocoa in the country and lift local consumption. He also announced"
+        " that 91m naira of the funding available had been earmarked for"
+        " establishing cocoa plant nurseries. The country could be looking to"
+        " emulate rival Ghana, which produced a bumper crop last year."
+        ' However, some farmers are sceptical about the proposals. "People'
+        ' who are not farming will hijack the subsidy," said Joshua Osagie,'
+        ' a cocoa farmer from Edo state told Reuters. "The farmers in the'
+        ' village never see any assistance," he added.  At the same time as'
+        " Nigeria announced its new initiative, Ghana - the world's second"
+        " largest cocoa exporter - announced revenues from the industry had"
+        " broken new records. The country saw more than $1.2bn-worth of the"
+        " beans exported during 2003-04. Analysts said high tech-production"
+        " techniques and crop spraying introduced by the government led to"
+        " the huge crop, pushing production closer to levels seen in the 1960s"
+        " when the country was the world's leading cocoa grower."
+    )
+    assert ItemAdapter(items[0]).asdict() == {
+        "articleBody": body,
+        "articleBodyHtml": f"<article>\n\n<p>{body}</p>\n\n</article>",
+        "authors": [{"name": "Eve Wilson", "url": str(url.join(URL("/author/4")))}],
+        "datePublished": "2024-06-21T00:00:00",
+        "datePublishedRaw": "June 21, 2024",
+        "description": (
+            "The government of Nigeria is hoping to triple cocoa"
+            " production over the next three years with the launch"
+            " of an ambitious development programme"
+        ),
+        "headline": "Nigeria to boost cocoa production",
+        "metadata": {
+            "dateDownloaded": items[0].metadata.dateDownloaded,
+            "probability": 1.0,
+        },
+        "url": str(url),
+    }
+
+
+@deferred_f_from_coro_f
+async def test_extract_articles_404(zyte_api_server, articles_website):
+    items = await crawl_fake_zyte_api(
+        zyte_api_server,
+        ArticleSpider,
+        {"url": str(articles_website.make_url("/articles/foo"))},
+    )
+    assert not items
