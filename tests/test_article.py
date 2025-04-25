@@ -626,7 +626,7 @@ def test_crawl():
 
 
 @deferred_f_from_coro_f
-async def test_extract_jobs(zyte_api_server, articles_website):
+async def test_extract_articles(zyte_api_server, articles_website):
     items = await crawl_fake_zyte_api(
         zyte_api_server,
         ArticleSpider,
@@ -637,7 +637,7 @@ async def test_extract_jobs(zyte_api_server, articles_website):
 
 
 @deferred_f_from_coro_f
-async def test_extract_jobs_max_reqs(zyte_api_server, articles_website):
+async def test_extract_articles_max_reqs(zyte_api_server, articles_website):
     items = await crawl_fake_zyte_api(
         zyte_api_server,
         ArticleSpider,
