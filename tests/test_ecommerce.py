@@ -1337,7 +1337,7 @@ async def test_extract_product_direct_item(zyte_api_server, ecommerce_website):
 
 
 @deferred_f_from_coro_f
-async def test_extract_jobs_404(zyte_api_server, ecommerce_website):
+async def test_extract_products_404(zyte_api_server, ecommerce_website):
     items = await crawl_fake_zyte_api(
         zyte_api_server,
         EcommerceSpider,
