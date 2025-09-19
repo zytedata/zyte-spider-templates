@@ -534,7 +534,7 @@ from zyte_spider_templates.pages.search_request_template import (
         # Link with recognized parameters
         *(
             (
-                f"""<a href="https://example.com/search?{prefix}{q}=example{suffix}""".encode(),
+                f"""<a href="https://example.com/search?{prefix}{q}=example{suffix}">""".encode(),
                 {"search_request_builders": ["link_heuristics"]},
                 {
                     "url": f"https://example.com/search?{prefix}{q}={{{{ query|quote_plus }}}}{suffix}"
