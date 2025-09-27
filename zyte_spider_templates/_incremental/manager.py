@@ -7,9 +7,8 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 import scrapinghub
 from itemadapter import ItemAdapter
 from scrapinghub.client.exceptions import Unauthorized
-from scrapy import signals
+from scrapy import Request, signals
 from scrapy.crawler import Crawler
-from scrapy.http.request import Request
 from zyte_common_items import Item
 
 from zyte_spider_templates.utils import (
