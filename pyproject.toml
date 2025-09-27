@@ -4,6 +4,23 @@ multi_line_output = 3
 
 [tool.mypy]
 check_untyped_defs = true
+
+# no py.typed
+[[tool.mypy.overrides]]
+module = [
+    "extruct",
+    "feedparser",
+    "form2request",
+    "formasaurus",
+    "pytest_twisted",
+    "scrapinghub.*",
+    "xtractmime",
+]
+ignore_missing_imports = true
+
+# no py.typed but planning to add it
+[[tool.mypy.overrides]]
+module = ["scrapy_poet", "scrapy_zyte_api.*"]
 ignore_missing_imports = true
 
 [tool.black]
