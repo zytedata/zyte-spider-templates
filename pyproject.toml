@@ -4,7 +4,30 @@ multi_line_output = 3
 
 [tool.mypy]
 check_untyped_defs = true
+implicit_reexport = false
+
+# no py.typed
+[[tool.mypy.overrides]]
+module = [
+    "extruct",
+    "feedparser",
+    "form2request",
+    "formasaurus",
+    "pytest_twisted",
+    "scrapinghub.*",
+    "xtractmime",
+]
 ignore_missing_imports = true
+
+# no py.typed but planning to add it
+[[tool.mypy.overrides]]
+module = ["scrapy_poet", "scrapy_zyte_api.*"]
+ignore_missing_imports = true
+
+# to be fixed
+[[tool.mypy.overrides]]
+module = ["scrapy_spider_metadata", "zyte_common_items"]
+implicit_reexport = true
 
 [tool.black]
 target-version = ["py38", "py39", "py310", "py311", "py312"]

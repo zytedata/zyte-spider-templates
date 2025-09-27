@@ -31,12 +31,8 @@ from zyte_common_items import (
 )
 
 from zyte_spider_templates.heuristics import is_homepage
-from zyte_spider_templates.params import ExtractFrom, parse_input_params
-from zyte_spider_templates.spiders.base import (
-    ARG_SETTING_PRIORITY,
-    INPUT_GROUP,
-    BaseSpider,
-)
+from zyte_spider_templates.params import INPUT_GROUP, ExtractFrom, parse_input_params
+from zyte_spider_templates.spiders.base import ARG_SETTING_PRIORITY, BaseSpider
 from zyte_spider_templates.utils import get_domain
 
 from ..documentation import document_enum

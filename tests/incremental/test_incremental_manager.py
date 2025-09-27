@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from pytest_twisted import ensureDeferred
+from scrapy import Request
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.request import RequestFingerprinter
 from zyte_common_items import Article
@@ -11,7 +12,6 @@ from zyte_spider_templates import ArticleSpider
 from zyte_spider_templates._incremental.manager import (
     CollectionsFingerprintsManager,
     IncrementalCrawlingManager,
-    Request,
 )
 
 
