@@ -10,7 +10,7 @@ charset-normalizer==3.4.0
     # via requests
 cssselect==1.2.0
     # via parsel
-idna==3.10
+idna==3.15
     # via requests
 jinja2==3.1.5
     # via -r requirements.in
