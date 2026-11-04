@@ -131,12 +131,12 @@ async def test_crawl_nofollow_links():
 @pytest.mark.deprication_warning
 def test_deprecated_page_objects():
     with pytest.warns(DeprecationWarning, match="page_objects"):
-        from zyte_spider_templates.page_objects import (  # noqa: F401
+        from zyte_spider_templates.page_objects import (  # type: ignore[attr-defined]  # noqa: F401
             HeuristicsProductNavigationPage,
         )
 
     # We cannot test the warning again because duplicate warnings are ignored,
     # but we still want to ensure that we can import the class.
-    from zyte_spider_templates.page_objects.product_navigation_heuristics import (  # noqa: F401, F811
+    from zyte_spider_templates.page_objects.product_navigation_heuristics import (  # type: ignore[attr-defined]  # noqa: F401, F811
         HeuristicsProductNavigationPage,
     )

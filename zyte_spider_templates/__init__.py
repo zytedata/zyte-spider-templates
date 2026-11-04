@@ -19,6 +19,24 @@ from .spiders.serp import GoogleSearchSpider
 
 from ._addon import Addon  # isort: skip
 
+__all__ = [
+    "Addon",
+    "AllowOffsiteMiddleware",
+    "ArticleSpider",
+    "BaseSpider",
+    "BaseSpiderParams",
+    "CrawlingLogsMiddleware",
+    "EcommerceSpider",
+    "GoogleSearchSpider",
+    "IncrementalCrawlMiddleware",
+    "JobPostingSpider",
+    "MaxRequestsPerSeedDownloaderMiddleware",
+    "OffsiteRequestsPerSeedMiddleware",
+    "OnlyFeedsMiddleware",
+    "TrackNavigationDepthSpiderMiddleware",
+    "TrackSeedsSpiderMiddleware",
+]
+
 logger = getLogger(__name__)
 package = "zyte-spider-templates"
 logger.info(f"Running {package} {version(package)}")

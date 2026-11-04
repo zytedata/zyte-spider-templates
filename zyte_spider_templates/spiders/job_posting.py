@@ -27,14 +27,11 @@ from zyte_common_items import (
     SearchRequestTemplate,
 )
 
-from zyte_spider_templates.spiders.base import (
-    ARG_SETTING_PRIORITY,
-    INPUT_GROUP,
-    BaseSpider,
-)
+from zyte_spider_templates.spiders.base import ARG_SETTING_PRIORITY, BaseSpider
 
 from ..documentation import document_enum
 from ..params import (
+    INPUT_GROUP,
     CustomAttrsInputParam,
     CustomAttrsMethodParam,
     ExtractFrom,
