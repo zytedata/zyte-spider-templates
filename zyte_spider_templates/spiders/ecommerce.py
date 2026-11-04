@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import (
-    TYPE_CHECKING,
     Any,
+    AsyncIterator,
     Callable,
     Dict,
     Iterable,
     List,
     Optional,
+    Self,
     TypeVar,
     Union,
     cast,
@@ -51,11 +52,6 @@ from ..params import (
     UrlsFileParam,
     UrlsParam,
 )
-
-if TYPE_CHECKING:
-    # typing.Self requires Python 3.11
-    from typing_extensions import Self
-
 
 ItemTV = TypeVar("ItemTV", bound=Item)
 
@@ -329,9 +325,13 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
 
         return scrapy.Request(
             url=url,
-            callback=callback,
+            callback=callback,  # type: ignore[arg-type]
             meta=meta,
         )
+
+    async def start(self) -> AsyncIterator[scrapy.Request]:
+        for request in self.start_requests():
+            yield request
 
     def start_requests(self) -> Iterable[scrapy.Request]:
         if self.args.search_queries:
@@ -344,7 +344,7 @@ class EcommerceSpider(Args[EcommerceSpiderParams], BaseSpider):
                 with self._log_request_exception:
                     yield scrapy.Request(
                         url=url,
-                        callback=self.parse_search_request_template,
+                        callback=self.parse_search_request_template,  # type: ignore[arg-type]
                         meta=meta,
                     )
         else:

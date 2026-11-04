@@ -4,6 +4,8 @@ from unittest.mock import patch
 
 import pytest
 from scrapy import Request, Spider
+from scrapy.utils.request import fingerprint
+from zyte_common_items import Article
 
 from tests import get_crawler
 from zyte_spider_templates.utils import (
@@ -200,15 +202,14 @@ def test_get_project_id(
 def test_get_request_fingerprint():
     url = "https://example.com"
     domain_fp = "ffeeddccbbaa"
-    request_fp = "aabbccddeeff"
 
     with patch(
         "zyte_spider_templates.utils.get_domain_fingerprint", return_value=domain_fp
     ):
         crawler = get_crawler()
-        with patch.object(crawler, "request_fingerprinter") as mock_fingerprinter:
-            mock_fingerprinter.fingerprint.return_value = bytes.fromhex(request_fp)
-            request = Request(url)
-            result = get_request_fingerprint(crawler, request)
-            assert result == domain_fp + request_fp
-            mock_fingerprinter.fingerprint.assert_called_once_with(request)
+        request = Request(url)
+        result = get_request_fingerprint(crawler, request)
+        assert result == domain_fp + fingerprint(request).hex()
+        assert result == get_request_fingerprint(
+            crawler, Request(url, meta={"inject": [Article]})
+        )

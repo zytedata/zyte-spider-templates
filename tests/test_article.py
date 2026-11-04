@@ -12,7 +12,7 @@ from itemadapter import ItemAdapter
 from pydantic import ValidationError
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.defer import deferred_f_from_coro_f
-from scrapy_poet import DummyResponse
+from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_spider_metadata import get_spider_metadata
 from yarl import URL
 from zyte_common_items import (
@@ -498,7 +498,7 @@ def test_crawl():
     )
     requests = list(
         cast(ArticleSpider, spider).parse_dynamic(
-            response, {ArticleNavigation: navigation}
+            response, DynamicDeps({ArticleNavigation: navigation})
         )
     )
     assert requests[2].url == "https://example.com/link_4"
@@ -550,7 +550,9 @@ def test_crawl():
     assert (
         article
         == list(
-            cast(ArticleSpider, spider).parse_dynamic(response, {Article: article})
+            cast(ArticleSpider, spider).parse_dynamic(
+                response, DynamicDeps({Article: article})
+            )
         )[0]
     )
 
@@ -565,7 +567,7 @@ def test_crawl():
     )
     requests = list(
         cast(ArticleSpider, spider).parse_dynamic(
-            response, {Article: article, ArticleNavigation: navigation}
+            response, DynamicDeps({Article: article, ArticleNavigation: navigation})
         )
     )
 
@@ -589,7 +591,7 @@ def test_crawl():
     )
     requests = list(
         cast(ArticleSpider, spider).parse_dynamic(
-            response, {Article: article, ArticleNavigation: navigation}
+            response, DynamicDeps({Article: article, ArticleNavigation: navigation})
         )
     )
 
@@ -615,7 +617,7 @@ def test_crawl():
     )
     requests = list(
         cast(ArticleSpider, spider).parse_dynamic(
-            response, {Article: article, ArticleNavigation: navigation}
+            response, DynamicDeps({Article: article, ArticleNavigation: navigation})
         )
     )
 

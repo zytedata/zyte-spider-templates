@@ -137,7 +137,7 @@ class DefaultResource(Resource):
                     {"url": f"{request_data['url'].rstrip('/')}/product/1"},
                     {"url": f"{request_data['url'].rstrip('/')}/product/2"},
                 ],
-                **kwargs,
+                **kwargs,  # type: ignore[dict-item]
             }
 
         return json.dumps(response_data).encode()
@@ -188,10 +188,10 @@ def main():
     sys.path.append(".")
     resource = getattr(import_module(module_name), name)()
     # Typing issue: https://github.com/twisted/twisted/issues/9909
-    http_port = reactor.listenTCP(args.port, Site(resource))  # type: ignore[attr-defined]
+    http_port = reactor.listenTCP(args.port, Site(resource))  # type: ignore[attr-defined,arg-type]
 
     def print_listening():
-        host = http_port.getHost()
+        host = http_port.getHost()  # type: ignore[misc]
         print(
             "Mock server {} running at http://{}:{}".format(
                 resource, host.host, host.port
@@ -200,7 +200,7 @@ def main():
 
     # Typing issue: https://github.com/twisted/twisted/issues/9909
     reactor.callWhenRunning(print_listening)  # type: ignore[attr-defined]
-    reactor.run()  # type: ignore[attr-defined]
+    reactor.run()  # type: ignore[attr-defined,misc]
 
 
 if __name__ == "__main__":

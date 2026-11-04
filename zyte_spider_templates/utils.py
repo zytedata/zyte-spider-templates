@@ -8,7 +8,8 @@ import scrapinghub
 import tldextract
 from scrapy.crawler import Crawler
 from scrapy.http import Request
-from scrapy.utils.url import parse_url
+from scrapy.utils.request import fingerprint
+from w3lib.url import parse_url
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +66,9 @@ def get_request_fingerprint(crawler: Crawler, request: Request) -> str:
     # Calculate domain fingerprint
     domain_fingerprint = get_domain_fingerprint(request.url)
 
-    # Calculate request fingerprint
-    request_fingerprint = crawler.request_fingerprinter.fingerprint(request).hex()  # type: ignore[union-attr]
+    # Calculate request fingerprint, ignoring meta (e.g. injected dependencies)
+    # so that the same URL always gets the same fingerprint.
+    request_fingerprint = fingerprint(request).hex()
 
     # Combine the fingerprints by taking the 2-bytes (4 chars) domain fingerprint
     # to create a domain-specific identifier.

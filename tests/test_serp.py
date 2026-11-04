@@ -36,7 +36,7 @@ from .utils import assertEqualSpiderMetadata
 def run_parse_serp(spider, total_results=99999, page=1, query="foo", results=10):
     url = f"https://www.google.com/search?q={quote_plus(query)}"
     if page > 1:
-        url = add_or_replace_parameter(url, "start", (page - 1) * 10)
+        url = add_or_replace_parameter(url, "start", str((page - 1) * 10))
     response = ZyteAPITextResponse.from_api_response(
         api_response={
             "serp": {

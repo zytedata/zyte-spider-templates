@@ -18,7 +18,6 @@ from zyte_spider_templates._incremental.manager import (
 def crawler_for_incremental():
     url = "https://example.com"
     crawler = get_crawler()
-    crawler.settings["REQUEST_FINGERPRINTER_IMPLEMENTATION"] = "2.7"
     crawler.request_fingerprinter = RequestFingerprinter(crawler)
     crawler.stats = StatsCollector(crawler)
     crawler.spider = ArticleSpider.from_crawler(crawler, url=url)

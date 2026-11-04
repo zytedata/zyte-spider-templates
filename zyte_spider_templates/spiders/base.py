@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Annotated, Any, Dict
+from typing import Annotated, Any, Dict, Self
 from warnings import warn
 
 import scrapy
@@ -20,10 +20,6 @@ from ..params import (
     UrlsFileParam,
     UrlsParam,
 )
-
-if TYPE_CHECKING:
-    # typing.Self requires Python 3.11
-    from typing_extensions import Self
 
 
 class _LogExceptionsContextManager:

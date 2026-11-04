@@ -57,6 +57,11 @@ def _test_setting_changes(initial_settings, expected_settings):
     for key in BASELINE_SETTINGS:
         if key in actual_settings and actual_settings[key] == BASELINE_SETTINGS[key]:
             del actual_settings[key]
+        if (
+            key in expected_settings
+            and expected_settings[key] == BASELINE_SETTINGS[key]
+        ):
+            del expected_settings[key]
     del actual_settings["ADDONS"]
 
     assert actual_settings == expected_settings

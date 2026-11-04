@@ -16,7 +16,7 @@ configured on an existing Scrapy_ project.
 Requirements
 ============
 
--   Python 3.9+
+-   Python 3.11+
 
 -   Scrapy 2.11+
 
