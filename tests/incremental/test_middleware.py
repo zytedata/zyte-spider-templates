@@ -1,11 +1,11 @@
 from unittest.mock import patch
 
 import pytest
-from pytest_twisted import ensureDeferred
 from scrapy.exceptions import CloseSpider, NotConfigured
 from scrapy.http import Request, Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy.utils.request import RequestFingerprinter
 
 from tests import get_crawler
@@ -59,8 +59,8 @@ def test_prepare_manager_with_collection_fp_failure(caplog):
         IncrementalCrawlMiddleware.prepare_incremental_manager(crawler)
 
 
+@deferred_f_from_coro_f
 @patch("scrapinghub.ScrapinghubClient")
-@ensureDeferred
 async def test_middleware_process_spider_output(mock_scrapinghub_client):
     crawler = crawler_for_incremental()
     crawler.spider.settings = Settings({"INCREMENTAL_CRAWL_ENABLED": True})
