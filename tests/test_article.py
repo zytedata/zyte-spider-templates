@@ -116,13 +116,13 @@ def test_crawl_strategy_direct_item():
     crawler = get_crawler()
     spider = ArticleSpider.from_crawler(
         crawler,
-        url="https://example.com",
+        url="https://example.com/",
         crawl_strategy="direct_item",
     )
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 1
     assert start_requests[0].callback == cast(ArticleSpider, spider).parse_dynamic
-    assert start_requests[0].url == "https://example.com"
+    assert start_requests[0].url == "https://example.com/"
     assert start_requests[0].meta["request_type"] == RequestType.ARTICLE
     assert start_requests[0].meta["crawling_logs"]["name"] == "[article]"
     assert start_requests[0].meta["crawling_logs"]["page_type"] == "article"
@@ -228,12 +228,12 @@ def test_arguments():
 
 def test_init_input_with_urls_file():
     crawler = get_crawler()
-    url = "https://example.com"
+    url = "https://example.com/"
 
     with patch("zyte_spider_templates.spiders.article.requests.get") as mock_get:
         response = requests.Response()
         response._content = (
-            b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
+            b"https://a.example/\n \nhttps://b.example/\nhttps://c.example/\n\n"
         )
         mock_get.return_value = response
         spider = ArticleSpider.from_crawler(crawler, urls_file=url)
@@ -241,9 +241,9 @@ def test_init_input_with_urls_file():
 
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 3
-    assert start_requests[0].url == "https://a.example"
-    assert start_requests[1].url == "https://b.example"
-    assert start_requests[2].url == "https://c.example"
+    assert start_requests[0].url == "https://a.example/"
+    assert start_requests[1].url == "https://b.example/"
+    assert start_requests[2].url == "https://c.example/"
 
 
 def test_init_input_without_urls_file():

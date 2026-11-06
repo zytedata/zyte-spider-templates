@@ -50,7 +50,7 @@ async def ecommerce_website(aiohttp_server) -> AiohttpServer:
 
 
 def test_start_requests():
-    url = "https://example.com"
+    url = "https://example.com/"
     crawler = get_crawler()
     spider = EcommerceSpider.from_crawler(crawler, url=url)
     requests = list(spider.start_requests())
@@ -1069,7 +1069,7 @@ def test_url_invalid():
 
 def test_urls(caplog):
     crawler = get_crawler()
-    url = "https://example.com"
+    url = "https://example.com/"
 
     spider = EcommerceSpider.from_crawler(crawler, urls=[url])
     start_requests = list(spider.start_requests())
@@ -1086,7 +1086,7 @@ def test_urls(caplog):
     caplog.clear()
     spider = EcommerceSpider.from_crawler(
         crawler,
-        urls="https://a.example\n \nhttps://b.example\nhttps://c.example\nfoo\n\n",
+        urls="https://a.example/\n \nhttps://b.example/\nhttps://c.example/\nfoo\n\n",
     )
     assert "'foo', from the 'urls' spider argument, is not a valid URL" in caplog.text
     start_requests = list(spider.start_requests())
@@ -1094,9 +1094,9 @@ def test_urls(caplog):
     assert all(
         request.callback == spider.parse_navigation for request in start_requests
     )
-    assert start_requests[0].url == "https://a.example"
-    assert start_requests[1].url == "https://b.example"
-    assert start_requests[2].url == "https://c.example"
+    assert start_requests[0].url == "https://a.example/"
+    assert start_requests[1].url == "https://b.example/"
+    assert start_requests[2].url == "https://c.example/"
 
     caplog.clear()
     with pytest.raises(ValueError):
@@ -1110,12 +1110,12 @@ def test_urls(caplog):
 
 def test_urls_file():
     crawler = get_crawler()
-    url = "https://example.com"
+    url = "https://example.com/"
 
     with patch("zyte_spider_templates.params.requests.get") as mock_get:
         response = requests.Response()
         response._content = (
-            b"https://a.example\n \nhttps://b.example\nhttps://c.example\n\n"
+            b"https://a.example/\n \nhttps://b.example/\nhttps://c.example/\n\n"
         )
         mock_get.return_value = response
         spider = EcommerceSpider.from_crawler(crawler, urls_file=url)
@@ -1123,14 +1123,14 @@ def test_urls_file():
 
     start_requests = list(spider.start_requests())
     assert len(start_requests) == 3
-    assert start_requests[0].url == "https://a.example"
-    assert start_requests[1].url == "https://b.example"
-    assert start_requests[2].url == "https://c.example"
+    assert start_requests[0].url == "https://a.example/"
+    assert start_requests[1].url == "https://b.example/"
+    assert start_requests[2].url == "https://c.example/"
 
 
 def test_search_queries():
     crawler = get_crawler()
-    url = "https://example.com"
+    url = "https://example.com/"
 
     spider = EcommerceSpider.from_crawler(crawler, url=url, search_queries="foo bar")
     start_requests = list(spider.start_requests())
@@ -1207,7 +1207,7 @@ def test_get_start_request_default_strategy(url, has_full_domain):
             get_crawler(), url=url, crawl_strategy=crawl_strategy
         )
         result = spider.get_start_request(url)
-        assert result.url == url
+        assert result.url == scrapy.Request(url).url
         assert result.callback == spider.parse_navigation
         assert_meta(has_full_domain[i])
 

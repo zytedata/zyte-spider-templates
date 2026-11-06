@@ -55,7 +55,7 @@ class DefaultResource(Resource):
 
     -   Job-posting websites with the following endpoints:
 
-        -   https://jobs.example (jobPostingNavigation pointing to the 2 items
+        -   https://jobs.example/ (jobPostingNavigation pointing to the 2 items
             below).
 
         -   https://jobs.offsite.example/jobs/1 (jobPosting)
@@ -81,7 +81,7 @@ class DefaultResource(Resource):
 
         response_data["url"] = request_data["url"]
 
-        if request_data["url"] == "https://jobs.example":
+        if request_data["url"] == "https://jobs.example/":
             assert request_data["jobPostingNavigation"] is True
             response_data["jobPostingNavigation"] = {
                 "url": request_data["url"],

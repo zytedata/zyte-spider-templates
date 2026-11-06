@@ -40,7 +40,7 @@ async def test_article_page():
             </div>
             <footer>
                 <a href="https://example.com/privacy-policy">Privacy Policy</a>
-                <a href="https://another-example.com">Link to other domain</a>
+                <a href="https://another-example.com/">Link to other domain</a>
                 <a href="https://example.com/feed/rss.xml">RSS feed</a>
             </footer>
         </body>
@@ -81,7 +81,7 @@ async def test_article_page():
         {"url": "https://example.com/2024/05/modern-css", "name": "Modern CSS"},
         {"url": "https://example.com/2024/04/how-run-ux", "name": "How to run UX"},
         {"url": "https://example.com/page-2", "name": "Next Page"},
-        {"url": "https://another-example.com", "name": "Link to other domain"},
+        {"url": "https://another-example.com/", "name": "Link to other domain"},
     ]
     requests_subcategories = [
         ProbabilityRequest(
@@ -114,7 +114,7 @@ async def test_article_page():
         {"url": "https://example.com/2024/05/modern-css", "name": "Modern CSS"},
         {"url": "https://example.com/2024/04/how-run-ux", "name": "How to run UX"},
         {"url": "https://example.com/page-2", "name": "Next Page"},
-        {"url": "https://another-example.com", "name": "Link to other domain"},
+        {"url": "https://another-example.com/", "name": "Link to other domain"},
     ]
     requests_items = [
         ProbabilityRequest(

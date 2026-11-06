@@ -41,7 +41,7 @@ def test_crawling_logs_middleware_no_requests():
     crawler = get_crawler()
     middleware = CrawlingLogsMiddleware.from_crawler(crawler)
 
-    url = "https://example.com"
+    url = "https://example.com/"
     request = Request(url)
     response = Response(url=url, request=request)
 
@@ -53,14 +53,14 @@ def test_crawling_logs_middleware_no_requests():
 
     crawl_logs = middleware.crawl_logs(response, results_gen())
     assert crawl_logs == (
-        "Crawling Logs for https://example.com (parsed as: None):\n"
+        "Crawling Logs for https://example.com/ (parsed as: None):\n"
         "Nothing to crawl.\n"
         "Structured Logs:\n"
         "{\n"
         '  "time": "2023-10-10 20:09:29",\n'
         '  "current": {\n'
-        '    "url": "https://example.com",\n'
-        '    "request_url": "https://example.com",\n'
+        '    "url": "https://example.com/",\n'
+        '    "request_url": "https://example.com/",\n'
         f'    "request_fingerprint": "{fingerprint}",\n'
         '    "page_type": null,\n'
         '    "probability": null\n'
@@ -75,7 +75,7 @@ def test_crawling_logs_middleware():
     crawler = get_crawler()
     middleware = CrawlingLogsMiddleware.from_crawler(crawler)
 
-    url = "https://example.com"
+    url = "https://example.com/"
     request = Request(url)
     response = Response(url=url, request=request)
 
@@ -241,7 +241,7 @@ def test_crawling_logs_middleware():
 
     crawl_logs = middleware.crawl_logs(response, results_gen())
     assert crawl_logs == (
-        "Crawling Logs for https://example.com (parsed as: None):\n"
+        "Crawling Logs for https://example.com/ (parsed as: None):\n"
         "Number of Requests per page type:\n"
         "- product: 1\n"
         "- nextPage: 1\n"
@@ -259,8 +259,8 @@ def test_crawling_logs_middleware():
         "{\n"
         '  "time": "2023-10-10 20:09:29",\n'
         '  "current": {\n'
-        '    "url": "https://example.com",\n'
-        '    "request_url": "https://example.com",\n'
+        '    "url": "https://example.com/",\n'
+        '    "request_url": "https://example.com/",\n'
         f'    "request_fingerprint": "{fingerprint}",\n'
         '    "page_type": null,\n'
         '    "probability": null\n'
