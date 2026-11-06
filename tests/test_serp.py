@@ -3,6 +3,7 @@ from urllib.parse import quote_plus
 import pytest
 from pydantic import ValidationError
 from scrapy import Request
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy_spider_metadata import get_spider_metadata
 from scrapy_zyte_api.responses import ZyteAPITextResponse
 from w3lib.url import add_or_replace_parameter
@@ -75,6 +76,16 @@ def test_start_requests():
     crawler = get_crawler()
     spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
     requests = list(spider.start_requests())
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo+bar"
+    assert requests[0].callback == spider.parse_serp
+
+
+@deferred_f_from_coro_f
+async def test_start():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    requests = [request async for request in spider.start()]
     assert len(requests) == 1
     assert requests[0].url == "https://www.google.com/search?q=foo+bar"
     assert requests[0].callback == spider.parse_serp

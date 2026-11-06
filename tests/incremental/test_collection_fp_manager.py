@@ -76,6 +76,28 @@ def test_get_existing_fingerprints(
     assert r == expected_result
 
 
+@patch("scrapinghub.ScrapinghubClient")
+@inlineCallbacks
+def test_get_existing_fingerprints_batch_error(mock_scrapinghub_client, caplog):
+    mock_crawler = MagicMock()
+    mock_crawler.settings.getint.return_value = 2
+
+    def get_keys_from_collection(keys):
+        if "fp1" in keys:
+            raise ValueError("foo")
+        return keys
+
+    manager = CollectionsFingerprintsManager(mock_crawler)
+    manager.get_keys_from_collection = get_keys_from_collection  # type: ignore
+    manager.batch = set()
+
+    r = yield Deferred.fromFuture(
+        ensure_future(manager.get_existing_fingerprints_async(["fp1", "fp2", "fp3"]))
+    )
+    assert r == {"fp3"}
+    assert "Error while processing batch: foo" in caplog.text
+
+
 @pytest.mark.parametrize(
     "fingerprints, expected_keys",
     [
