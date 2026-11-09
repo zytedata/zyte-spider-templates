@@ -125,7 +125,9 @@ async def test_crawl_nofollow_links():
     page = HeuristicsProductNavigationPage(
         request_url, navigation, response, page_params
     )
-    assert [req.url for req in page.subCategories] == ["https://example.com/can-follow"]
+    assert [req.url for req in page.subCategories or []] == [
+        "https://example.com/can-follow"
+    ]
 
 
 @pytest.mark.deprication_warning

@@ -45,7 +45,7 @@ class HeuristicsArticleNavigationPage(BaseArticleNavigationPage):
     _FEED_ITEMS_HEURISTIC = {"name": "feed items", "dummy probability": 0.99}
 
     @field
-    def url(self) -> str:
+    def url(self) -> str:  # type: ignore[override]
         return str(self.response.url)
 
     @field
