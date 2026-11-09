@@ -1,6 +1,19 @@
 Changes
 =======
 
+0.13.0 (unreleased)
+-------------------
+
+* Dropped support for Python 3.9 and 3.10, and added support for Python 3.14
+  and 3.15.
+
+* Added support for Scrapy 2.16+.
+
+* The :ref:`article spider template <article>` no longer sends more than one
+  request for the same URL, which could result in duplicate articles. Later
+  requests for an already-requested URL are kept only if they ask for data
+  that earlier requests did not, and they ask only for that data.
+
 0.12.0 (2025-03-31)
 -------------------
 
