@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 from scrapy import Request
@@ -314,6 +314,10 @@ class GoogleSearchSpider(Args[GoogleSearchSpiderParams], BaseSpider):
                 },
             },
         )
+
+    async def start(self) -> AsyncIterator[Request]:
+        for request in self.start_requests():
+            yield request
 
     def start_requests(self) -> Iterable[Request]:
         search_queries = self.args.search_queries

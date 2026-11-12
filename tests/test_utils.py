@@ -1,6 +1,6 @@
 import logging
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from scrapy import Request, Spider
@@ -206,9 +206,11 @@ def test_get_request_fingerprint():
         "zyte_spider_templates.utils.get_domain_fingerprint", return_value=domain_fp
     ):
         crawler = get_crawler()
-        with patch.object(crawler, "request_fingerprinter") as mock_fingerprinter:
-            mock_fingerprinter.fingerprint.return_value = bytes.fromhex(request_fp)
-            request = Request(url)
-            result = get_request_fingerprint(crawler, request)
-            assert result == domain_fp + request_fp
-            mock_fingerprinter.fingerprint.assert_called_once_with(request)
+        crawler.request_fingerprinter = MagicMock()
+        crawler.request_fingerprinter.fingerprint.return_value = bytes.fromhex(
+            request_fp
+        )
+        request = Request(url)
+        result = get_request_fingerprint(crawler, request)
+        assert result == domain_fp + request_fp
+        crawler.request_fingerprinter.fingerprint.assert_called_once_with(request)

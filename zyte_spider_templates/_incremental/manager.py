@@ -124,12 +124,11 @@ class CollectionsFingerprintsManager:
             self.read_batches(fingerprints, i)
             for i in range(0, fingerprints_size, self.batch_size)
         ]
-        for future in asyncio.as_completed(tasks):
-            try:
-                batch_keys = await future
+        for batch_keys in await asyncio.gather(*tasks, return_exceptions=True):
+            if isinstance(batch_keys, BaseException):
+                logging.error(f"Error while processing batch: {batch_keys}")
+            else:
                 duplicated_fingerprints.update(batch_keys)
-            except Exception as e:
-                logging.error(f"Error while processing batch: {e}")
 
         # Check duplicates in the local buffer
         local_duplicates = set(fingerprints) & {fp for fp, _ in self.batch}

@@ -22,16 +22,20 @@ from scrapy.dupefilters import RFPDupeFilter
 from scrapy.exceptions import IgnoreRequest, NotConfigured
 from scrapy.http import Response
 from scrapy.utils.httpobj import urlparse_cached
+from scrapy.utils.request import fingerprint
 from scrapy.utils.url import url_is_from_any_domain
 from scrapy_poet import DynamicDeps
+from web_poet import AnyResponse, BrowserResponse, HttpResponse
 from zyte_common_items import Article, ArticleNavigation, Item
 
 try:
     from scrapy.downloadermiddlewares.offsite import OffsiteMiddleware
 except ImportError:
-    from scrapy.spidermiddlewares.offsite import OffsiteMiddleware  # type: ignore[assignment]
+    from scrapy.spidermiddlewares.offsite import OffsiteMiddleware  # type: ignore[assignment,no-redef]
 
 from zyte_spider_templates.utils import get_domain
+
+_RESPONSE_CLASSES = (AnyResponse, BrowserResponse, HttpResponse)
 
 logger = logging.getLogger(__name__)
 
@@ -78,11 +82,18 @@ class CrawlingLogsMiddleware:
     def _fingerprint(self, request):
         return self._crawler.request_fingerprinter.fingerprint(request).hex()
 
-    def process_spider_output(self, response, result, spider):
+    def process_spider_output(self, response, result, spider=None):
         result = list(result)
         crawl_logs = self.crawl_logs(response, result)
         logger.info(crawl_logs)
         return result
+
+    async def process_spider_output_async(self, response, result, spider=None):
+        result = [item_or_request async for item_or_request in result]
+        crawl_logs = self.crawl_logs(response, result)
+        logger.info(crawl_logs)
+        for item_or_request in result:
+            yield item_or_request
 
     def crawl_logs(self, response, result):
         current_page_type = response.meta.get("crawling_logs", {}).get("page_type")
@@ -182,7 +193,7 @@ class MaxRequestsPerSeedDownloaderMiddleware:
     def from_crawler(cls, crawler: Crawler):
         return cls(crawler)
 
-    def process_request(self, request, spider):
+    def process_request(self, request, spider=None):
         seed = request.meta.get("seed")
         if seed is None:
             return
@@ -212,19 +223,30 @@ class TrackSeedsSpiderMiddleware:
     def from_crawler(cls, crawler: Crawler):
         return cls(crawler)
 
+    async def process_start(
+        self, start: AsyncIterable[Union[Request, Item]]
+    ) -> AsyncIterable[Union[Request, Item]]:
+        async for item_or_request in start:
+            if isinstance(item_or_request, Request):
+                self._process_start_request(item_or_request)
+            yield item_or_request
+
     def process_start_requests(
         self, start_requests: Iterable[Request], spider: Spider
     ) -> Iterable[Request]:
         for request in start_requests:
-            request.meta.setdefault("seed", request.url)
-            request.meta.setdefault("is_seed_request", True)
+            self._process_start_request(request)
             yield request
+
+    def _process_start_request(self, request: Request) -> None:
+        request.meta.setdefault("seed", request.url)
+        request.meta.setdefault("is_seed_request", True)
 
     def process_spider_output(
         self,
         response: Response,
         result: Iterable[Union[Request, Item]],
-        spider: Spider,
+        spider: Optional[Spider] = None,
     ) -> Iterable[Union[Request, Item]]:
         for item_or_request in result:
             if not isinstance(item_or_request, Request):
@@ -237,7 +259,7 @@ class TrackSeedsSpiderMiddleware:
         self,
         response: Response,
         result: AsyncIterable[Union[Request, Item]],
-        spider: Spider,
+        spider: Optional[Spider] = None,
     ) -> AsyncIterable[Union[Request, Item]]:
         async for item_or_request in result:
             if not isinstance(item_or_request, Request):
@@ -268,6 +290,14 @@ class PageParamsMiddlewareBase:
     def from_crawler(cls, crawler):
         return cls(crawler)
 
+    async def process_start(
+        self, start: AsyncIterable[Union[Request, Item]]
+    ) -> AsyncIterable[Union[Request, Item]]:
+        async for item_or_request in start:
+            if isinstance(item_or_request, Request):
+                self._update_page_params(item_or_request)
+            yield item_or_request
+
     def process_start_requests(
         self, start_requests: List[Request], spider: Spider
     ) -> Iterable[Request]:
@@ -276,7 +306,7 @@ class PageParamsMiddlewareBase:
             yield request
 
     def process_spider_output(
-        self, response, result, spider
+        self, response, result, spider=None
     ) -> Iterable[Union[Request, Item]]:
         for item_or_request in result:
             if isinstance(item_or_request, Request):
@@ -284,7 +314,7 @@ class PageParamsMiddlewareBase:
             yield item_or_request
 
     async def process_spider_output_async(
-        self, response, result, spider
+        self, response, result, spider=None
     ) -> AsyncIterable[Union[Request, Item]]:
         async for item_or_request in result:
             if isinstance(item_or_request, Request):
@@ -330,17 +360,28 @@ class TrackNavigationDepthSpiderMiddleware(PageParamsMiddlewareBase):
             "final_navigation_page", page_params.get("skip_subcategories")
         )
 
+    async def process_start(
+        self, start: AsyncIterable[Union[Request, Item]]
+    ) -> AsyncIterable[Union[Request, Item]]:
+        async for item_or_request in super().process_start(start):
+            if isinstance(item_or_request, Request):
+                self._process_start_request(item_or_request)
+            yield item_or_request
+
     def process_start_requests(
         self, start_requests: List[Request], spider: Spider
     ) -> Iterable[Request]:
         for request in super().process_start_requests(start_requests, spider):
-            # We treat the initial response as having a navigation_depth of 1.
-            self._update_request_with_navigation(request, navigation_depth=1)
-            self.stats.inc_value("navigation_depth/inits")
+            self._process_start_request(request)
             yield request
 
+    def _process_start_request(self, request: Request) -> None:
+        # We treat the initial response as having a navigation_depth of 1.
+        self._update_request_with_navigation(request, navigation_depth=1)
+        self.stats.inc_value("navigation_depth/inits")
+
     def process_spider_output(
-        self, response, result, spider
+        self, response, result, spider=None
     ) -> Iterable[Union[Request, Item]]:
         for item_or_request in super().process_spider_output(response, result, spider):
             if not isinstance(item_or_request, Request):
@@ -351,7 +392,7 @@ class TrackNavigationDepthSpiderMiddleware(PageParamsMiddlewareBase):
                 yield req
 
     async def process_spider_output_async(
-        self, response, result, spider
+        self, response, result, spider=None
     ) -> AsyncIterable[Union[Request, Item]]:
         async for item_or_request in super().process_spider_output_async(
             response, result, spider
@@ -465,7 +506,7 @@ class OffsiteRequestsPerSeedMiddleware:
         self,
         response: Response,
         result: Iterable[Union[Request, Item]],
-        spider: Spider,
+        spider: Optional[Spider] = None,
     ) -> Iterable[Union[Request, Item]]:
         self._fill_allowed_domains_per_seed_dict(response)
         for item_or_request in result:
@@ -480,7 +521,7 @@ class OffsiteRequestsPerSeedMiddleware:
         self,
         response: Response,
         result: AsyncIterable[Union[Request, Item]],
-        spider: Spider,
+        spider: Optional[Spider] = None,
     ) -> AsyncIterable[Union[Request, Item]]:
         self._fill_allowed_domains_per_seed_dict(response)
         async for item_or_request in result:
@@ -583,55 +624,88 @@ class DummyDupeFilter(RFPDupeFilter):
 
 
 class DupeFilterSpiderMiddleware:
-    """
-    This middleware uses a custom duplicate filter to override Scrapy's default filtering,
-    leveraging the `DummyDupeFilter` to bypass global deduplication. Instead,
-    deduplication is managed within the middleware itself, filtering out duplicate requests
-    before they reach other middlewares.
-    """
+    """Filters out requests whose URL, method and body were already requested,
+    regardless of their meta.
 
-    dupe_filter: RFPDupeFilter = RFPDupeFilter()
+    For requests with an ``inject`` meta key, the dependencies already
+    requested for the same URL are removed from that key, and the request is
+    dropped only if no dependency other than a response class is left.
+    """
 
     def __init__(self, crawler):
         self.crawler = crawler
+        self._seen: Dict[bytes, Set[Any]] = {}
 
     @classmethod
     def from_crawler(cls, crawler):
         return cls(crawler)
 
+    async def process_start(
+        self, start: AsyncIterable[Union[Request, Item]]
+    ) -> AsyncIterable[Union[Request, Item]]:
+        async for item_or_request in start:
+            if not isinstance(item_or_request, Request):
+                yield item_or_request
+            elif (request := self._filter(None, item_or_request)) is not None:
+                yield request
+
     def process_start_requests(
         self, start_requests: List[Request], spider: Spider
     ) -> Iterable[Request]:
         for request in start_requests:
-            if not self.url_already_seen(None, request):
-                yield request
+            if (filtered_request := self._filter(None, request)) is not None:
+                yield filtered_request
 
     def process_spider_output(
-        self, response, result, spider
+        self, response, result, spider=None
     ) -> Iterable[Union[Request, Item]]:
         for item_or_request in result:
-            if isinstance(item_or_request, Request):
-                if not self.url_already_seen(response, item_or_request):
-                    yield item_or_request
-            else:
+            if not isinstance(item_or_request, Request):
                 yield item_or_request
+            elif (request := self._filter(response, item_or_request)) is not None:
+                yield request
 
     async def process_spider_output_async(
-        self, response, result, spider
+        self, response, result, spider=None
     ) -> AsyncIterable[Union[Request, Item]]:
         async for item_or_request in result:
-            if isinstance(item_or_request, Request):
-                if not self.url_already_seen(response, item_or_request):
-                    yield item_or_request
-            else:
+            if not isinstance(item_or_request, Request):
                 yield item_or_request
+            elif (request := self._filter(response, item_or_request)) is not None:
+                yield request
+
+    def _filter(
+        self, response: Optional[Response], request: Request
+    ) -> Optional[Request]:
+        inject = request.meta.get("inject")
+        if inject is None or request.dont_filter:
+            return None if self.url_already_seen(response, request) else request
+        seen = self._seen.setdefault(fingerprint(request), set())
+        new_inject = [
+            dep for dep in inject if dep not in seen or dep in _RESPONSE_CLASSES
+        ]
+        if all(dep in _RESPONSE_CLASSES for dep in new_inject):
+            self._log_duplicate(response, request)
+            return None
+        seen.update(new_inject)
+        if len(new_inject) == len(inject):
+            return request
+        self.crawler.stats.inc_value("dupe_filter_spider_mw/inject_reduced")
+        return request.replace(meta={**request.meta, "inject": new_inject})
 
     def url_already_seen(self, response: Optional[Response], request: Request) -> bool:
         """A custom replacement for the default duplicate filtering, tracking URLs seen in this run."""
-        if not request.dont_filter and self.dupe_filter.request_seen(request):
-            logger.debug(
-                f"URL is duplicated {request.url}, for the response {response.url if response else 'start_request'}."
-            )
-            self.crawler.stats.inc_value("dupe_filter_spider_mw/url_already_seen")
+        if request.dont_filter:
+            return False
+        key = fingerprint(request)
+        if key in self._seen:
+            self._log_duplicate(response, request)
             return True
+        self._seen[key] = set()
         return False
+
+    def _log_duplicate(self, response: Optional[Response], request: Request) -> None:
+        logger.debug(
+            f"URL is duplicated {request.url}, for the response {response.url if response else 'start_request'}."
+        )
+        self.crawler.stats.inc_value("dupe_filter_spider_mw/url_already_seen")

@@ -53,7 +53,7 @@ class IncrementalCrawlMiddleware:
         return cls(crawler)
 
     async def process_spider_output(
-        self, response, result, spider
+        self, response, result, spider=None
     ) -> AsyncGenerator[Union[Request, Item], None]:
         result_list = []
         async for item_or_request in result:

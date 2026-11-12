@@ -11,6 +11,7 @@ setup(
     url="https://github.com/zytedata/zyte-spider-templates",
     packages=find_packages(),
     include_package_data=True,
+    python_requires=">=3.11",
     install_requires=[
         "duplicate-url-discarder>=0.2.0",
         "duplicate-url-discarder-rules>=2024.11.05",
@@ -26,6 +27,7 @@ setup(
         "scrapy-poet>=0.24.0",
         "scrapy-spider-metadata>=0.2.0",
         "scrapy-zyte-api[provider]>=0.25.0",
+        "w3lib>=2.1.1",
         "web-poet>=0.17.1",
         "xtractmime>=0.2.1",
         "zyte-common-items>=0.26.2",
@@ -36,10 +38,10 @@ setup(
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
+        "Programming Language :: Python :: 3.15",
     ],
 )

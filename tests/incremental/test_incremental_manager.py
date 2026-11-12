@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-from pytest_twisted import ensureDeferred
 from scrapy.statscollectors import StatsCollector
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy.utils.request import RequestFingerprinter
 from zyte_common_items import Article
 
@@ -18,7 +18,6 @@ from zyte_spider_templates._incremental.manager import (
 def crawler_for_incremental():
     url = "https://example.com"
     crawler = get_crawler()
-    crawler.settings["REQUEST_FINGERPRINTER_IMPLEMENTATION"] = "2.7"
     crawler.request_fingerprinter = RequestFingerprinter(crawler)
     crawler.stats = StatsCollector(crawler)
     crawler.spider = ArticleSpider.from_crawler(crawler, url=url)
@@ -26,7 +25,6 @@ def crawler_for_incremental():
     return crawler
 
 
-@patch("scrapinghub.ScrapinghubClient")
 @pytest.mark.parametrize(
     "input_request, input_result, expected_result, duplicated_fingerprints_result, expected_stats",
     [
@@ -265,7 +263,8 @@ def crawler_for_incremental():
         ),  # Three Requests and one Item with redirected URL in the result, one existing fingerprint in the cache
     ],
 )
-@ensureDeferred
+@deferred_f_from_coro_f
+@patch("scrapinghub.ScrapinghubClient")
 async def test_process_incremental(
     mock_scrapinghub_client,
     input_request,
@@ -289,8 +288,8 @@ async def test_process_incremental(
     assert crawler.stats.get_stats() == expected_stats
 
 
+@deferred_f_from_coro_f
 @patch("scrapinghub.ScrapinghubClient")
-@ensureDeferred
 async def test_process_incremental_several_items(
     mock_scrapinghub_client,
 ):

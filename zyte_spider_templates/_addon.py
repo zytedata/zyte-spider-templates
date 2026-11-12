@@ -147,7 +147,7 @@ class Addon:
         try:
             from scrapy.downloadermiddlewares.offsite import OffsiteMiddleware
         except ImportError:
-            from scrapy.spidermiddlewares.offsite import (  # type: ignore[assignment]
+            from scrapy.spidermiddlewares.offsite import (  # type: ignore[assignment,no-redef]
                 OffsiteMiddleware,
             )
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional
+from typing import Any, AsyncIterator, Dict, Iterable, Optional, Self
 
 import attrs
 import requests
@@ -22,6 +22,7 @@ from zyte_common_items import (
 from zyte_common_items.pipelines import DropLowProbabilityItemPipeline
 
 from zyte_spider_templates.documentation import document_enum
+from zyte_spider_templates.middlewares import DupeFilterSpiderMiddleware
 from zyte_spider_templates.pages.article_heuristics import is_feed_request
 from zyte_spider_templates.params import (
     INPUT_GROUP,
@@ -37,10 +38,6 @@ from zyte_spider_templates.params import (
 from zyte_spider_templates.spiders.base import ARG_SETTING_PRIORITY, BaseSpider
 
 from ..utils import load_url_list
-
-if TYPE_CHECKING:
-    # typing.Self requires Python 3.11
-    from typing_extensions import Self
 
 
 @attrs.define
@@ -198,6 +195,7 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
     def update_settings(cls, settings: BaseSettings) -> None:
         super().update_settings(settings)
         settings["ITEM_PIPELINES"][DropLowProbabilityItemPipeline] = 0
+        settings["SPIDER_MIDDLEWARES"][DupeFilterSpiderMiddleware] = 40
 
     def _init_input(self):
         urls_file = self.args.urls_file
@@ -278,6 +276,10 @@ class ArticleSpider(Args[ArticleSpiderParams], BaseSpider):
         }
         for old_name, new_name in replacements.items():
             req.name = (req.name or "").replace(old_name, new_name)
+
+    async def start(self) -> AsyncIterator[scrapy.Request]:
+        for request in self.start_requests():
+            yield request
 
     def start_requests(self) -> Iterable[scrapy.Request]:
         if self.args.crawl_strategy == ArticleCrawlStrategy.full:

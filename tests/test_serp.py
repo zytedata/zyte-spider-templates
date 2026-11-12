@@ -3,6 +3,7 @@ from urllib.parse import quote_plus
 import pytest
 from pydantic import ValidationError
 from scrapy import Request
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy_spider_metadata import get_spider_metadata
 from scrapy_zyte_api.responses import ZyteAPITextResponse
 from w3lib.url import add_or_replace_parameter
@@ -36,7 +37,7 @@ from .utils import assertEqualSpiderMetadata
 def run_parse_serp(spider, total_results=99999, page=1, query="foo", results=10):
     url = f"https://www.google.com/search?q={quote_plus(query)}"
     if page > 1:
-        url = add_or_replace_parameter(url, "start", (page - 1) * 10)
+        url = add_or_replace_parameter(url, "start", str((page - 1) * 10))
     response = ZyteAPITextResponse.from_api_response(
         api_response={
             "serp": {
@@ -75,6 +76,16 @@ def test_start_requests():
     crawler = get_crawler()
     spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
     requests = list(spider.start_requests())
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.google.com/search?q=foo+bar"
+    assert requests[0].callback == spider.parse_serp
+
+
+@deferred_f_from_coro_f
+async def test_start():
+    crawler = get_crawler()
+    spider = GoogleSearchSpider.from_crawler(crawler, search_queries="foo bar")
+    requests = [request async for request in spider.start()]
     assert len(requests) == 1
     assert requests[0].url == "https://www.google.com/search?q=foo+bar"
     assert requests[0].callback == spider.parse_serp

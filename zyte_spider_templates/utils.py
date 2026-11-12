@@ -8,7 +8,7 @@ import scrapinghub
 import tldextract
 from scrapy.crawler import Crawler
 from scrapy.http import Request
-from scrapy.utils.url import parse_url
+from w3lib.url import parse_url
 
 logger = logging.getLogger(__name__)
 

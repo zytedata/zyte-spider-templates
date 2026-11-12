@@ -11,10 +11,10 @@ from scrapy.exceptions import IgnoreRequest, NotConfigured
 from scrapy.http import Request, Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
-from scrapy.utils.misc import create_instance
 from scrapy.utils.test import get_crawler
 from scrapy_poet import DynamicDeps
-from zyte_common_items import Article, Item, Product
+from web_poet import HttpResponse
+from zyte_common_items import Article, ArticleNavigation, Item, Product
 
 from zyte_spider_templates.middlewares import (
     AllowOffsiteMiddleware,
@@ -39,11 +39,9 @@ def get_fingerprinter(crawler):
 @freeze_time("2023-10-10 20:09:29")
 def test_crawling_logs_middleware_no_requests():
     crawler = get_crawler()
-    middleware = create_instance(
-        CrawlingLogsMiddleware, settings=crawler.settings, crawler=crawler
-    )
+    middleware = CrawlingLogsMiddleware.from_crawler(crawler)
 
-    url = "https://example.com"
+    url = "https://example.com/"
     request = Request(url)
     response = Response(url=url, request=request)
 
@@ -55,14 +53,14 @@ def test_crawling_logs_middleware_no_requests():
 
     crawl_logs = middleware.crawl_logs(response, results_gen())
     assert crawl_logs == (
-        "Crawling Logs for https://example.com (parsed as: None):\n"
+        "Crawling Logs for https://example.com/ (parsed as: None):\n"
         "Nothing to crawl.\n"
         "Structured Logs:\n"
         "{\n"
         '  "time": "2023-10-10 20:09:29",\n'
         '  "current": {\n'
-        '    "url": "https://example.com",\n'
-        '    "request_url": "https://example.com",\n'
+        '    "url": "https://example.com/",\n'
+        '    "request_url": "https://example.com/",\n'
         f'    "request_fingerprint": "{fingerprint}",\n'
         '    "page_type": null,\n'
         '    "probability": null\n'
@@ -75,11 +73,9 @@ def test_crawling_logs_middleware_no_requests():
 @freeze_time("2023-10-10 20:09:29")
 def test_crawling_logs_middleware():
     crawler = get_crawler()
-    middleware = create_instance(
-        CrawlingLogsMiddleware, settings=crawler.settings, crawler=crawler
-    )
+    middleware = CrawlingLogsMiddleware.from_crawler(crawler)
 
-    url = "https://example.com"
+    url = "https://example.com/"
     request = Request(url)
     response = Response(url=url, request=request)
 
@@ -95,7 +91,7 @@ def test_crawling_logs_middleware():
         },
     )
     next_page_request = Request(
-        "https://example.com?page=2",
+        "https://example.com/?page=2",
         priority=100,
         meta={
             "crawling_logs": {
@@ -245,7 +241,7 @@ def test_crawling_logs_middleware():
 
     crawl_logs = middleware.crawl_logs(response, results_gen())
     assert crawl_logs == (
-        "Crawling Logs for https://example.com (parsed as: None):\n"
+        "Crawling Logs for https://example.com/ (parsed as: None):\n"
         "Number of Requests per page type:\n"
         "- product: 1\n"
         "- nextPage: 1\n"
@@ -263,8 +259,8 @@ def test_crawling_logs_middleware():
         "{\n"
         '  "time": "2023-10-10 20:09:29",\n'
         '  "current": {\n'
-        '    "url": "https://example.com",\n'
-        '    "request_url": "https://example.com",\n'
+        '    "url": "https://example.com/",\n'
+        '    "request_url": "https://example.com/",\n'
         f'    "request_fingerprint": "{fingerprint}",\n'
         '    "page_type": null,\n'
         '    "probability": null\n'
@@ -285,7 +281,7 @@ def test_crawling_logs_middleware():
         '        "name": "Category Page 2",\n'
         '        "probability": 0.9712,\n'
         '        "page_type": "nextPage",\n'
-        '        "request_url": "https://example.com?page=2",\n'
+        '        "request_url": "https://example.com/?page=2",\n'
         '        "request_priority": 100,\n'
         f'        "request_fingerprint": "{next_page_request_fp}"\n'
         "      }\n"
@@ -399,9 +395,7 @@ def test_crawling_logs_middleware_deprecated_subclassing():
 
     crawler = get_crawler()
     with pytest.warns(DeprecationWarning, match="must now accept a crawler parameter"):
-        middleware = create_instance(
-            CustomCrawlingLogsMiddleware, settings=crawler.settings, crawler=crawler
-        )
+        middleware = CustomCrawlingLogsMiddleware.from_crawler(crawler)
     assert middleware._crawler == crawler
     assert hasattr(middleware, "_fingerprint")
 
@@ -1648,6 +1642,29 @@ async def test_dupe_filter_spider_middleware_async():
     assert processed_output[1] == item
 
 
+def test_dupe_filter_spider_middleware_inject():
+    crawler = get_crawler_with_settings()
+    crawler.spider = Spider(name="test")
+    crawler.stats = StatsCollector(crawler)
+    middleware = DupeFilterSpiderMiddleware(crawler)
+    url = "https://example.com/1"
+    result = [
+        Request(url, meta={"inject": [Article, HttpResponse]}),
+        Request(url, meta={"inject": [Article, ArticleNavigation, HttpResponse]}),
+        Request(url, meta={"inject": [ArticleNavigation, HttpResponse]}),
+        Request(url, meta={"inject": [Article]}, dont_filter=True),
+        Request(url),
+    ]
+    processed = list(middleware.process_spider_output(None, result, crawler.spider))
+    assert [request.meta.get("inject") for request in processed] == [  # type: ignore[union-attr]
+        [Article, HttpResponse],
+        [ArticleNavigation, HttpResponse],
+        [Article],
+    ]
+    assert crawler.stats.get_value("dupe_filter_spider_mw/inject_reduced") == 1
+    assert crawler.stats.get_value("dupe_filter_spider_mw/url_already_seen") == 2
+
+
 def test_track_navigation_depth_spider_middleware():
     class TestSpider(Spider):
         name = "test"
@@ -1735,3 +1752,57 @@ def test_track_navigation_depth_spider_middleware():
     assert processed_output[0].url == request_url_1  # type: ignore[union-attr]
     assert processed_output[1] == item
     assert processed_output[2].url == request_url_2  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize(
+    ("middleware_cls", "settings", "expected_meta"),
+    (
+        (
+            TrackSeedsSpiderMiddleware,
+            {},
+            {"seed": "https://example.com/start", "is_seed_request": True},
+        ),
+        (
+            OnlyFeedsMiddleware,
+            {"ONLY_FEEDS_ENABLED": True},
+            {"page_params": {"only_feeds": True}},
+        ),
+        (
+            TrackNavigationDepthSpiderMiddleware,
+            {"NAVIGATION_DEPTH_LIMIT": 1},
+            {
+                "page_params": {"skip_subcategories": None},
+                "navigation_depth": 1,
+                "final_navigation_page": True,
+            },
+        ),
+        (DupeFilterSpiderMiddleware, {}, {}),
+    ),
+)
+@ensureDeferred
+async def test_process_start(middleware_cls, settings, expected_meta):
+    crawler = get_crawler()
+    crawler.spider = Spider(name="test")
+    crawler.spider.settings = Settings(settings)
+    crawler.stats = StatsCollector(crawler)
+    middleware = middleware_cls.from_crawler(crawler)
+    item = Article(url="https://example.com/article")
+
+    async def start():
+        for item_or_request in (
+            Request("https://example.com/start"),
+            item,
+            Request("https://example.com/start"),
+        ):
+            yield item_or_request
+
+    result = [
+        item_or_request async for item_or_request in middleware.process_start(start())
+    ]
+    if middleware_cls is DupeFilterSpiderMiddleware:
+        assert len(result) == 2
+    else:
+        assert len(result) == 3
+        assert result[2].meta == expected_meta
+    assert result[0].meta == expected_meta
+    assert result[1] is item
